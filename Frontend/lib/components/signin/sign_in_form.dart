@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
@@ -10,6 +12,32 @@ class SignInForm extends StatefulWidget {
 class _SignInFormState extends State<SignInForm> {
   final _formKey = GlobalKey<FormState>();
   bool _obscureText = true;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _signIn() async {
+    if (_formKey.currentState!.validate()) {
+      final response = await http.post(
+        Uri.parse(
+            'http://10.0.2.2:8000/api/login/'), // Replace with your Django backend URL
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+        body: jsonEncode(<String, String>{
+          'email': _emailController.text,
+          'password': _passwordController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // Handle successful response
+        print('Login successful');
+      } else {
+        // Handle error response
+        print('Login failed');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +50,7 @@ class _SignInFormState extends State<SignInForm> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               TextFormField(
+                controller: _emailController,
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: const Color.fromARGB(255, 135, 62, 213),
@@ -45,6 +74,7 @@ class _SignInFormState extends State<SignInForm> {
               ),
               const SizedBox(height: 31),
               TextFormField(
+                controller: _passwordController,
                 obscureText: _obscureText,
                 decoration: InputDecoration(
                   filled: true,
@@ -79,11 +109,7 @@ class _SignInFormState extends State<SignInForm> {
               ),
               const SizedBox(height: 44),
               ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    // Perform sign in logic here
-                  }
-                },
+                onPressed: _signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color.fromARGB(255, 153, 78, 248),
                   shape: RoundedRectangleBorder(

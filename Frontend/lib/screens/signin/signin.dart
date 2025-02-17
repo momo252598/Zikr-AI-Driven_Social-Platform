@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:software_graduation_project/components/social_sign_in.dart';
-import 'package:software_graduation_project/components/sign_in_form.dart';
-import 'package:software_graduation_project/components/register_link.dart';
+import 'package:software_graduation_project/components/signin/sign_in_form.dart';
+import 'package:software_graduation_project/components/signin/register_link.dart';
 
-class QuranAppScreen extends StatelessWidget {
-  const QuranAppScreen({super.key});
+class LoginScreen extends StatelessWidget {
+  const LoginScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
