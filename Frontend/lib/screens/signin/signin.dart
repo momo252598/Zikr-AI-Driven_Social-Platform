@@ -40,7 +40,7 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 6),
                   const SizedBox(height: 53),
                   const Align(
-                    alignment: Alignment.centerLeft,
+                    alignment: Alignment.center,
                     child: Text(
                       'Sign In',
                       style: TextStyle(

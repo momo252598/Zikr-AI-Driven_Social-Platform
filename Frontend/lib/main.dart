@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:software_graduation_project/screens/Signup/signup.dart';
 import 'package:software_graduation_project/screens/signin/signin.dart';
 import 'package:software_graduation_project/components/signup/sign_up_form.dart';
+import 'package:software_graduation_project/skeleton.dart';
 
 void main() {
   runApp(const MyApp());
@@ -36,6 +37,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    return const SignUpScreen();
+    return const Skeleton();
   }
 }
