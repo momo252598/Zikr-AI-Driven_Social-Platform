@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../../base/res/styles/app_styles.dart';
 
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _SignInFormState createState() => _SignInFormState();
 }
 
@@ -56,9 +58,9 @@ class _SignInFormState extends State<SignInForm> {
                     controller: _emailController,
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: const Color.fromARGB(255, 135, 62, 213),
+                      fillColor: AppStyles.txtFieldColor,
                       hintText: 'Email',
-                      hintStyle: const TextStyle(color: Colors.white),
+                      hintStyle: TextStyle(color: AppStyles.white),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
@@ -66,7 +68,7 @@ class _SignInFormState extends State<SignInForm> {
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 25, vertical: 15),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppStyles.white),
                     keyboardType: TextInputType.emailAddress,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -81,9 +83,9 @@ class _SignInFormState extends State<SignInForm> {
                     obscureText: _obscureText,
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: const Color.fromARGB(255, 135, 62, 213),
+                      fillColor: AppStyles.txtFieldColor,
                       hintText: 'Password',
-                      hintStyle: const TextStyle(color: Colors.white),
+                      hintStyle: TextStyle(color: AppStyles.white),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
@@ -95,7 +97,7 @@ class _SignInFormState extends State<SignInForm> {
                           _obscureText
                               ? Icons.visibility_off
                               : Icons.visibility,
-                          color: Colors.white,
+                          color: AppStyles.white,
                         ),
                         onPressed: () {
                           setState(() {
@@ -104,7 +106,7 @@ class _SignInFormState extends State<SignInForm> {
                         },
                       ),
                     ),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: AppStyles.white),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
@@ -116,16 +118,16 @@ class _SignInFormState extends State<SignInForm> {
                   ElevatedButton(
                     onPressed: _signIn,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 153, 78, 248),
+                      backgroundColor: AppStyles.buttonColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Sign in',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppStyles.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Poppins',

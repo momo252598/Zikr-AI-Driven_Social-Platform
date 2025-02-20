@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:software_graduation_project/base/res/media.dart';
+import '../../base/res/styles/app_styles.dart';
+import '../../base/widgets/text_field_form.dart'; // new import
 
 class SignUpForm extends StatefulWidget {
-  const SignUpForm({super.key});
+  final ValueChanged<String?>? onGenderChanged; // new parameter
+
+  const SignUpForm({super.key, this.onGenderChanged});
 
   @override
   _SignUpFormState createState() => _SignUpFormState();
@@ -17,27 +22,10 @@ class _SignUpFormState extends State<SignUpForm> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _dobController = TextEditingController();
-  final TextEditingController _countryController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  DateTime? _selectedDate;
-
-  Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? DateTime(2000),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        _dobController.text =
-            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
-      });
-    }
-  }
+  // New gender variable
+  String? _selectedGender;
 
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
@@ -52,9 +40,8 @@ class _SignUpFormState extends State<SignUpForm> {
           'last_name': _lastNameController.text,
           'username': _usernameController.text,
           'email': _emailController.text,
-          'date_of_birth': _dobController.text,
-          'country': _countryController.text,
           'password': _passwordController.text,
+          'gender': _selectedGender ?? '',
         }),
       );
 
@@ -73,218 +60,146 @@ class _SignUpFormState extends State<SignUpForm> {
     // Mimic the style from the sign-in page
     return Form(
       key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // First Name & Last Name Row
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _firstNameController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color.fromARGB(255, 135, 62, 213),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 500, minWidth: 400),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // First Name & Last Name Row using CustomTextField
+            Row(
+              children: [
+                Expanded(
+                  child: CustomTextField(
+                    controller: _firstNameController,
                     hintText: 'First Name',
-                    hintStyle: const TextStyle(color: Colors.white),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 15),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Enter first name';
+                      }
+                      return null;
+                    },
                   ),
-                  style: const TextStyle(color: Colors.white),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter first name';
-                    }
-                    return null;
-                  },
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  controller: _lastNameController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color.fromARGB(255, 135, 62, 213),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: CustomTextField(
+                    controller: _lastNameController,
                     hintText: 'Last Name',
-                    hintStyle: const TextStyle(color: Colors.white),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 15),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Enter last name';
+                      }
+                      return null;
+                    },
                   ),
-                  style: const TextStyle(color: Colors.white),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter last name';
-                    }
-                    return null;
-                  },
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Username
-          TextFormField(
-            controller: _usernameController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color.fromARGB(255, 135, 62, 213),
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Username
+            CustomTextField(
+              controller: _usernameController,
               hintText: 'Username',
-              hintStyle: const TextStyle(color: Colors.white),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+              keyboardType: TextInputType.text,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Enter username';
+                return null;
+              },
             ),
-            style: const TextStyle(color: Colors.white),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Enter username';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-          // Email
-          TextFormField(
-            controller: _emailController,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color.fromARGB(255, 135, 62, 213),
+            const SizedBox(height: 20),
+            // Email
+            CustomTextField(
+              controller: _emailController,
               hintText: 'Email',
-              hintStyle: const TextStyle(color: Colors.white),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Enter email';
+                return null;
+              },
             ),
-            style: const TextStyle(color: Colors.white),
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Enter email';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-          // Date of Birth & Country Row
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _dobController,
-                  readOnly: true,
-                  onTap: _pickDate,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color.fromARGB(255, 135, 62, 213),
-                    hintText: 'Date of Birth',
-                    hintStyle: const TextStyle(color: Colors.white),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 15),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter DOB';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextFormField(
-                  controller: _countryController,
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: const Color.fromARGB(255, 135, 62, 213),
-                    hintText: 'Country',
-                    hintStyle: const TextStyle(color: Colors.white),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 15),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Enter country';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          // Password
-          TextFormField(
-            controller: _passwordController,
-            obscureText: true,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color.fromARGB(255, 135, 62, 213),
+            const SizedBox(height: 20),
+            // Password
+            CustomTextField(
+              controller: _passwordController,
               hintText: 'Password',
-              hintStyle: const TextStyle(color: Colors.white),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 25, vertical: 15),
+              obscureText: true,
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Enter password';
+                return null;
+              },
             ),
-            style: const TextStyle(color: Colors.white),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Enter password';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 30),
-          // const Spacer(),
-          // Sign Up button
-          ElevatedButton(
-            onPressed: _signUp,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color.fromARGB(255, 153, 78, 248),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+            const SizedBox(height: 20),
+            // New Gender field with updated dropdown menu text color and arrow icon color
+            DropdownButtonFormField<String>(
+              value: _selectedGender,
+              alignment: Alignment.centerLeft,
+              style: TextStyle(color: AppStyles.white),
+              selectedItemBuilder: (BuildContext context) {
+                return ['Male', 'Female'].map((String value) {
+                  return Text(value, style: TextStyle(color: AppStyles.white));
+                }).toList();
+              },
+              icon: Icon(Icons.arrow_drop_down,
+                  color: AppStyles.white), // arrow icon color set to white
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: AppStyles.txtFieldColor,
+                hintText: 'Gender',
+                hintStyle: TextStyle(color: AppStyles.white),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
               ),
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              items: [
+                DropdownMenuItem(
+                  value: 'Male',
+                  child: Text('Male', style: TextStyle(color: AppStyles.black)),
+                ),
+                DropdownMenuItem(
+                  value: 'Female',
+                  child:
+                      Text('Female', style: TextStyle(color: AppStyles.black)),
+                ),
+              ],
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedGender = newValue;
+                });
+                widget.onGenderChanged?.call(newValue); // propagate the change
+              },
+              validator: (value) {
+                if (value == null || value.isEmpty) return 'Select gender';
+                return null;
+              },
             ),
-            child: const Text(
-              'Create Account',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Poppins',
+            const SizedBox(height: 30),
+            // const Spacer(),
+            // Sign Up button
+            ElevatedButton(
+              onPressed: _signUp,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppStyles.buttonColor,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+              ),
+              child: Text(
+                'Create Account',
+                style: TextStyle(
+                  color: AppStyles.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: 'Poppins',
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 20),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

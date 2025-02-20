@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:software_graduation_project/components/signin/sign_in_form.dart';
 import 'package:software_graduation_project/components/signin/register_link.dart';
+import 'package:software_graduation_project/base/res/media.dart';
+import '../../base/res/styles/app_styles.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -11,13 +13,13 @@ class LoginScreen extends StatelessWidget {
       body: SizedBox.expand(
         child: Container(
           decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 247, 247, 247),
+            color: AppStyles.bgColor,
             borderRadius: BorderRadius.circular(40),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                color: Color(0x40000000),
+                color: AppStyles.boxShadow,
                 blurRadius: 100,
-                offset: Offset(40, 40),
+                offset: const Offset(40, 40),
               ),
             ],
           ),
@@ -33,7 +35,7 @@ class LoginScreen extends StatelessWidget {
                     width: 100, // Set the desired width
                     height: 100, // Set the desired height
                     child: Image.asset(
-                      'assets/images/quran.png', // Replace with your image path
+                      AppMedia.quran, // Replace with your image path
                       fit: BoxFit.cover,
                     ),
                   ),
@@ -55,30 +57,25 @@ class LoginScreen extends StatelessWidget {
                   const SignInForm(),
                   // const SizedBox(height: 36),
                   // const SizedBox(height: 30),
-                  Stack(
-                    alignment: Alignment.topCenter,
-                    children: [
-                      ColorFiltered(
-                        colorFilter: ColorFilter.mode(
-                          const Color.fromARGB(255, 135, 62, 213)
-                              .withOpacity(0.1),
-                          BlendMode.srcATop,
-                        ),
-                        child: Image.asset(
-                          'assets/images/mosque.png', // Replace with your image path
+                  ConstrainedBox(
+                    constraints:
+                        const BoxConstraints(maxWidth: 500, minWidth: 400),
+                    child: Stack(
+                      alignment: Alignment.topCenter,
+                      children: [
+                        Image.asset(
+                          AppMedia.mosque, // Replace with your image path
                           fit: BoxFit.cover,
                           width: double.infinity,
                         ),
-                      ),
-                      const Column(
-                        children: [
-                          // SizedBox(height: 20),
-                          // SocialSignIn(),
-                          SizedBox(height: 20),
-                          RegisterLink(),
-                        ],
-                      ),
-                    ],
+                        const Column(
+                          children: [
+                            SizedBox(height: 20),
+                            RegisterLink(),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

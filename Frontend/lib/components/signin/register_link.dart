@@ -1,5 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:software_graduation_project/screens/signup/signup.dart';
+import '../../base/res/styles/app_styles.dart';
 
 class RegisterLink extends StatelessWidget {
   const RegisterLink({super.key});
@@ -18,12 +20,30 @@ class RegisterLink extends StatelessWidget {
           const TextSpan(text: "Don't have an account? "),
           TextSpan(
             text: 'Register here',
-            style: const TextStyle(
-              color: Color(0xFF0E18F6),
+            style: TextStyle(
+              color: AppStyles.txtFieldColor,
             ),
             recognizer: TapGestureRecognizer()
               ..onTap = () {
-                // Navigate to registration page
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    transitionDuration: const Duration(milliseconds: 250),
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        const SignUpScreen(),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                      final offsetAnimation = Tween<Offset>(
+                        begin: const Offset(1.0, 0.0),
+                        end: Offset.zero,
+                      ).animate(animation);
+                      return SlideTransition(
+                        position: offsetAnimation,
+                        child: child,
+                      );
+                    },
+                  ),
+                );
               },
           ),
         ],

@@ -3,7 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:auto_size_text/auto_size_text.dart'; // new dependency
-import 'package:flutter/foundation.dart'; // new import for compute()
+import 'package:flutter/foundation.dart';
+import '../../base/res/styles/app_styles.dart'; // new import for compute()
 
 // Helper function: converts English digits to Arabic display digits.
 String convertToArabic(String number) {
@@ -73,35 +74,59 @@ List<List<Map<String, dynamic>>> computeSplitPages(
   return pages;
 }
 
-// Modify _loadPages to rebuild widgets with interactive chunks.
-Future<List<Widget>> _loadPages(BuildContext context) async {
+// Modify _loadPages to remove the context parameter and fetch pages only once.
+Future<List<List<Map<String, dynamic>>>> _loadPages() async {
   final String jsonString =
       await rootBundle.loadString('assets/utils/data-uthmani.json');
   const int maxWordsPerPage = 150;
-  // Offload splitting work to a separate isolate.
   List<List<Map<String, dynamic>>> pagesChunks =
       await compute(computeSplitPages, {
     'jsonString': jsonString,
     'maxWordsPerPage': maxWordsPerPage,
   });
+  return pagesChunks;
+}
 
-  // On main thread, rebuild widgets with RichText using desired style.
-  List<Widget> pages = pagesChunks.map((pageChunks) {
-    // Check if the first chunk is a header (surah title)
-    if (pageChunks.first['surah'] == null) {
-      final headerText = pageChunks.first['text'];
-      List<InlineSpan> spans = pageChunks.skip(1).map((chunk) {
-        return TextSpan(
-          text: chunk['text'],
-          recognizer: (chunk['surah'] != null && chunk['ayah'] != null)
-              ? (LongPressGestureRecognizer()
-                ..onLongPress = () {
-                  print("Surah: ${chunk['surah']}, Ayah: ${chunk['ayah']}");
-                })
-              : null,
-        );
-      }).toList();
-      return Padding(
+// Helper function to build a page from its chunks using current highlight state.
+Widget _buildPage(
+    BuildContext context,
+    List<Map<String, dynamic>> pageChunks,
+    Map<String, dynamic>? selectedAyah,
+    Function(Map<String, dynamic>?) onChunkLongPress) {
+  // Build spans with conditional background for highlighted chunks.
+  List<InlineSpan> buildSpans(List<Map<String, dynamic>> chunks) {
+    return chunks.map((chunk) {
+      bool isHighlighted = selectedAyah != null &&
+          chunk['surah'] != null &&
+          chunk['ayah'] != null &&
+          selectedAyah['surah'] == chunk['surah'] &&
+          selectedAyah['ayah'] == chunk['ayah'];
+
+      return TextSpan(
+        text: chunk['text'],
+        style:
+            isHighlighted ? TextStyle(backgroundColor: AppStyles.grey) : null,
+        recognizer: (chunk['surah'] != null && chunk['ayah'] != null)
+            ? (LongPressGestureRecognizer()
+              ..onLongPress = () {
+                print("Surah: ${chunk['surah']}, Ayah: ${chunk['ayah']}");
+                onChunkLongPress({
+                  'surah': chunk['surah'],
+                  'ayah': chunk['ayah'],
+                });
+              })
+            : null,
+      );
+    }).toList();
+  }
+
+  // If page starts with header chunk.
+  if (pageChunks.first['surah'] == null) {
+    final headerText = pageChunks.first['text'];
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => onChunkLongPress(null),
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: Column(
@@ -114,8 +139,11 @@ Future<List<Widget>> _loadPages(BuildContext context) async {
                   style: Theme.of(context)
                           .textTheme
                           .headlineMedium
-                          ?.copyWith(fontSize: 24) ??
-                      const TextStyle(fontSize: 24, color: Colors.black),
+                          ?.copyWith(fontSize: 24, fontFamily: 'othman') ??
+                      const TextStyle(
+                          fontSize: 24,
+                          color: Colors.black,
+                          fontFamily: 'othman'),
                 ),
               ),
               const SizedBox(height: 16),
@@ -126,29 +154,25 @@ Future<List<Widget>> _loadPages(BuildContext context) async {
                   style: Theme.of(context)
                           .textTheme
                           .headlineMedium
-                          ?.copyWith(fontSize: 24) ??
-                      const TextStyle(fontSize: 24, color: Colors.black),
-                  children: spans,
+                          ?.copyWith(fontSize: 24, fontFamily: 'othman') ??
+                      const TextStyle(
+                          fontSize: 24,
+                          color: Colors.black,
+                          fontFamily: 'othman'),
+                  children: buildSpans(pageChunks.skip(1).toList()),
                 ),
               ),
             ],
           ),
         ),
-      );
-    } else {
-      // Page without header chunk: build one RichText for all chunks.
-      List<InlineSpan> spans = pageChunks.map((chunk) {
-        return TextSpan(
-          text: chunk['text'],
-          recognizer: (chunk['surah'] != null && chunk['ayah'] != null)
-              ? (LongPressGestureRecognizer()
-                ..onLongPress = () {
-                  print("Surah: ${chunk['surah']}, Ayah: ${chunk['ayah']}");
-                })
-              : null,
-        );
-      }).toList();
-      return Padding(
+      ),
+    );
+  } else {
+    // Page without header
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () => onChunkLongPress(null),
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: SingleChildScrollView(
           child: RichText(
@@ -158,25 +182,41 @@ Future<List<Widget>> _loadPages(BuildContext context) async {
               style: Theme.of(context)
                       .textTheme
                       .headlineMedium
-                      ?.copyWith(fontSize: 24) ??
-                  const TextStyle(fontSize: 24, color: Colors.black),
-              children: spans,
+                      ?.copyWith(fontSize: 24, fontFamily: 'othman') ??
+                  const TextStyle(
+                      fontSize: 24, color: Colors.black, fontFamily: 'othman'),
+              children: buildSpans(pageChunks),
             ),
           ),
         ),
-      );
-    }
-  }).toList();
-  return pages;
+      ),
+    );
+  }
 }
 
-class QuranPage extends StatelessWidget {
+// Convert QuranPage to a StatefulWidget to manage highlight state and cache loaded pages.
+class QuranPage extends StatefulWidget {
   const QuranPage({Key? key}) : super(key: key);
 
   @override
+  _QuranPageState createState() => _QuranPageState();
+}
+
+class _QuranPageState extends State<QuranPage> {
+  Map<String, dynamic>? selectedAyah;
+  late Future<List<List<Map<String, dynamic>>>> pagesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cache the future so that pages are loaded only once.
+    pagesFuture = _loadPages();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Widget>>(
-      future: _loadPages(context),
+    return FutureBuilder<List<List<Map<String, dynamic>>>>(
+      future: pagesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -187,17 +227,26 @@ class QuranPage extends StatelessWidget {
             body: Center(child: Text("Error loading Quran text")),
           );
         }
-        final pagesWidgets = snapshot.data!;
+        final pagesData = snapshot.data!;
         return Scaffold(
           body: Directionality(
             textDirection: TextDirection.rtl,
             child: SizedBox(
-              // replaced LayoutBuilder with SizedBox using MediaQuery for height
               height: MediaQuery.of(context).size.height,
               child: PageView.builder(
-                itemCount: pagesWidgets.length,
-                itemBuilder: (context, index) => pagesWidgets[index],
-                // physics: ClampingScrollPhysics(),
+                itemCount: pagesData.length,
+                itemBuilder: (context, index) {
+                  return _buildPage(
+                    context,
+                    pagesData[index],
+                    selectedAyah,
+                    (newHighlight) {
+                      setState(() {
+                        selectedAyah = newHighlight;
+                      });
+                    },
+                  );
+                },
               ),
             ),
           ),

@@ -4,6 +4,8 @@ import 'screens/quran/quran.dart';
 import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
+import 'package:software_graduation_project/base/res/media.dart';
+import '../../base/res/styles/app_styles.dart';
 
 class Skeleton extends StatefulWidget {
   const Skeleton({super.key});
@@ -30,18 +32,18 @@ class _SkeletonState extends State<Skeleton> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                Color.fromARGB(255, 78, 41, 153),
-                Color.fromARGB(255, 152, 78, 248)
+                AppStyles.darkPurple,
+                AppStyles.lightPurple,
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            image: DecorationImage(
-              image: AssetImage(
-                  'assets/images/islamic_pattern.png'), // add a suitable Islamic pattern image in assets
+            image: const DecorationImage(
+              image: AssetImage(AppMedia
+                  .pattern3), // add a suitable Islamic pattern image in assets
               fit: BoxFit.cover,
               colorFilter: ColorFilter.mode(
                 Color.fromARGB(96, 255, 255, 255),
@@ -51,20 +53,21 @@ class _SkeletonState extends State<Skeleton> {
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           "Al-Quran",
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppStyles.white,
           ),
         ),
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color.fromARGB(255, 152, 78, 248),
-        unselectedItemColor: Colors.grey, // Updated color for better visibility
+        selectedItemColor: AppStyles.lightPurple,
+        unselectedItemColor:
+            AppStyles.grey, // Updated color for better visibility
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
