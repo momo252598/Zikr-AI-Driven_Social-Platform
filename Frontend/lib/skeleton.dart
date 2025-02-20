@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'screens/home/home.dart';
 import 'screens/quran/quran.dart';
+import 'screens/prayers/prayers.dart';
 import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
@@ -20,6 +21,7 @@ class _SkeletonState extends State<Skeleton> {
   final List<Widget> _pages = const [
     HomePage(),
     QuranPage(),
+    PrayersPage(),
     ChatPage(),
     ProfilePage(),
   ];
@@ -78,6 +80,8 @@ class _SkeletonState extends State<Skeleton> {
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
               icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'Quran'),
+          BottomNavigationBarItem(
+              icon: Icon(FlutterIslamicIcons.prayer), label: 'Prayers'),
           BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],

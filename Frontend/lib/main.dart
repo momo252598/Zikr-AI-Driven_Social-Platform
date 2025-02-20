@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:software_graduation_project/screens/Signup/signup.dart';
+import 'package:software_graduation_project/screens/prayers/prayers_test.dart';
 import 'package:software_graduation_project/screens/signin/signin.dart';
 import 'package:software_graduation_project/components/signup/sign_up_form.dart';
 import 'package:software_graduation_project/skeleton.dart';
+import 'package:software_graduation_project/screens/prayers/prayers.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
