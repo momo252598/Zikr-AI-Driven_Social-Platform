@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'screens/home/home.dart';
 import 'screens/quran/quran.dart';
+import 'package:software_graduation_project/screens/quran/quran_sura_page.dart';
 import 'screens/prayers/prayers.dart';
 import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
@@ -16,15 +20,40 @@ class Skeleton extends StatefulWidget {
 }
 
 class _SkeletonState extends State<Skeleton> {
+  var widgetjsonData;
+
+  loadJsonAsset() async {
+    final String jsonString =
+        await rootBundle.loadString('assets/utils/surahs.json');
+    var data = jsonDecode(jsonString);
+    setState(() {
+      widgetjsonData = data;
+    });
+    // final String jsonString2 =
+    //     await rootBundle.loadString('assets/utils/surahs.json');
+    // var data2 = jsonDecode(jsonString2);
+  }
+
+  @override
+  void initState() {
+    loadJsonAsset(); // initialize JSON on startup
+    super.initState();
+  }
+
   int _currentIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomePage(),
-    QuranPage(),
-    PrayersPage(),
-    ChatPage(),
-    ProfilePage(),
-  ];
+  List<Widget> get _pages {
+    return [
+      const HomePage(),
+      // const HomePage(),
+      QuranPage2(
+        suraJsonData: widgetjsonData,
+      ),
+      const PrayersPage(),
+      const ChatPage(),
+      const ProfilePage(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +95,7 @@ class _SkeletonState extends State<Skeleton> {
       ),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: AppStyles.bgColor,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppStyles.lightPurple,
         unselectedItemColor:

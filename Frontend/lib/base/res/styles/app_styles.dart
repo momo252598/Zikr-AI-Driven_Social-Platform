@@ -12,4 +12,6 @@ class AppStyles {
   static Color darkPurple = const Color.fromARGB(255, 78, 41, 153);
   static Color lightPurple = const Color.fromARGB(255, 152, 78, 248);
   static Color appBarGrey = const Color.fromARGB(96, 255, 255, 255);
+  static Color surahName =
+      const Color.fromARGB(255, 158, 158, 158).withOpacity(.8);
 }

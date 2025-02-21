@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -6,6 +7,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppStyles.bgColor,
       // ...existing app bar or other widgets...
       body: Center(
         child: Text('Home Page',

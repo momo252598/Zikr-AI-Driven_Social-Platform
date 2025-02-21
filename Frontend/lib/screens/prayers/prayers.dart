@@ -5,6 +5,7 @@ import 'package:location/location.dart';
 import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:fluentui_icons/fluentui_icons.dart';
+import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 
 // Model for Prayer
 class Prayer {
@@ -188,6 +189,7 @@ class _PrayersPageState extends State<PrayersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppStyles.bgColor,
       // appBar removed or uncomment if needed.
       body: FutureBuilder<List<Prayer>>(
         future: futurePrayers,
