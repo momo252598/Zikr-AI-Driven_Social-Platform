@@ -1,0 +1,120 @@
+[
+  {
+    "id": 1,
+    "name": "Charlie Brown",
+    "lastMessage": "Doing well, just checking in.",
+    "timestamp": "2023-10-03T14:00:00Z",
+    "messages": [
+      {
+        "content": "Hello, how are you?",
+        "timestamp": "2023-10-03T14:01:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Bob Smith",
+    "lastMessage": "Got it, thanks!",
+    "timestamp": "2023-10-02T12:45:00Z",
+    "messages": [
+      {
+        "content": "Hi Bob, just a reminder for tomorrow's meeting.",
+        "timestamp": "2023-10-02T12:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Got it, thanks!",
+        "timestamp": "2023-10-02T12:05:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Alice Johnson",
+    "lastMessage": "Morning! I'm doing well, thanks for asking.",
+    "timestamp": "2023-10-01T10:30:00Z",
+    "messages": [
+      {
+        "content": "Good morning, Alice!",
+        "timestamp": "2023-10-01T10:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Morning! I'm doing well, thanks for asking.",
+        "timestamp": "2023-10-01T10:15:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "David Green",
+    "lastMessage": "Yes, see you at noon!",
+    "timestamp": "2023-09-30T09:30:00Z",
+    "messages": [
+      {
+        "content": "Hey David, are we still on for lunch?",
+        "timestamp": "2023-09-30T09:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Yes, see you at noon!",
+        "timestamp": "2023-09-30T09:05:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Emma Wilson",
+    "lastMessage": "Thanks, I appreciate it!",
+    "timestamp": "2023-09-29T16:20:00Z",
+    "messages": [
+      {
+        "content": "Hi Emma, any tips for the presentation?",
+        "timestamp": "2023-09-29T16:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Just be yourself and share your passion.",
+        "timestamp": "2023-09-29T16:10:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Thanks, I appreciate it!",
+        "timestamp": "2023-09-29T16:15:00Z",
+        "isSentByMe": true
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "name": "Frank Miller",
+    "lastMessage": "Absolutely, let's set up a meeting.",
+    "timestamp": "2023-09-28T11:45:00Z",
+    "messages": [
+      {
+        "content": "Hi Frank, are you ready to kick off the project?",
+        "timestamp": "2023-09-28T11:30:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Absolutely, let's set up a meeting.",
+        "timestamp": "2023-09-28T11:35:00Z",
+        "isSentByMe": false
+      }
+    ]
+  }
+]

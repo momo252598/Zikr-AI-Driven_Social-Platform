@@ -77,6 +77,7 @@ flutter:
     - assets/utils/fateha.json
     - assets/utils/data-uthmani.json
     - assets/utils/surahs.json
+    - assets/utils/chat_ex.json
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

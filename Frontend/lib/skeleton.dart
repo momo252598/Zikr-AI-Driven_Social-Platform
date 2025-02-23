@@ -2,10 +2,12 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:software_graduation_project/screens/chat/chat.dart';
 import 'screens/home/home.dart';
 import 'screens/quran/quran.dart';
 import 'package:software_graduation_project/screens/quran/quran_sura_page.dart';
 import 'screens/prayers/prayers.dart';
+import 'screens/chat/all_chats.dart';
 import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
@@ -50,7 +52,7 @@ class _SkeletonState extends State<Skeleton> {
         suraJsonData: widgetjsonData,
       ),
       const PrayersPage(),
-      const ChatPage(),
+      const AllChatsPage(),
       const ProfilePage(),
     ];
   }

@@ -10,8 +10,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:quran/quran.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 // import 'package:quran_tutorial/globalhelpers/constants.dart';
-import 'package:software_graduation_project/widgets/basmallah.dart';
-import 'package:software_graduation_project/widgets/header_widget.dart';
+import 'package:software_graduation_project/components/quran/basmallah.dart';
+import 'package:software_graduation_project/components/quran/header_widget.dart';
 // import 'package:wakelock/wakelock.dart';
 import '../../base/res/styles/app_styles.dart';
 

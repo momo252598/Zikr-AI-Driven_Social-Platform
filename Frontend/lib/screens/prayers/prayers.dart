@@ -84,7 +84,9 @@ Future<List<Prayer>> _getPrayerTimes() async {
 // PrayerCard widget showing an icon, prayer time, and time left.
 class PrayerCard extends StatelessWidget {
   final Prayer prayer;
-  const PrayerCard({Key? key, required this.prayer}) : super(key: key);
+  final bool isClosest; // new flag
+  const PrayerCard({Key? key, required this.prayer, this.isClosest = false})
+      : super(key: key);
 
   // Map for prayer icons.
   IconData _getIcon(String name) {
@@ -123,10 +125,13 @@ class PrayerCard extends StatelessWidget {
         constraints: const BoxConstraints(minWidth: 400, maxWidth: 500),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          // Change decoration if isClosest is true.
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.purple[50],
+            color: isClosest ? AppStyles.lightPurple : Colors.purple[50],
             borderRadius: BorderRadius.circular(12),
+            // border:
+            //     isClosest ? Border.all(color: AppStyles.grey, width: 2) : null,
             boxShadow: [
               BoxShadow(
                 color: Colors.purple.withOpacity(0.2),
@@ -137,7 +142,8 @@ class PrayerCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(_getIcon(prayer.name), size: 40, color: Colors.purple),
+              Icon(_getIcon(prayer.name),
+                  size: 40, color: isClosest ? AppStyles.white : Colors.purple),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -147,16 +153,24 @@ class PrayerCard extends StatelessWidget {
                         style: Theme.of(context)
                             .textTheme
                             .headlineMedium
-                            ?.copyWith(color: Colors.purple)),
+                            ?.copyWith(
+                                color: isClosest
+                                    ? AppStyles.white
+                                    : Colors.purple)),
                     const SizedBox(height: 4),
                     Text(
                       "Time: ${TimeOfDay.fromDateTime(prayer.time.toLocal()).format(context)}",
-                      style: const TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isClosest ? AppStyles.white : Colors.purple,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       _timeLeft(),
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      style: TextStyle(
+                          fontSize: 14,
+                          color: isClosest ? AppStyles.white : AppStyles.grey),
                     ),
                   ],
                 ),
@@ -200,12 +214,28 @@ class _PrayersPageState extends State<PrayersPage> {
             return Center(child: Text("Error: ${snapshot.error}"));
           }
           final prayers = snapshot.data!;
+          final now = DateTime.now();
+          Prayer? nextPrayer;
+          Duration? closestDiff;
+          for (var prayer in prayers) {
+            final diff =
+                prayer.time.subtract(const Duration(hours: 2)).difference(now);
+            if (diff.isNegative) continue;
+            if (closestDiff == null || diff < closestDiff) {
+              closestDiff = diff;
+              nextPrayer = prayer;
+            }
+          }
           return Center(
             child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: prayers
-                    .map((prayer) => PrayerCard(prayer: prayer))
+                    .map((prayer) => PrayerCard(
+                          prayer: prayer,
+                          isClosest: nextPrayer != null &&
+                              prayer.name == nextPrayer.name,
+                        ))
                     .toList(),
               ),
             ),
