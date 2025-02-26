@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:adhan_dart/adhan_dart.dart';
 import 'package:fluentui_icons/fluentui_icons.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
+import 'package:software_graduation_project/components/prayers/geolocation_provider.dart'; // added new helper import
 
 // Model for Prayer
 class Prayer {
@@ -19,8 +20,8 @@ Future<List<Prayer>> _getPrayerTimes() async {
   final Coordinates coordinates;
   final now = DateTime.now();
   if (kIsWeb) {
-    // Use default coordinates on web, e.g. New York City
-    coordinates = Coordinates(31.946570, 35.302723);
+    // Use dynamic location on web using helper.
+    coordinates = await getCurrentCoordinates();
   } else {
     final location = Location();
     // Check service
@@ -43,7 +44,6 @@ Future<List<Prayer>> _getPrayerTimes() async {
   // Dates: today and tomorrow
   final today = now;
   final tomorrow = now.add(const Duration(days: 1));
-  const shift = Duration(hours: 2);
 
   CalculationParameters params = CalculationMethod.muslimWorldLeague();
   params.madhab = Madhab.shafi;
@@ -62,8 +62,8 @@ Future<List<Prayer>> _getPrayerTimes() async {
   );
 
   DateTime shiftedOrNext(DateTime? todayTime, DateTime? tomorrowTime) {
-    final t = (todayTime ?? DateTime.now()).add(shift);
-    return t.isAfter(now) ? t : (tomorrowTime ?? DateTime.now()).add(shift);
+    final t = todayTime ?? DateTime.now();
+    return t.isAfter(now) ? t : (tomorrowTime ?? DateTime.now());
   }
 
   return [
@@ -107,10 +107,8 @@ class PrayerCard extends StatelessWidget {
   }
 
   // Calculates time left until the prayer.
-  // Remove the 2-hour shift (Duration.hours:2) from prayer.time for the countdown.
   String _timeLeft() {
-    const shift = Duration(hours: 2);
-    Duration diff = prayer.time.subtract(shift).difference(DateTime.now());
+    Duration diff = prayer.time.difference(DateTime.now());
     if (diff.isNegative) return "Passed";
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String hours = twoDigits(diff.inHours);
@@ -218,8 +216,7 @@ class _PrayersPageState extends State<PrayersPage> {
           Prayer? nextPrayer;
           Duration? closestDiff;
           for (var prayer in prayers) {
-            final diff =
-                prayer.time.subtract(const Duration(hours: 2)).difference(now);
+            final diff = prayer.time.difference(now);
             if (diff.isNegative) continue;
             if (closestDiff == null || diff < closestDiff) {
               closestDiff = diff;

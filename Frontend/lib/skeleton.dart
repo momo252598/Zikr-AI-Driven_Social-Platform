@@ -13,6 +13,8 @@ import 'screens/profile/profile.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 import '../../base/res/styles/app_styles.dart';
+import 'package:flutter/foundation.dart'; // for kIsWeb
+import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart';
 
 class Skeleton extends StatefulWidget {
   const Skeleton({super.key});
@@ -47,12 +49,11 @@ class _SkeletonState extends State<Skeleton> {
   List<Widget> get _pages {
     return [
       const HomePage(),
-      // const HomePage(),
       QuranPage2(
         suraJsonData: widgetjsonData,
       ),
       const PrayersPage(),
-      const AllChatsPage(),
+      kIsWeb ? const BrowserChatLayout() : const AllChatsPage(),
       const ProfilePage(),
     ];
   }

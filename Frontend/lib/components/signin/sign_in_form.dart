@@ -123,6 +123,7 @@ class _SignInFormState extends State<SignInForm> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 10),
+                      minimumSize: const Size(double.infinity, 50),
                     ),
                     child: Text(
                       'Sign in',

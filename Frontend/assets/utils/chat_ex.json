@@ -19,6 +19,86 @@
         "content": "Doing well, just checking in.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm good, thanks! And you?",
+        "timestamp": "2023-10-03T14:02:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Doing well, just checking in.",
+        "timestamp": "2023-10-03T14:03:00Z",
+        "isSentByMe": false
       }
     ]
   },
@@ -114,6 +194,237 @@
         "content": "Absolutely, let's set up a meeting.",
         "timestamp": "2023-09-28T11:35:00Z",
         "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 7,
+    "name": "Grace Lee",
+    "lastMessage": "Looking forward to our call!",
+    "timestamp": "2023-10-04T09:45:00Z",
+    "messages": [
+      {
+        "content": "Hi Grace, can we schedule a call?",
+        "timestamp": "2023-10-04T09:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Sure, how about 10 AM?",
+        "timestamp": "2023-10-04T09:05:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "That works. See you then!",
+        "timestamp": "2023-10-04T09:10:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Looking forward to our call!",
+        "timestamp": "2023-10-04T09:45:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'll send you the meeting link shortly.",
+        "timestamp": "2023-10-04T09:50:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 8,
+    "name": "Henry Ford",
+    "lastMessage": "I'll send the details shortly.",
+    "timestamp": "2023-10-04T11:20:00Z",
+    "messages": [
+      {
+        "content": "Morning Henry, any updates on the project?",
+        "timestamp": "2023-10-04T10:45:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Working on it, will update soon.",
+        "timestamp": "2023-10-04T10:50:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Great, thanks for the quick response.",
+        "timestamp": "2023-10-04T10:55:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "I'll send the details shortly.",
+        "timestamp": "2023-10-04T11:20:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Let me know if you need anything else.",
+        "timestamp": "2023-10-04T11:25:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 9,
+    "name": "Isabella Young",
+    "lastMessage": "Talk to you later!",
+    "timestamp": "2023-10-03T17:30:00Z",
+    "messages": [
+      {
+        "content": "Hey Isabella, are you joining the meeting?",
+        "timestamp": "2023-10-03T17:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "I might be a few minutes late.",
+        "timestamp": "2023-10-03T17:05:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "No worries, catch up when you can.",
+        "timestamp": "2023-10-03T17:10:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Talk to you later!",
+        "timestamp": "2023-10-03T17:30:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'll update you on any changes.",
+        "timestamp": "2023-10-03T17:35:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "Jack Daniels",
+    "lastMessage": "Cheers, that sounds perfect.",
+    "timestamp": "2023-10-03T20:15:00Z",
+    "messages": [
+      {
+        "content": "Hi Jack, are we still on for tonight?",
+        "timestamp": "2023-10-03T19:30:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Absolutely, see you at 8.",
+        "timestamp": "2023-10-03T19:35:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'm thinking of trying the new place.",
+        "timestamp": "2023-10-03T19:40:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Cheers, that sounds perfect.",
+        "timestamp": "2023-10-03T20:15:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Let me know if you want to change plans.",
+        "timestamp": "2023-10-03T20:20:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "Karen White",
+    "lastMessage": "I agree, let's do that.",
+    "timestamp": "2023-10-04T08:30:00Z",
+    "messages": [
+      {
+        "content": "Morning Karen, what's the plan for today?",
+        "timestamp": "2023-10-04T08:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "I was thinking of a team meeting.",
+        "timestamp": "2023-10-04T08:05:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Sounds good, let's start with the agenda.",
+        "timestamp": "2023-10-04T08:10:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "I agree, let's do that.",
+        "timestamp": "2023-10-04T08:30:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I'll prepare the meeting minutes.",
+        "timestamp": "2023-10-04T08:35:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "Leo King",
+    "lastMessage": "See you tomorrow!",
+    "timestamp": "2023-10-03T22:00:00Z",
+    "messages": [
+      {
+        "content": "Hey Leo, are we still set for the event?",
+        "timestamp": "2023-10-03T21:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Yes, all prepared.",
+        "timestamp": "2023-10-03T21:05:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Awesome, really looking forward to it.",
+        "timestamp": "2023-10-03T21:10:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "See you tomorrow!",
+        "timestamp": "2023-10-03T22:00:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Don't forget to bring your ticket.",
+        "timestamp": "2023-10-03T22:05:00Z",
+        "isSentByMe": false
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "name": "Megan Brown",
+    "lastMessage": "I'll keep you posted.",
+    "timestamp": "2023-10-04T12:00:00Z",
+    "messages": [
+      {
+        "content": "Hi Megan, any updates on the proposal?",
+        "timestamp": "2023-10-04T11:00:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Working on it, need a bit more time.",
+        "timestamp": "2023-10-04T11:05:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "Alright, let me know if you need help.",
+        "timestamp": "2023-10-04T11:10:00Z",
+        "isSentByMe": true
+      },
+      {
+        "content": "Sure, I'll keep you posted.",
+        "timestamp": "2023-10-04T12:00:00Z",
+        "isSentByMe": false
+      },
+      {
+        "content": "I have some ideas we can discuss later.",
+        "timestamp": "2023-10-04T12:05:00Z",
+        "isSentByMe": true
       }
     ]
   }

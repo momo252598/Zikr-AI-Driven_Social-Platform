@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/res/media.dart';
-import 'package:software_graduation_project/components/chat/message.dart';
 import 'package:software_graduation_project/skeleton.dart';
 import 'chat.dart'; // added import for ChatPage
 import 'package:software_graduation_project/components/chat/skeleton_with_chat.dart'; // added import
 
 class AllChatsPage extends StatefulWidget {
-  const AllChatsPage({Key? key}) : super(key: key);
+  final void Function(int)? onChatSelected; // new optional callback
+  const AllChatsPage({Key? key, this.onChatSelected}) : super(key: key);
 
   @override
   _AllChatsPageState createState() => _AllChatsPageState();
@@ -85,13 +85,17 @@ class _AllChatsPageState extends State<AllChatsPage> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              SkeletonWithChat(chatId: chat['id']),
-                        ),
-                      );
+                      if (widget.onChatSelected != null) {
+                        widget.onChatSelected!(chat['id']);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                SkeletonWithChat(chatId: chat['id']),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),

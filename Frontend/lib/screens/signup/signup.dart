@@ -31,15 +31,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
           // Background image covers whole screen
           Container(
             decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(AppMedia.pattern2),
-                fit: BoxFit.cover,
+                // image: DecorationImage(
+                // image: AssetImage(AppMedia.pattern2),
+                // fit: BoxFit.cover,
                 // colorFilter: ColorFilter.mode(
                 //   Colors.black.withOpacity(0.2), // adjust opacity as needed
                 //   BlendMode.darken,
                 // ),
-              ),
-            ),
+                // ),
+                ),
           ),
           // Foreground content
           SingleChildScrollView(

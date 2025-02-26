@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/res/media.dart';
-import 'package:software_graduation_project/components/chat/message.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 
 class ChatPage extends StatefulWidget {
