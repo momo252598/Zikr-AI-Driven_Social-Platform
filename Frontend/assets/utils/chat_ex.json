@@ -1,102 +1,102 @@
 [
   {
     "id": 1,
-    "name": "Charlie Brown",
-    "lastMessage": "Doing well, just checking in.",
+    "name": "علي حسن",
+    "lastMessage": "بخير، فقط أتفقد الأحوال.",
     "timestamp": "2023-10-03T14:00:00Z",
     "messages": [
       {
-        "content": "Hello, how are you?",
+        "content": "مرحباً، كيف حالك؟",
         "timestamp": "2023-10-03T14:01:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm good, thanks! And you?",
+        "content": "أنا بخير، شكرًا! وأنت؟",
         "timestamp": "2023-10-03T14:02:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Doing well, just checking in.",
+        "content": "بخير، فقط أتفقد الأحوال.",
         "timestamp": "2023-10-03T14:03:00Z",
         "isSentByMe": false
       }
@@ -104,17 +104,17 @@
   },
   {
     "id": 2,
-    "name": "Bob Smith",
-    "lastMessage": "Got it, thanks!",
+    "name": "محمد أحمد",
+    "lastMessage": "فهمت، شكرًا!",
     "timestamp": "2023-10-02T12:45:00Z",
     "messages": [
       {
-        "content": "Hi Bob, just a reminder for tomorrow's meeting.",
+        "content": "مرحباً، مجرد تذكير بخصوص اجتماع الغد.",
         "timestamp": "2023-10-02T12:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Got it, thanks!",
+        "content": "فهمت، شكرًا!",
         "timestamp": "2023-10-02T12:05:00Z",
         "isSentByMe": false
       }
@@ -122,17 +122,17 @@
   },
   {
     "id": 3,
-    "name": "Alice Johnson",
-    "lastMessage": "Morning! I'm doing well, thanks for asking.",
+    "name": "فاطمة الزهراء",
+    "lastMessage": "صباح الخير! أنا بخير، شكرًا على سؤالك.",
     "timestamp": "2023-10-01T10:30:00Z",
     "messages": [
       {
-        "content": "Good morning, Alice!",
+        "content": "صباح الخير، فاطمة!",
         "timestamp": "2023-10-01T10:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Morning! I'm doing well, thanks for asking.",
+        "content": "صباح الخير! أنا بخير، شكرًا على سؤالك.",
         "timestamp": "2023-10-01T10:15:00Z",
         "isSentByMe": false
       }
@@ -140,17 +140,17 @@
   },
   {
     "id": 4,
-    "name": "David Green",
-    "lastMessage": "Yes, see you at noon!",
+    "name": "يوسف سالم",
+    "lastMessage": "نعم، أراك في الظهيرة!",
     "timestamp": "2023-09-30T09:30:00Z",
     "messages": [
       {
-        "content": "Hey David, are we still on for lunch?",
+        "content": "مرحباً، هل ما زلنا على موعد للغداء؟",
         "timestamp": "2023-09-30T09:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Yes, see you at noon!",
+        "content": "نعم، أراك في الظهيرة!",
         "timestamp": "2023-09-30T09:05:00Z",
         "isSentByMe": false
       }
@@ -158,22 +158,22 @@
   },
   {
     "id": 5,
-    "name": "Emma Wilson",
-    "lastMessage": "Thanks, I appreciate it!",
+    "name": "زينب محمود",
+    "lastMessage": "شكراً، أقدّر ذلك!",
     "timestamp": "2023-09-29T16:20:00Z",
     "messages": [
       {
-        "content": "Hi Emma, any tips for the presentation?",
+        "content": "مرحباً، هل لديك أي نصائح للعرض التقديمي؟",
         "timestamp": "2023-09-29T16:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Just be yourself and share your passion.",
+        "content": "فقط كن على طبيعتك وشارك شغفك.",
         "timestamp": "2023-09-29T16:10:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Thanks, I appreciate it!",
+        "content": "شكراً، أقدّر ذلك!",
         "timestamp": "2023-09-29T16:15:00Z",
         "isSentByMe": true
       }
@@ -181,17 +181,17 @@
   },
   {
     "id": 6,
-    "name": "Frank Miller",
-    "lastMessage": "Absolutely, let's set up a meeting.",
+    "name": "عمر سعيد",
+    "lastMessage": "بالتأكيد، دعونا نرتب اجتماعاً.",
     "timestamp": "2023-09-28T11:45:00Z",
     "messages": [
       {
-        "content": "Hi Frank, are you ready to kick off the project?",
+        "content": "مرحباً، هل أنت مستعد لبدء المشروع؟",
         "timestamp": "2023-09-28T11:30:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Absolutely, let's set up a meeting.",
+        "content": "بالتأكيد، دعونا نرتب اجتماعاً.",
         "timestamp": "2023-09-28T11:35:00Z",
         "isSentByMe": false
       }
@@ -199,32 +199,32 @@
   },
   {
     "id": 7,
-    "name": "Grace Lee",
-    "lastMessage": "Looking forward to our call!",
+    "name": "منى عبدالله",
+    "lastMessage": "أتطلع إلى مكالمتنا!",
     "timestamp": "2023-10-04T09:45:00Z",
     "messages": [
       {
-        "content": "Hi Grace, can we schedule a call?",
+        "content": "مرحباً، هل يمكننا تحديد موعد لمكالمة؟",
         "timestamp": "2023-10-04T09:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Sure, how about 10 AM?",
+        "content": "بالتأكيد، ماذا عن الساعة 10 صباحاً؟",
         "timestamp": "2023-10-04T09:05:00Z",
         "isSentByMe": false
       },
       {
-        "content": "That works. See you then!",
+        "content": "هذا مناسب. أراك حينها!",
         "timestamp": "2023-10-04T09:10:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Looking forward to our call!",
+        "content": "أتطلع إلى مكالمتنا!",
         "timestamp": "2023-10-04T09:45:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'll send you the meeting link shortly.",
+        "content": "سأرسل لك رابط الاجتماع قريباً.",
         "timestamp": "2023-10-04T09:50:00Z",
         "isSentByMe": false
       }
@@ -232,32 +232,32 @@
   },
   {
     "id": 8,
-    "name": "Henry Ford",
-    "lastMessage": "I'll send the details shortly.",
+    "name": "سليمان فاروق",
+    "lastMessage": "سأرسل التفاصيل قريباً.",
     "timestamp": "2023-10-04T11:20:00Z",
     "messages": [
       {
-        "content": "Morning Henry, any updates on the project?",
+        "content": "صباح الخير، هل هناك أي تحديثات على المشروع؟",
         "timestamp": "2023-10-04T10:45:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Working on it, will update soon.",
+        "content": "أعمل على ذلك، سأحدثك قريباً.",
         "timestamp": "2023-10-04T10:50:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Great, thanks for the quick response.",
+        "content": "رائع، شكرًا على الرد السريع.",
         "timestamp": "2023-10-04T10:55:00Z",
         "isSentByMe": true
       },
       {
-        "content": "I'll send the details shortly.",
+        "content": "سأرسل التفاصيل قريباً.",
         "timestamp": "2023-10-04T11:20:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Let me know if you need anything else.",
+        "content": "أخبرني إذا كنت بحاجة إلى أي شيء آخر.",
         "timestamp": "2023-10-04T11:25:00Z",
         "isSentByMe": false
       }
@@ -265,32 +265,32 @@
   },
   {
     "id": 9,
-    "name": "Isabella Young",
-    "lastMessage": "Talk to you later!",
+    "name": "هند راشد",
+    "lastMessage": "سنتحدث لاحقاً!",
     "timestamp": "2023-10-03T17:30:00Z",
     "messages": [
       {
-        "content": "Hey Isabella, are you joining the meeting?",
+        "content": "مرحباً، هل ستنضمين للاجتماع؟",
         "timestamp": "2023-10-03T17:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "I might be a few minutes late.",
+        "content": "قد أتأخر بضع دقائق.",
         "timestamp": "2023-10-03T17:05:00Z",
         "isSentByMe": false
       },
       {
-        "content": "No worries, catch up when you can.",
+        "content": "لا تقلقي، لنتواصل عندما يتسنى لك ذلك.",
         "timestamp": "2023-10-03T17:10:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Talk to you later!",
+        "content": "سنتحدث لاحقاً!",
         "timestamp": "2023-10-03T17:30:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'll update you on any changes.",
+        "content": "سأحيطك بالعلم في حالة حدوث أي تغييرات.",
         "timestamp": "2023-10-03T17:35:00Z",
         "isSentByMe": false
       }
@@ -298,32 +298,32 @@
   },
   {
     "id": 10,
-    "name": "Jack Daniels",
-    "lastMessage": "Cheers, that sounds perfect.",
+    "name": "خالد طارق",
+    "lastMessage": "صحتك، يبدو هذا مثالياً.",
     "timestamp": "2023-10-03T20:15:00Z",
     "messages": [
       {
-        "content": "Hi Jack, are we still on for tonight?",
+        "content": "مرحباً، هل ما زلنا على الموعد لهذه الليلة؟",
         "timestamp": "2023-10-03T19:30:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Absolutely, see you at 8.",
+        "content": "بالتأكيد، أراك الساعة 8.",
         "timestamp": "2023-10-03T19:35:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'm thinking of trying the new place.",
+        "content": "أفكر في تجربة المكان الجديد.",
         "timestamp": "2023-10-03T19:40:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Cheers, that sounds perfect.",
+        "content": "صحتك، يبدو هذا مثالياً.",
         "timestamp": "2023-10-03T20:15:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Let me know if you want to change plans.",
+        "content": "أخبرني إذا كنت تريد تغيير الخطط.",
         "timestamp": "2023-10-03T20:20:00Z",
         "isSentByMe": false
       }
@@ -331,32 +331,32 @@
   },
   {
     "id": 11,
-    "name": "Karen White",
-    "lastMessage": "I agree, let's do that.",
+    "name": "ليلى حسن",
+    "lastMessage": "أنا موافقة، لنقم بذلك.",
     "timestamp": "2023-10-04T08:30:00Z",
     "messages": [
       {
-        "content": "Morning Karen, what's the plan for today?",
+        "content": "صباح الخير، ليلى، ما هي خطة اليوم؟",
         "timestamp": "2023-10-04T08:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "I was thinking of a team meeting.",
+        "content": "كنت أفكر في اجتماع فريق العمل.",
         "timestamp": "2023-10-04T08:05:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Sounds good, let's start with the agenda.",
+        "content": "يبدو جيداً، لنبدأ بالأجندة.",
         "timestamp": "2023-10-04T08:10:00Z",
         "isSentByMe": true
       },
       {
-        "content": "I agree, let's do that.",
+        "content": "أنا موافقة، لنقم بذلك.",
         "timestamp": "2023-10-04T08:30:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I'll prepare the meeting minutes.",
+        "content": "سأعد محضر الاجتماع.",
         "timestamp": "2023-10-04T08:35:00Z",
         "isSentByMe": false
       }
@@ -364,32 +364,32 @@
   },
   {
     "id": 12,
-    "name": "Leo King",
-    "lastMessage": "See you tomorrow!",
+    "name": "ناصر كمال",
+    "lastMessage": "أراك غداً!",
     "timestamp": "2023-10-03T22:00:00Z",
     "messages": [
       {
-        "content": "Hey Leo, are we still set for the event?",
+        "content": "مرحباً، ناصر، هل ما زلنا على موعد للفعالية؟",
         "timestamp": "2023-10-03T21:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Yes, all prepared.",
+        "content": "نعم، كل شيء جاهز.",
         "timestamp": "2023-10-03T21:05:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Awesome, really looking forward to it.",
+        "content": "رائع، أتطلع حقاً لذلك.",
         "timestamp": "2023-10-03T21:10:00Z",
         "isSentByMe": true
       },
       {
-        "content": "See you tomorrow!",
+        "content": "أراك غداً!",
         "timestamp": "2023-10-03T22:00:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Don't forget to bring your ticket.",
+        "content": "لا تنسَ إحضار تذكرتك.",
         "timestamp": "2023-10-03T22:05:00Z",
         "isSentByMe": false
       }
@@ -397,32 +397,32 @@
   },
   {
     "id": 13,
-    "name": "Megan Brown",
-    "lastMessage": "I'll keep you posted.",
+    "name": "ريم جبران",
+    "lastMessage": "سأبقيك على اطلاع.",
     "timestamp": "2023-10-04T12:00:00Z",
     "messages": [
       {
-        "content": "Hi Megan, any updates on the proposal?",
+        "content": "مرحباً، ريم، هل هناك تحديثات بخصوص الاقتراح؟",
         "timestamp": "2023-10-04T11:00:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Working on it, need a bit more time.",
+        "content": "أعمل على ذلك، أحتاج إلى بعض الوقت الإضافي.",
         "timestamp": "2023-10-04T11:05:00Z",
         "isSentByMe": false
       },
       {
-        "content": "Alright, let me know if you need help.",
+        "content": "حسنًا، أخبرني إذا كنت بحاجة إلى مساعدة.",
         "timestamp": "2023-10-04T11:10:00Z",
         "isSentByMe": true
       },
       {
-        "content": "Sure, I'll keep you posted.",
+        "content": "بالتأكيد، سأبقيك على اطلاع.",
         "timestamp": "2023-10-04T12:00:00Z",
         "isSentByMe": false
       },
       {
-        "content": "I have some ideas we can discuss later.",
+        "content": "لدي بعض الأفكار يمكننا مناقشتها لاحقاً.",
         "timestamp": "2023-10-04T12:05:00Z",
         "isSentByMe": true
       }

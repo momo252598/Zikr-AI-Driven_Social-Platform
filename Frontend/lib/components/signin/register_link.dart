@@ -17,9 +17,9 @@ class RegisterLink extends StatelessWidget {
           color: Colors.black,
         ),
         children: [
-          const TextSpan(text: "Don't have an account? "),
+          const TextSpan(text: "ليس لديك حساب؟ "), // translated
           TextSpan(
-            text: 'Register here',
+            text: 'سجّل هنا', // translated link text
             style: TextStyle(
               color: AppStyles.txtFieldColor,
             ),

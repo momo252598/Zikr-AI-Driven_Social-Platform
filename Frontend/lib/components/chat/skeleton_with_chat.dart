@@ -37,7 +37,7 @@ class SkeletonWithChat extends StatelessWidget {
         ),
         centerTitle: true,
         title: Text(
-          "Al-Quran",
+          "تطبيق القرآن الكريم", // translated title
           style: TextStyle(
             fontFamily: 'Poppins',
             fontWeight: FontWeight.bold,

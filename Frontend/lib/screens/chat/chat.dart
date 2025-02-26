@@ -130,8 +130,12 @@ class _ChatPageState extends State<ChatPage> {
                 Expanded(
                   child: TextField(
                     controller: _messageController,
+                    textAlign:
+                        TextAlign.right, // added alignment for placeholder text
+                    textDirection:
+                        TextDirection.rtl, // set input direction to RTL
                     decoration: const InputDecoration(
-                      hintText: 'Type your message...',
+                      hintText: '...اكتب رسالتك', // translated hint text
                       border: OutlineInputBorder(),
                     ),
                   ),

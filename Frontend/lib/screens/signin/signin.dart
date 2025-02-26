@@ -44,7 +44,7 @@ class LoginScreen extends StatelessWidget {
                   const Align(
                     alignment: Alignment.center,
                     child: Text(
-                      'Sign In',
+                      'تسجيل الدخول', // translated text
                       style: TextStyle(
                         color: Color(0xFF010001),
                         fontSize: 14,

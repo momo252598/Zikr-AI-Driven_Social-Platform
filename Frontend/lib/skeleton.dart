@@ -60,64 +60,68 @@ class _SkeletonState extends State<Skeleton> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        // Custom beautiful app bar with gradient and pattern image
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppStyles.darkPurple,
-                AppStyles.lightPurple,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            image: const DecorationImage(
-              image: AssetImage(AppMedia
-                  .pattern3), // add a suitable Islamic pattern image in assets
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Color.fromARGB(96, 255, 255, 255),
-                BlendMode.dstATop,
+    return Directionality(
+      textDirection: TextDirection.rtl, // set app to RTL
+      child: Scaffold(
+        appBar: AppBar(
+          // Custom beautiful app bar with gradient and pattern image
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppStyles.darkPurple,
+                  AppStyles.lightPurple,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              image: const DecorationImage(
+                image: AssetImage(AppMedia
+                    .pattern3), // add a suitable Islamic pattern image in assets
+                fit: BoxFit.cover,
+                colorFilter: ColorFilter.mode(
+                  Color.fromARGB(96, 255, 255, 255),
+                  BlendMode.dstATop,
+                ),
               ),
             ),
           ),
-        ),
-        centerTitle: true,
-        title: Text(
-          "Al-Quran",
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-            color: AppStyles.white,
+          centerTitle: true,
+          title: Text(
+            "تطبيق القرآن الكريم", // translated title
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.bold,
+              color: AppStyles.white,
+            ),
           ),
         ),
-      ),
-      body: _pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: AppStyles.bgColor,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppStyles.lightPurple,
-        unselectedItemColor:
-            AppStyles.grey, // Updated color for better visibility
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(
-              icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'Quran'),
-          BottomNavigationBarItem(
-              icon: Icon(FlutterIslamicIcons.prayer), label: 'Prayers'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+        body: _pages[_currentIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: AppStyles.bgColor,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppStyles.lightPurple,
+          unselectedItemColor:
+              AppStyles.grey, // Updated color for better visibility
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() {
+              _currentIndex = index;
+            });
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
+            BottomNavigationBarItem(
+                icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
+            BottomNavigationBarItem(
+                icon: Icon(FlutterIslamicIcons.prayer), label: 'الصلاة'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'الرسائل'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.person), label: 'الملف الشخصي'),
+          ],
+        ),
       ),
     );
   }

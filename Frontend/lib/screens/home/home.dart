@@ -10,7 +10,7 @@ class HomePage extends StatelessWidget {
       backgroundColor: AppStyles.bgColor,
       // ...existing app bar or other widgets...
       body: Center(
-        child: Text('Home Page',
+        child: Text('الصفحة الرئيسية',
             style: Theme.of(context).textTheme.headlineMedium),
       ),
     );

@@ -68,16 +68,19 @@ Future<List<Prayer>> _getPrayerTimes() async {
 
   return [
     Prayer(
-        name: "Fajr", time: shiftedOrNext(todayTimes.fajr, tomorrowTimes.fajr)),
+        name: "الفجر",
+        time: shiftedOrNext(todayTimes.fajr, tomorrowTimes.fajr)),
     Prayer(
-        name: "Dhuhr",
+        name: "الظهر",
         time: shiftedOrNext(todayTimes.dhuhr, tomorrowTimes.dhuhr)),
-    Prayer(name: "Asr", time: shiftedOrNext(todayTimes.asr, tomorrowTimes.asr)),
     Prayer(
-        name: "Maghrib",
+        name: "العصر", time: shiftedOrNext(todayTimes.asr, tomorrowTimes.asr)),
+    Prayer(
+        name: "المغرب",
         time: shiftedOrNext(todayTimes.maghrib, tomorrowTimes.maghrib)),
     Prayer(
-        name: "Isha", time: shiftedOrNext(todayTimes.isha, tomorrowTimes.isha)),
+        name: "العشاء",
+        time: shiftedOrNext(todayTimes.isha, tomorrowTimes.isha)),
   ];
 }
 
@@ -91,15 +94,15 @@ class PrayerCard extends StatelessWidget {
   // Map for prayer icons.
   IconData _getIcon(String name) {
     switch (name) {
-      case "Fajr":
+      case "الفجر":
         return Icons.wb_twighlight;
-      case "Dhuhr":
+      case "الظهر":
         return Icons.wb_sunny;
-      case "Asr":
+      case "العصر":
         return Icons.wb_sunny_rounded;
-      case "Maghrib":
+      case "المغرب":
         return Icons.wb_twilight;
-      case "Isha":
+      case "العشاء":
         return Icons.nights_stay;
       default:
         return Icons.access_time;
@@ -109,11 +112,11 @@ class PrayerCard extends StatelessWidget {
   // Calculates time left until the prayer.
   String _timeLeft() {
     Duration diff = prayer.time.difference(DateTime.now());
-    if (diff.isNegative) return "Passed";
+    if (diff.isNegative) return "انتهى"; // translated text
     String twoDigits(int n) => n.toString().padLeft(2, "0");
     String hours = twoDigits(diff.inHours);
     String minutes = twoDigits(diff.inMinutes.remainder(60));
-    return "$hours:$minutes left";
+    return "$hours:$minutes متبقي"; // appended "متبقي"
   }
 
   @override
@@ -157,7 +160,7 @@ class PrayerCard extends StatelessWidget {
                                     : Colors.purple)),
                     const SizedBox(height: 4),
                     Text(
-                      "Time: ${TimeOfDay.fromDateTime(prayer.time.toLocal()).format(context)}",
+                      "الوقت: ${TimeOfDay.fromDateTime(prayer.time.toLocal()).format(context)}", // updated label
                       style: TextStyle(
                         fontSize: 16,
                         color: isClosest ? AppStyles.white : Colors.purple,

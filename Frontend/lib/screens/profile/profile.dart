@@ -9,8 +9,8 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
       body: Center(
-        child: Text('Profile Page',
-            style: Theme.of(context).textTheme.headlineMedium),
+        child:
+            Text('الحساب', style: Theme.of(context).textTheme.headlineMedium),
       ),
     );
   }

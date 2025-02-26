@@ -17,6 +17,14 @@ class _BrowserChatLayoutState extends State<BrowserChatLayout> {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        Expanded(
+          child: selectedChatId != null
+              ? ChatPage(chatId: selectedChatId!)
+              : Center(
+                  child: Text("إختر محادثة أو أنشئ رسالة جديدة!",
+                      style: Theme.of(context).textTheme.displaySmall)),
+        ),
+        VerticalDivider(width: 1, color: AppStyles.grey),
         ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 250, maxWidth: 350),
           child: AllChatsPage(
@@ -27,14 +35,6 @@ class _BrowserChatLayoutState extends State<BrowserChatLayout> {
             },
           ),
         ),
-        VerticalDivider(width: 1, color: AppStyles.grey),
-        Expanded(
-          child: selectedChatId != null
-              ? ChatPage(chatId: selectedChatId!)
-              : Center(
-                  child: Text("Select a chat, or start a new one!",
-                      style: Theme.of(context).textTheme.displaySmall)),
-        )
       ],
     );
   }

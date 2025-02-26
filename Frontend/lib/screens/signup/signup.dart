@@ -26,66 +26,69 @@ class _SignUpScreenState extends State<SignUpScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Stack(
-        children: [
-          // Background image covers whole screen
-          Container(
-            decoration: const BoxDecoration(
-                // image: DecorationImage(
-                // image: AssetImage(AppMedia.pattern2),
-                // fit: BoxFit.cover,
-                // colorFilter: ColorFilter.mode(
-                //   Colors.black.withOpacity(0.2), // adjust opacity as needed
-                //   BlendMode.darken,
-                // ),
-                // ),
-                ),
-          ),
-          // Foreground content
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.only(
-                top: kToolbarHeight + 10, // leave space for AppBar
-                left: 32,
-                right: 32,
-                bottom: 11,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Change icon based on selected gender
-                  Icon(
-                    _selectedGender == 'Female'
-                        ? FlutterIslamicIcons.muslimah2
-                        : FlutterIslamicIcons.muslim2,
-                    size: 200,
-                    color: AppStyles.black,
+      body: Directionality(
+        textDirection: TextDirection.rtl, // added RTL direction
+        child: Stack(
+          children: [
+            // Background image covers whole screen
+            Container(
+              decoration: const BoxDecoration(
+                  // image: DecorationImage(
+                  // image: AssetImage(AppMedia.pattern2),
+                  // fit: BoxFit.cover,
+                  // colorFilter: ColorFilter.mode(
+                  //   Colors.black.withOpacity(0.2), // adjust opacity as needed
+                  //   BlendMode.darken,
+                  // ),
+                  // ),
                   ),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'Sign Up',
-                      style: TextStyle(
-                        color: AppStyles.black,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
+            ),
+            // Foreground content
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  top: kToolbarHeight + 10, // leave space for AppBar
+                  left: 32,
+                  right: 32,
+                  bottom: 11,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Change icon based on selected gender
+                    Icon(
+                      _selectedGender == 'أنثى'
+                          ? FlutterIslamicIcons.muslimah2
+                          : FlutterIslamicIcons.muslim2,
+                      size: 200,
+                      color: AppStyles.black,
+                    ),
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'إنشاء حساب', // translated text
+                        style: TextStyle(
+                          color: AppStyles.black,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 22),
-                  SignUpForm(
-                    onGenderChanged: (value) {
-                      setState(() {
-                        _selectedGender = value;
-                      });
-                    },
-                  ),
-                ],
+                    const SizedBox(height: 22),
+                    SignUpForm(
+                      onGenderChanged: (value) {
+                        setState(() {
+                          _selectedGender = value;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

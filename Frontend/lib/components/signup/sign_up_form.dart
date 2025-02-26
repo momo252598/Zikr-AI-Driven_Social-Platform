@@ -27,6 +27,9 @@ class _SignUpFormState extends State<SignUpForm> {
   // New gender variable
   String? _selectedGender;
 
+  // New state variable for password visibility
+  bool _obscurePassword = true;
+
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
       final response = await http.post(
@@ -71,10 +74,10 @@ class _SignUpFormState extends State<SignUpForm> {
                 Expanded(
                   child: CustomTextField(
                     controller: _firstNameController,
-                    hintText: 'First Name',
+                    hintText: 'الاسم الأول', // translated hint
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Enter first name';
+                        return 'ادخل الاسم الأول'; // translated error
                       }
                       return null;
                     },
@@ -84,10 +87,10 @@ class _SignUpFormState extends State<SignUpForm> {
                 Expanded(
                   child: CustomTextField(
                     controller: _lastNameController,
-                    hintText: 'Last Name',
+                    hintText: 'اسم العائلة', // translated hint
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Enter last name';
+                        return 'ادخل اسم العائلة'; // translated error
                       }
                       return null;
                     },
@@ -99,10 +102,11 @@ class _SignUpFormState extends State<SignUpForm> {
             // Username
             CustomTextField(
               controller: _usernameController,
-              hintText: 'Username',
+              hintText: 'اسم المستخدم', // translated hint
               keyboardType: TextInputType.text,
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Enter username';
+                if (value == null || value.isEmpty)
+                  return 'ادخل اسم المستخدم'; // translated error
                 return null;
               },
             ),
@@ -110,21 +114,34 @@ class _SignUpFormState extends State<SignUpForm> {
             // Email
             CustomTextField(
               controller: _emailController,
-              hintText: 'Email',
+              hintText: 'البريد الإلكتروني', // translated hint
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Enter email';
+                if (value == null || value.isEmpty)
+                  return 'ادخل البريد الإلكتروني'; // translated error
                 return null;
               },
             ),
             const SizedBox(height: 20),
-            // Password
+            // Password field with show/hide functionality using CustomTextField
             CustomTextField(
               controller: _passwordController,
-              hintText: 'Password',
-              obscureText: true,
+              hintText: 'كلمة المرور', // translated hint
+              obscureText: _obscurePassword, // updated
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                  color: AppStyles.white,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Enter password';
+                if (value == null || value.isEmpty)
+                  return 'ادخل كلمة المرور'; // translated error
                 return null;
               },
             ),
@@ -135,7 +152,7 @@ class _SignUpFormState extends State<SignUpForm> {
               alignment: Alignment.centerLeft,
               style: TextStyle(color: AppStyles.white),
               selectedItemBuilder: (BuildContext context) {
-                return ['Male', 'Female'].map((String value) {
+                return ['ذكر', 'أنثى'].map((String value) {
                   return Text(value, style: TextStyle(color: AppStyles.white));
                 }).toList();
               },
@@ -144,7 +161,7 @@ class _SignUpFormState extends State<SignUpForm> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppStyles.txtFieldColor,
-                hintText: 'Gender',
+                hintText: 'الجنس', // translated hint
                 hintStyle: TextStyle(color: AppStyles.white),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -155,13 +172,12 @@ class _SignUpFormState extends State<SignUpForm> {
               ),
               items: [
                 DropdownMenuItem(
-                  value: 'Male',
-                  child: Text('Male', style: TextStyle(color: AppStyles.black)),
+                  value: 'ذكر',
+                  child: Text('ذكر', style: TextStyle(color: AppStyles.black)),
                 ),
                 DropdownMenuItem(
-                  value: 'Female',
-                  child:
-                      Text('Female', style: TextStyle(color: AppStyles.black)),
+                  value: 'أنثى',
+                  child: Text('أنثى', style: TextStyle(color: AppStyles.black)),
                 ),
               ],
               onChanged: (String? newValue) {
@@ -171,7 +187,8 @@ class _SignUpFormState extends State<SignUpForm> {
                 widget.onGenderChanged?.call(newValue); // propagate the change
               },
               validator: (value) {
-                if (value == null || value.isEmpty) return 'Select gender';
+                if (value == null || value.isEmpty)
+                  return 'اختر الجنس'; // translated error
                 return null;
               },
             ),
@@ -189,7 +206,7 @@ class _SignUpFormState extends State<SignUpForm> {
                 minimumSize: const Size(double.infinity, 50),
               ),
               child: Text(
-                'Create Account',
+                'إنشاء حساب', // translated button text
                 style: TextStyle(
                   color: AppStyles.white,
                   fontSize: 13,

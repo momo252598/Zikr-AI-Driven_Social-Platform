@@ -88,7 +88,7 @@ class _QuranPageState extends State<QuranPage2> {
 
                           ayatFiltered = searchWords(searchQuery);
                           filteredData = widget.suraJsonData.where((sura) {
-                            final suraName = sura['englishName'].toLowerCase();
+                            final suraName = sura['name'].toLowerCase();
                             // final suraNameTranslated =
                             //     sura['name']
                             //         .toString()
@@ -106,7 +106,7 @@ class _QuranPageState extends State<QuranPage2> {
                     },
                     style: const TextStyle(color: Color.fromARGB(190, 0, 0, 0)),
                     decoration: const InputDecoration(
-                      hintText: 'Search',
+                      hintText: 'البحث',
                       hintStyle: TextStyle(),
                       // border: InputBorder.none,
                     ),
@@ -144,7 +144,7 @@ class _QuranPageState extends State<QuranPage2> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(pageNumbers[index].toString()),
-                                Text(getSurahName(
+                                Text(getSurahNameArabic(
                                     getPageData(pageNumbers[index])[0]
                                         ["surah"]))
                               ],
@@ -174,9 +174,9 @@ class _QuranPageState extends State<QuranPage2> {
                   itemCount: filteredData.length,
                   itemBuilder: (context, index) {
                     int suraNumber = index + 1;
-                    String suraName = filteredData[index]["englishName"];
+                    String suraName = filteredData[index]["name"];
                     String suraNameEnglishTranslated =
-                        filteredData[index]["englishNameTranslation"];
+                        filteredData[index]["englishName"];
                     int suraNumberInQuran = filteredData[index]["number"];
                     String suraNameTranslated =
                         filteredData[index]["name"].toString();

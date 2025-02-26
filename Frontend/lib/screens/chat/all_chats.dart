@@ -31,7 +31,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
       appBar: AppBar(
-        title: const Text('All Chats'),
+        title: const Text('جميع الرسائل'), // translated title
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(

@@ -56,10 +56,12 @@ class _SignInFormState extends State<SignInForm> {
                 children: [
                   TextFormField(
                     controller: _emailController,
+                    textDirection: TextDirection.rtl, // set RTL direction
+                    textAlign: TextAlign.right, // added alignment
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppStyles.txtFieldColor,
-                      hintText: 'Email',
+                      hintText: 'البريد الإلكتروني', // translated hint
                       hintStyle: TextStyle(color: AppStyles.white),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -80,19 +82,20 @@ class _SignInFormState extends State<SignInForm> {
                   const SizedBox(height: 31),
                   TextFormField(
                     controller: _passwordController,
+                    textDirection: TextDirection.rtl, // set RTL direction
+                    textAlign: TextAlign.right, // added alignment
                     obscureText: _obscureText,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppStyles.txtFieldColor,
-                      hintText: 'Password',
+                      hintText: 'كلمة المرور', // translated hint
                       hintStyle: TextStyle(color: AppStyles.white),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 21, vertical: 15),
-                      suffixIcon: IconButton(
+                      // Moved IconButton from suffixIcon to prefixIcon
+                      prefixIcon: IconButton(
                         icon: Icon(
                           _obscureText
                               ? Icons.visibility_off
@@ -105,6 +108,8 @@ class _SignInFormState extends State<SignInForm> {
                           });
                         },
                       ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 21, vertical: 15),
                     ),
                     style: TextStyle(color: AppStyles.white),
                     validator: (value) {
@@ -126,7 +131,7 @@ class _SignInFormState extends State<SignInForm> {
                       minimumSize: const Size(double.infinity, 50),
                     ),
                     child: Text(
-                      'Sign in',
+                      'تسجيل الدخول', // translated button text
                       style: TextStyle(
                         color: AppStyles.white,
                         fontSize: 13,
