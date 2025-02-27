@@ -15,6 +15,7 @@ import 'package:software_graduation_project/base/res/media.dart';
 import '../../base/res/styles/app_styles.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart';
+import 'package:software_graduation_project/screens/quran/quran_web/responsive_quran_layout.dart';
 
 class Skeleton extends StatefulWidget {
   const Skeleton({super.key});
@@ -33,9 +34,6 @@ class _SkeletonState extends State<Skeleton> {
     setState(() {
       widgetjsonData = data;
     });
-    // final String jsonString2 =
-    //     await rootBundle.loadString('assets/utils/surahs.json');
-    // var data2 = jsonDecode(jsonString2);
   }
 
   @override
@@ -49,9 +47,11 @@ class _SkeletonState extends State<Skeleton> {
   List<Widget> get _pages {
     return [
       const HomePage(),
-      QuranPage2(
-        suraJsonData: widgetjsonData,
-      ),
+      widgetjsonData != null
+          ? kIsWeb
+              ? ResponsiveQuranLayout(suraJsonData: widgetjsonData)
+              : QuranPage2(suraJsonData: widgetjsonData)
+          : const Center(child: CircularProgressIndicator()),
       const PrayersPage(),
       kIsWeb ? const BrowserChatLayout() : const AllChatsPage(),
       const ProfilePage(),
