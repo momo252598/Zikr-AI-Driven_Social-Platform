@@ -48,7 +48,7 @@ dependencies:
   easy_container: ^1.0.5
   string_validator: ^0.3.0
   flutter_screenutil: ^5.9.3
-  # wakelock: ^0.6.2
+  just_audio: ^0.9.36
 
 dev_dependencies:
   flutter_test:

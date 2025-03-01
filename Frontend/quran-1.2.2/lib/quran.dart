@@ -210,12 +210,13 @@ String getVerse(int surahNumber, int verseNumber,
 
   return verse + (verseEndSymbol ? getVerseEndSymbol(verseNumber) : "");
 }
+
 String getVerseQCF(int surahNumber, int verseNumber,
     {bool verseEndSymbol = false}) {
   String verse = "";
   for (var i in quranText) {
     if (i['surah_number'] == surahNumber && i['verse_number'] == verseNumber) {
-      verse = i['qcfData'].toString();//print(verse);
+      verse = i['qcfData'].toString(); //print(verse);
       break;
     }
   }
@@ -226,6 +227,7 @@ String getVerseQCF(int surahNumber, int verseNumber,
 
   return verse + (verseEndSymbol ? getVerseEndSymbol(verseNumber) : "");
 }
+
 ///Takes [juzNumber] and returns Juz URL (from Quran.com)
 String getJuzURL(int juzNumber) {
   return "https://quran.com/juz/$juzNumber";
@@ -350,6 +352,7 @@ String getAudioURLByVerse(int surahNumber, int verseNumber, reciterIdentifier) {
       reciterIdentifier == "ar.muhammadjibreel" ||
       reciterIdentifier == "ar.muhammadayyoub" ||
       reciterIdentifier == "ar.ibrahimakhbar" ||
+      reciterIdentifier == "ar.husary" ||
       reciterIdentifier == "ar.minshawi") {
     return "https://cdn.islamic.network/quran/audio/128/$reciterIdentifier/$verseNum.mp3";
   } else {
