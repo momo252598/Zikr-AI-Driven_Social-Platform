@@ -8,7 +8,7 @@ import '../../base/res/utils/tafseer.dart';
 import 'tafseer_bottom_sheet.dart';
 import 'web_tafseer_dialog.dart'; // Import the new web tafseer dialog
 
-// Using the same ReciterManager from verse_bottom_sheet.dart
+// Using the same ReciterManager and TafseerManager from verse_bottom_sheet.dart
 
 /// Shows a popup near the verse for web users
 void showWebVersePopup(
@@ -139,7 +139,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
   };
 
   // Track if reciter dialog is open to avoid multiple dialogs
-  OverlayEntry? _reciterDialogOverlay;
+  OverlayEntry? _dialogOverlay;
 
   @override
   void initState() {
@@ -174,15 +174,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
   @override
   void dispose() {
     _isDisposed = true;
-    _removeReciterDialog();
+    _removeDialog();
     super.dispose();
   }
 
-  // Helper method to safely remove the reciter dialog overlay if it exists
-  void _removeReciterDialog() {
-    if (_reciterDialogOverlay != null) {
-      _reciterDialogOverlay!.remove();
-      _reciterDialogOverlay = null;
+  // Helper method to safely remove the dialog overlay if it exists
+  void _removeDialog() {
+    if (_dialogOverlay != null) {
+      _dialogOverlay!.remove();
+      _dialogOverlay = null;
     }
   }
 
@@ -269,7 +269,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
   // Show dialog to select reciter - adapted for web with overlay positioning
   void _showReciterSelectionDialog() {
     // First remove any existing dialog
-    _removeReciterDialog();
+    _removeDialog();
 
     // Get the global position of this widget
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -295,13 +295,13 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     }
 
     // Create a new overlay entry
-    _reciterDialogOverlay = OverlayEntry(
+    _dialogOverlay = OverlayEntry(
       builder: (context) => Stack(
         children: [
           // Full-screen dismissible background
           Positioned.fill(
             child: GestureDetector(
-              onTap: _removeReciterDialog,
+              onTap: _removeDialog,
               child: Container(color: Colors.transparent),
             ),
           ),
@@ -347,7 +347,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                             setState(() {
                               ReciterManager.lastSelectedReciter = reciterId;
                             });
-                            _removeReciterDialog();
+                            _removeDialog();
                           },
                           child: Container(
                             decoration: BoxDecoration(
@@ -387,7 +387,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _removeReciterDialog,
+                    onPressed: _removeDialog,
                     child: Text(
                       'إلغاء',
                       style: TextStyle(
@@ -406,13 +406,13 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     );
 
     // Insert the overlay
-    Overlay.of(context).insert(_reciterDialogOverlay!);
+    Overlay.of(context).insert(_dialogOverlay!);
   }
 
   // Show dialog to select tafseer edition for web
   void _showTafseerSelectionDialog() {
-    // First remove any existing reciter dialog
-    _removeReciterDialog();
+    // First remove any existing dialog
+    _removeDialog();
 
     // Get the global position of this widget
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -437,13 +437,13 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     }
 
     // Create a new overlay entry for tafseer selection
-    _reciterDialogOverlay = OverlayEntry(
+    _dialogOverlay = OverlayEntry(
       builder: (context) => Stack(
         children: [
           // Full-screen dismissible background
           Positioned.fill(
             child: GestureDetector(
-              onTap: _removeReciterDialog,
+              onTap: _removeDialog,
               child: Container(color: Colors.transparent),
             ),
           ),
@@ -488,25 +488,17 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
                         return InkWell(
                           onTap: () {
-                            // Remove the reciter dialog
-                            _removeReciterDialog();
-
-                            // Store a reference to the onClose callback for use after navigation
-                            final closeCallback = widget.onClose;
-
-                            // Close the verse popup first by calling onClose
-                            closeCallback();
-
-                            // Then show the web tafseer dialog
-                            showWebTafseerDialog(
-                              context,
-                              surahNumber: widget.surahNumber,
-                              verseNumber: widget.verseNumber,
-                              tafseerEdition: tafseerSlug,
-                            );
+                            setState(() {
+                              TafseerManager.lastSelectedTafseer = tafseerSlug;
+                            });
+                            _removeDialog();
                           },
                           child: Container(
                             decoration: BoxDecoration(
+                              color: TafseerManager.lastSelectedTafseer ==
+                                      tafseerSlug
+                                  ? AppStyles.lightPurple.withOpacity(0.2)
+                                  : null,
                               border: Border(
                                 bottom: BorderSide(
                                   color: Colors.grey.withOpacity(0.3),
@@ -522,8 +514,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                               style: TextStyle(
                                 fontFamily: 'Taha',
                                 fontSize: 14,
-                                fontWeight: FontWeight.normal,
-                                color: Colors.black,
+                                fontWeight:
+                                    TafseerManager.lastSelectedTafseer ==
+                                            tafseerSlug
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                color: TafseerManager.lastSelectedTafseer ==
+                                        tafseerSlug
+                                    ? AppStyles.txtFieldColor
+                                    : Colors.black,
                               ),
                             ),
                           ),
@@ -532,7 +531,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                     ),
                   ),
                   TextButton(
-                    onPressed: _removeReciterDialog,
+                    onPressed: _removeDialog,
                     child: Text(
                       'إلغاء',
                       style: TextStyle(
@@ -551,7 +550,24 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     );
 
     // Insert the overlay
-    Overlay.of(context).insert(_reciterDialogOverlay!);
+    Overlay.of(context).insert(_dialogOverlay!);
+  }
+
+  // Show tafseer directly without selecting
+  void _showTafseerDirectly() {
+    // Store the original onClose callback for use after navigation
+    final closeCallback = widget.onClose;
+
+    // Close the verse popup first by calling onClose
+    closeCallback();
+
+    // Then show the web tafseer dialog with current selection
+    showWebTafseerDialog(
+      context,
+      surahNumber: widget.surahNumber,
+      verseNumber: widget.verseNumber,
+      tafseerEdition: TafseerManager.lastSelectedTafseer,
+    );
   }
 
   // Helper method to safely get font size based on screen width
@@ -573,7 +589,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     return Container(
       width: popupWidth,
       constraints: BoxConstraints(
-        maxHeight: 300,
+        maxHeight: 350, // Increase height for additional elements
         maxWidth: screenWidth * 0.9, // Ensure popup doesn't exceed screen width
       ),
       decoration: BoxDecoration(
@@ -592,44 +608,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Top row with reciter selection and close button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Reciter selection button
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: TextButton.icon(
-                  icon: Icon(
-                    Icons.person,
-                    color: AppStyles.txtFieldColor,
-                    size: 16,
-                  ),
-                  label: Text(
-                    "اختيار القارئ",
-                    style: TextStyle(
-                      fontFamily: "Taha",
-                      fontSize: getFontSize(context, 12),
-                      color: AppStyles.txtFieldColor,
-                    ),
-                  ),
-                  onPressed: _showReciterSelectionDialog,
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: 2, horizontal: 4),
-                    minimumSize: Size(0, 0),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ),
-              // Close button
-              IconButton(
-                icon:
-                    Icon(Icons.close, size: 20, color: AppStyles.txtFieldColor),
-                onPressed: () => widget.onClose(),
-                padding: EdgeInsets.all(8),
-                constraints: BoxConstraints(),
-              ),
-            ],
+          // Top row with close button
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              icon: Icon(Icons.close, size: 20, color: AppStyles.txtFieldColor),
+              onPressed: () => widget.onClose(),
+              padding: EdgeInsets.all(8),
+              constraints: BoxConstraints(),
+            ),
           ),
 
           // Header with decorative element
@@ -650,7 +637,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Surah Name - Fixed font size
+                // Surah Name
                 Text(
                   "سورة ${getSurahNameArabic(widget.surahNumber)}",
                   textAlign: TextAlign.center,
@@ -663,7 +650,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   overflow: TextOverflow.ellipsis,
                 ),
 
-                // Decorative divider - Simplified
+                // Decorative divider
                 Container(
                   margin:
                       const EdgeInsets.symmetric(vertical: 6, horizontal: 50),
@@ -679,7 +666,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   ),
                 ),
 
-                // Verse Number - Fixed font size
+                // Verse Number
                 Text(
                   "الآية ${widget.verseNumber}",
                   textAlign: TextAlign.center,
@@ -694,16 +681,110 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          // Reciter label
-          Center(
-            child: Text(
-              "القارئ: ${_reciters[ReciterManager.lastSelectedReciter] ?? ''}",
-              style: TextStyle(
-                fontFamily: "Taha",
-                fontSize: getFontSize(context, 12),
-                color: AppStyles.darkPurple,
+          // Reciter row - right-to-left order for Arabic
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _reciters[ReciterManager.lastSelectedReciter] ?? '',
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: getFontSize(context, 12),
+                    fontWeight: FontWeight.bold,
+                    color: AppStyles.darkPurple,
+                  ),
+                ),
+                Text(
+                  " :القارئ",
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: getFontSize(context, 12),
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Reciter selection button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextButton.icon(
+              icon: Icon(
+                Icons.person,
+                color: AppStyles.txtFieldColor,
+                size: 14,
+              ),
+              label: Text(
+                "تغيير القارئ",
+                style: TextStyle(
+                  fontFamily: "Taha",
+                  fontSize: getFontSize(context, 12),
+                  color: AppStyles.txtFieldColor,
+                ),
+              ),
+              onPressed: _showReciterSelectionDialog,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 2),
+                minimumSize: Size(0, 30),
+              ),
+            ),
+          ),
+
+          // Tafseer row - right-to-left order for Arabic
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  TafseerService.tafseerEditions[
+                          TafseerManager.lastSelectedTafseer] ??
+                      '',
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: getFontSize(context, 12),
+                    fontWeight: FontWeight.bold,
+                    color: AppStyles.darkPurple,
+                  ),
+                ),
+                Text(
+                  " :التفسير",
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: getFontSize(context, 12),
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Tafseer selection button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextButton.icon(
+              icon: Icon(
+                Icons.book,
+                color: AppStyles.txtFieldColor,
+                size: 14,
+              ),
+              label: Text(
+                "تغيير التفسير",
+                style: TextStyle(
+                  fontFamily: "Taha",
+                  fontSize: getFontSize(context, 12),
+                  color: AppStyles.txtFieldColor,
+                ),
+              ),
+              onPressed: _showTafseerSelectionDialog,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 2),
+                minimumSize: Size(0, 30),
               ),
             ),
           ),
@@ -743,13 +824,13 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                       : _togglePlayPause,
                 ),
 
-                // Tafsir Button
+                // Tafsir Button - now directly shows the selected tafseer
                 _buildTextButton(
                   context,
                   icon: Icons.menu_book,
                   text: "التفسير",
                   backgroundColor: AppStyles.txtFieldColor,
-                  onPressed: _showTafseerSelectionDialog,
+                  onPressed: _showTafseerDirectly,
                 ),
               ],
             ),

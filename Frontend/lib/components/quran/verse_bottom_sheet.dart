@@ -11,6 +11,11 @@ class ReciterManager {
   static String lastSelectedReciter = 'ar.husary';
 }
 
+// Static variable to remember last selected tafseer across all bottom sheets
+class TafseerManager {
+  static String lastSelectedTafseer = 'ar-tafsir-muyassar';
+}
+
 /// Shows a bottom sheet with verse details
 void showVerseBottomSheet(
   BuildContext context,
@@ -80,7 +85,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
   bool _isLoading = false;
   late String _selectedReciter;
   bool _isOperationInProgress = false;
-  String _selectedTafseer = 'ar-tafsir-muyassar'; // Default tafseer
+  late String _selectedTafseer; // Changed from initialization to late
 
   // Map of reciter IDs to their Arabic names - added three new reciters
   final Map<String, String> _reciters = {
@@ -99,6 +104,9 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
 
     // Initialize with the last selected reciter from our static manager
     _selectedReciter = ReciterManager.lastSelectedReciter;
+
+    // Initialize with the last selected tafseer from our static manager
+    _selectedTafseer = TafseerManager.lastSelectedTafseer;
 
     // Set up audio player listeners
     widget.audioPlayer.playerStateStream.listen((state) {
@@ -342,26 +350,29 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                     style: TextStyle(
                       fontFamily: 'Taha',
                       fontSize: 16.sp,
-                      fontWeight: FontWeight.normal,
-                      color: AppStyles.black,
+                      // Make the selected tafseer text bold and colored
+                      fontWeight: _selectedTafseer == tafseerSlug
+                          ? FontWeight.bold
+                          : FontWeight.normal,
+                      color: _selectedTafseer == tafseerSlug
+                          ? AppStyles.txtFieldColor
+                          : AppStyles.black,
                     ),
                   ),
+                  selected: _selectedTafseer == tafseerSlug,
                   onTap: () {
                     setState(() {
                       _selectedTafseer = tafseerSlug;
+
+                      // Save the selection to our static manager
+                      TafseerManager.lastSelectedTafseer = tafseerSlug;
                     });
-
                     Navigator.of(context).pop();
-
-                    // Show the tafseer bottom sheet
-                    showTafseerBottomSheet(
-                      context,
-                      surahNumber: widget.surahNumber,
-                      verseNumber: widget.verseNumber,
-                      tafseerEdition: _selectedTafseer,
-                    );
                   },
-                  tileColor: Colors.transparent,
+                  // Add a subtle background for the selected item
+                  tileColor: _selectedTafseer == tafseerSlug
+                      ? AppStyles.lightPurple.withOpacity(0.2)
+                      : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -392,12 +403,22 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
     );
   }
 
+  // Show the tafseer directly without selecting edition
+  void _showTafseerDirectly() {
+    showTafseerBottomSheet(
+      context,
+      surahNumber: widget.surahNumber,
+      verseNumber: widget.verseNumber,
+      tafseerEdition: _selectedTafseer,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      // Adjust height to accommodate new button
-      height: MediaQuery.of(context).size.height * 0.42,
+      // Increase height to fix overflow issue
+      height: MediaQuery.of(context).size.height * 0.48,
       decoration: BoxDecoration(
         color: AppStyles.bgColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -485,20 +506,12 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
             ),
           ),
 
-          // Currently selected reciter display
+          // Currently selected reciter display - switched order
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  "القارئ: ",
-                  style: TextStyle(
-                    fontFamily: "Taha",
-                    fontSize: 14.sp,
-                    color: Colors.grey[600],
-                  ),
-                ),
                 Text(
                   _reciters[_selectedReciter] ?? '',
                   style: TextStyle(
@@ -506,6 +519,14 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                     fontSize: 14.sp,
                     fontWeight: FontWeight.bold,
                     color: AppStyles.darkPurple,
+                  ),
+                ),
+                Text(
+                  " :القارئ",
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: 14.sp,
+                    color: Colors.grey[600],
                   ),
                 ),
               ],
@@ -530,6 +551,57 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 ),
               ),
               onPressed: _showReciterSelectionDialog,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 4),
+              ),
+            ),
+          ),
+
+          // Currently selected tafseer display - switched order
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  TafseerService.tafseerEditions[_selectedTafseer] ?? '',
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppStyles.darkPurple,
+                  ),
+                ),
+                Text(
+                  " :التفسير",
+                  style: TextStyle(
+                    fontFamily: "Taha",
+                    fontSize: 14.sp,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Button to change tafseer
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: TextButton.icon(
+              icon: Icon(
+                Icons.book,
+                color: AppStyles.txtFieldColor,
+                size: 18,
+              ),
+              label: Text(
+                "تغيير التفسير",
+                style: TextStyle(
+                  fontFamily: "Taha",
+                  fontSize: 14.sp,
+                  color: AppStyles.txtFieldColor,
+                ),
+              ),
+              onPressed: _showTafseerSelectionDialog,
               style: TextButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 4),
               ),
@@ -570,12 +642,12 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                   showLoader: _isLoading,
                 ),
 
-                // Tafsir Button - Now opens tafseer selection dialog
+                // Tafsir Button - Now directly shows the selected tafseer
                 _buildTextButton(
                   icon: Icons.menu_book,
                   text: "التفسير",
                   backgroundColor: AppStyles.txtFieldColor,
-                  onPressed: _showTafseerSelectionDialog,
+                  onPressed: _showTafseerDirectly,
                 ),
               ],
             ),
