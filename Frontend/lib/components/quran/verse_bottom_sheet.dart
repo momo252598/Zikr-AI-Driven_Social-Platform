@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:quran/quran.dart';
 import '../../base/res/styles/app_styles.dart';
+import 'package:software_graduation_project/base/res/utils/tafseer.dart';
+import 'tafseer_bottom_sheet.dart';
 
 // Static variable to remember last selected reciter across all bottom sheets
 class ReciterManager {
@@ -78,6 +80,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
   bool _isLoading = false;
   late String _selectedReciter;
   bool _isOperationInProgress = false;
+  String _selectedTafseer = 'ar-tafsir-muyassar'; // Default tafseer
 
   // Map of reciter IDs to their Arabic names - added three new reciters
   final Map<String, String> _reciters = {
@@ -108,6 +111,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
           setState(() {
             _isLoading = false;
             _isPlaying = true;
+            _isOperationInProgress = false; // Reset flag when playback starts
           });
         }
       }
@@ -117,6 +121,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
         setState(() {
           _isLoading = false;
           _isPlaying = false;
+          _isOperationInProgress = false; // Also reset flag on error
         });
       }
     });
@@ -274,6 +279,93 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 // Add less padding between items to make list more compact
                 contentPadding:
                 EdgeInsets.symmetric(horizontal: 16, vertical: 4);
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text(
+                'إلغاء',
+                style: TextStyle(
+                  fontFamily: 'Taha',
+                  fontSize: 16.sp,
+                  color: Colors.grey,
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        );
+      },
+    );
+  }
+
+  // Show dialog to select tafseer edition
+  void _showTafseerSelectionDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'اختر التفسير',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Taha',
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: AppStyles.darkPurple,
+            ),
+          ),
+          content: Container(
+            width: double.maxFinite,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.25,
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: TafseerService.tafseerEditions.length,
+              itemBuilder: (BuildContext context, int index) {
+                String tafseerSlug =
+                    TafseerService.tafseerEditions.keys.elementAt(index);
+                String tafseerName =
+                    TafseerService.tafseerEditions[tafseerSlug]!;
+
+                return ListTile(
+                  title: Text(
+                    tafseerName,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Taha',
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.normal,
+                      color: AppStyles.black,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      _selectedTafseer = tafseerSlug;
+                    });
+
+                    Navigator.of(context).pop();
+
+                    // Show the tafseer bottom sheet
+                    showTafseerBottomSheet(
+                      context,
+                      surahNumber: widget.surahNumber,
+                      verseNumber: widget.verseNumber,
+                      tafseerEdition: _selectedTafseer,
+                    );
+                  },
+                  tileColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
               },
             ),
           ),
@@ -478,11 +570,12 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                   showLoader: _isLoading,
                 ),
 
-                // Tafsir Button
+                // Tafsir Button - Now opens tafseer selection dialog
                 _buildTextButton(
                   icon: Icons.menu_book,
                   text: "التفسير",
                   backgroundColor: AppStyles.txtFieldColor,
+                  onPressed: _showTafseerSelectionDialog,
                 ),
               ],
             ),
