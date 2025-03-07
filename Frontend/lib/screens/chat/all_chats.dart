@@ -31,16 +31,51 @@ class _AllChatsPageState extends State<AllChatsPage> {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
       appBar: AppBar(
-        title: const Text('جميع الرسائل'), // translated title
+        title: Text(
+          'جميع الرسائل',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.bold,
+            color: AppStyles.white,
+          ),
+        ),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppStyles.darkPurple,
+                AppStyles.lightPurple,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            image: const DecorationImage(
+              image: AssetImage(AppMedia.pattern3),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Color.fromARGB(96, 255, 255, 255),
+                BlendMode.dstATop,
+              ),
+            ),
+          ),
+        ), // translated title
         backgroundColor: Colors.transparent,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: Icon(
+              Icons.add,
+              color: AppStyles.white,
+            ),
             onPressed: () {
               // New chat functionality to be implemented later
             },
           )
         ],
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppStyles.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
       body: FutureBuilder<List<dynamic>>(
         future: _loadChats(),
@@ -91,8 +126,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                SkeletonWithChat(chatId: chat['id']),
+                            builder: (context) => ChatPage(chatId: chat['id']),
                           ),
                         );
                       }

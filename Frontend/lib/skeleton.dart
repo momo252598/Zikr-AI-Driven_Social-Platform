@@ -10,6 +10,7 @@ import 'screens/prayers/prayers.dart';
 import 'screens/chat/all_chats.dart';
 import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
+import 'screens/community/community.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 import '../../base/res/styles/app_styles.dart';
@@ -53,7 +54,8 @@ class _SkeletonState extends State<Skeleton> {
               : QuranPage2(suraJsonData: widgetjsonData)
           : const Center(child: CircularProgressIndicator()),
       const PrayersPage(),
-      kIsWeb ? const BrowserChatLayout() : const AllChatsPage(),
+      // kIsWeb ? const BrowserChatLayout() : const AllChatsPage(),
+      const CommunityPage(),
       const ProfilePage(),
     ];
   }
@@ -116,8 +118,10 @@ class _SkeletonState extends State<Skeleton> {
             BottomNavigationBarItem(
                 icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
             BottomNavigationBarItem(
-                icon: Icon(FlutterIslamicIcons.prayer), label: 'الصلاة'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'الرسائل'),
+                icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
+            BottomNavigationBarItem(
+                icon: Icon(FlutterIslamicIcons.solidCommunity),
+                label: 'المجتمع'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.person), label: 'الملف الشخصي'),
           ],

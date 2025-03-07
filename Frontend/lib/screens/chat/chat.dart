@@ -14,19 +14,58 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
+  String contactName = ''; // Store the contact name
+  Map<String, dynamic>? chatData;
+  bool isLoading = true;
 
-  Future<Map<String, dynamic>?> _loadConversation() async {
-    final jsonString = await DefaultAssetBundle.of(context)
-        .loadString('assets/utils/chat_ex.json');
-    List<dynamic> chats = json.decode(jsonString);
-    var chatObj = chats.firstWhere(
-      (chat) => chat['id'] == widget.chatId,
-      orElse: () => null,
-    );
-    if (chatObj != null && !chatObj.containsKey('messages')) {
-      chatObj['messages'] = []; // set empty conversation if none exists
+  @override
+  void initState() {
+    super.initState();
+    // Load conversation data when the page initializes
+    _loadConversationData();
+  }
+
+  Future<void> _loadConversationData() async {
+    try {
+      final jsonString = await DefaultAssetBundle.of(context)
+          .loadString('assets/utils/chat_ex.json');
+      List<dynamic> chats = json.decode(jsonString);
+
+      // Find our chat by ID
+      Map<String, dynamic>? foundChat;
+      for (var chat in chats) {
+        if (chat['id'] == widget.chatId) {
+          foundChat = Map<String, dynamic>.from(chat);
+          break;
+        }
+      }
+
+      if (foundChat != null) {
+        // Ensure messages array exists
+        if (!foundChat.containsKey('messages')) {
+          foundChat['messages'] = [];
+        }
+
+        setState(() {
+          chatData = foundChat;
+          contactName = foundChat?['name'] ?? 'محادثة';
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          contactName = 'محادثة غير موجودة';
+          chatData = {'messages': []};
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading chat: $e');
+      setState(() {
+        contactName = 'خطأ';
+        chatData = {'messages': []};
+        isLoading = false;
+      });
     }
-    return chatObj;
   }
 
   Future<void> _sendMessage() async {
@@ -85,46 +124,51 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
-      // appBar: AppBar(
-      //   title: const Text('Chat'),
-      //   backgroundColor: Colors.transparent,
-      // ),
+      appBar: AppBar(
+        title: Text(contactName,
+            style: TextStyle(
+              color: AppStyles.white,
+            )),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppStyles.darkPurple,
+                AppStyles.lightPurple,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            image: const DecorationImage(
+              image: AssetImage(AppMedia.pattern3),
+              fit: BoxFit.cover,
+              colorFilter: ColorFilter.mode(
+                Color.fromARGB(96, 255, 255, 255),
+                BlendMode.dstATop,
+              ),
+            ),
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppStyles.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: Column(
         children: [
           // Expanded list of messages
           Expanded(
-            child: FutureBuilder<Map<String, dynamic>?>(
-              future: _loadConversation(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data == null) {
-                  return const Center(child: Text('No conversation found.'));
-                }
-                final chat = snapshot.data!;
-                List<dynamic> messages = chat['messages'];
-                // Sort messages from oldest to newest
-                messages.sort((a, b) => DateTime.parse(a['timestamp'])
-                    .compareTo(DateTime.parse(b['timestamp'])));
-
-                if (messages.isEmpty) {
-                  return const Center(child: Text('No messages available.'));
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8, bottom: 8),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) =>
-                      _buildMessage(messages[index]),
-                );
-              },
-            ),
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _buildMessagesList(),
           ),
           // Input field for sending messages
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: Colors.white,
+            color: AppStyles.white,
             child: Row(
               children: [
                 Expanded(
@@ -149,6 +193,30 @@ class _ChatPageState extends State<ChatPage> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildMessagesList() {
+    if (chatData == null) {
+      return const Center(child: Text('لم يتم العثور على المحادثة'));
+    }
+
+    List<dynamic> messages = chatData!['messages'] ?? [];
+
+    // Sort messages from oldest to newest
+    if (messages.isNotEmpty) {
+      messages.sort((a, b) => DateTime.parse(a['timestamp'])
+          .compareTo(DateTime.parse(b['timestamp'])));
+    }
+
+    if (messages.isEmpty) {
+      return const Center(child: Text('لا توجد رسائل بعد'));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(top: 8, bottom: 8),
+      itemCount: messages.length,
+      itemBuilder: (context, index) => _buildMessage(messages[index]),
     );
   }
 }
