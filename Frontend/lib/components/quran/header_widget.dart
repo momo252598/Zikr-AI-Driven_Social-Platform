@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:quran/quran.dart';
+import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 
 class HeaderWidget extends StatelessWidget {
   final dynamic e;
@@ -56,7 +57,7 @@ class HeaderWidget extends StatelessWidget {
                   style: TextStyle(
                       fontFamily: "arsura",
                       fontSize: 22 * textScaleFactor,
-                      color: Colors.black),
+                      color: AppStyles.black),
                 ))),
                 Text(
                   "ترتيبها\n${e["surah"]}",

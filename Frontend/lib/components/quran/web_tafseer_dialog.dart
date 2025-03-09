@@ -120,7 +120,7 @@ class _WebTafseerDialogState extends State<WebTafseerDialog> {
               margin: const EdgeInsets.symmetric(vertical: 16),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppStyles.white,
                 borderRadius: BorderRadius.circular(15),
                 border: Border.all(
                   color: AppStyles.lightPurple.withOpacity(0.3),
@@ -133,7 +133,7 @@ class _WebTafseerDialogState extends State<WebTafseerDialog> {
                 style: TextStyle(
                   fontSize: 18,
                   fontFamily: "QCF_BSML", // Using Quran font
-                  color: Colors.black,
+                  color: AppStyles.black,
                 ),
               ),
             ),
@@ -150,7 +150,7 @@ class _WebTafseerDialogState extends State<WebTafseerDialog> {
                             style: TextStyle(
                               fontSize: 16,
                               fontFamily: "Taha",
-                              color: Colors.red,
+                              color: AppStyles.red,
                             ),
                           ),
                         )
@@ -163,7 +163,7 @@ class _WebTafseerDialogState extends State<WebTafseerDialog> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontFamily: "Taha",
-                                color: Colors.black,
+                                color: AppStyles.black,
                                 height: 1.5,
                               ),
                             ),

@@ -63,7 +63,7 @@ void showWebVersePopup(
           Positioned.fill(
             child: GestureDetector(
               onTap: handleClose,
-              child: Container(color: Colors.transparent),
+              child: Container(color: AppStyles.trans),
             ),
           ),
 
@@ -80,7 +80,7 @@ void showWebVersePopup(
                 ? (screenHeight - position.dy + 30)
                 : null,
             child: Material(
-              color: Colors.transparent,
+              color: AppStyles.trans,
               child: WebVersePopupContent(
                 pageNumber: pageNumber,
                 surahNumber: surahNumber,
@@ -250,8 +250,8 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
           // Show error indicator (simpler for web)
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('عذراً، لم نتمكن من تشغيل الآية'),
-              backgroundColor: Colors.red,
+              content: const Text('عذراً، لم نتمكن من تشغيل الآية'),
+              backgroundColor: AppStyles.red,
             ),
           );
         }
@@ -302,7 +302,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
           Positioned.fill(
             child: GestureDetector(
               onTap: _removeDialog,
-              child: Container(color: Colors.transparent),
+              child: Container(color: AppStyles.trans),
             ),
           ),
 
@@ -312,7 +312,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
             top: top,
             width: dialogWidth,
             child: Material(
-              color: Colors.white,
+              color: AppStyles.white,
               borderRadius: BorderRadius.circular(15),
               elevation: 8,
               child: Column(
@@ -357,12 +357,12 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                                   : null,
                               border: Border(
                                 bottom: BorderSide(
-                                  color: Colors.grey.withOpacity(0.3),
+                                  color: AppStyles.grey.withOpacity(0.3),
                                   width: 0.5,
                                 ),
                               ),
                             ),
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                                 vertical: 10, horizontal: 16),
                             child: Text(
                               reciterName,
@@ -378,7 +378,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                                 color: ReciterManager.lastSelectedReciter ==
                                         reciterId
                                     ? AppStyles.txtFieldColor
-                                    : Colors.black,
+                                    : AppStyles.black,
                               ),
                             ),
                           ),
@@ -393,7 +393,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                       style: TextStyle(
                         fontFamily: 'Taha',
                         fontSize: 14,
-                        color: Colors.grey,
+                        color: AppStyles.grey,
                       ),
                     ),
                   ),
@@ -444,7 +444,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
           Positioned.fill(
             child: GestureDetector(
               onTap: _removeDialog,
-              child: Container(color: Colors.transparent),
+              child: Container(color: AppStyles.trans),
             ),
           ),
 
@@ -454,7 +454,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
             top: top,
             width: dialogWidth,
             child: Material(
-              color: Colors.white,
+              color: AppStyles.white,
               borderRadius: BorderRadius.circular(15),
               elevation: 8,
               child: Column(
@@ -501,12 +501,12 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                                   : null,
                               border: Border(
                                 bottom: BorderSide(
-                                  color: Colors.grey.withOpacity(0.3),
+                                  color: AppStyles.grey.withOpacity(0.3),
                                   width: 0.5,
                                 ),
                               ),
                             ),
-                            padding: EdgeInsets.symmetric(
+                            padding: const EdgeInsets.symmetric(
                                 vertical: 10, horizontal: 16),
                             child: Text(
                               tafseerName,
@@ -522,7 +522,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                                 color: TafseerManager.lastSelectedTafseer ==
                                         tafseerSlug
                                     ? AppStyles.txtFieldColor
-                                    : Colors.black,
+                                    : AppStyles.black,
                               ),
                             ),
                           ),
@@ -537,7 +537,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                       style: TextStyle(
                         fontFamily: 'Taha',
                         fontSize: 14,
-                        color: Colors.grey,
+                        color: AppStyles.grey,
                       ),
                     ),
                   ),
@@ -614,8 +614,8 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
             child: IconButton(
               icon: Icon(Icons.close, size: 20, color: AppStyles.txtFieldColor),
               onPressed: () => widget.onClose(),
-              padding: EdgeInsets.all(8),
-              constraints: BoxConstraints(),
+              padding: const EdgeInsets.all(8),
+              constraints: const BoxConstraints(),
             ),
           ),
 
@@ -624,7 +624,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
             padding: const EdgeInsets.symmetric(vertical: 8),
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppStyles.white,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
@@ -658,9 +658,9 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.transparent,
+                        AppStyles.trans,
                         AppStyles.lightPurple,
-                        Colors.transparent,
+                        AppStyles.trans,
                       ],
                     ),
                   ),
@@ -703,7 +703,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   style: TextStyle(
                     fontFamily: "Taha",
                     fontSize: getFontSize(context, 12),
-                    color: Colors.grey[600],
+                    color: AppStyles.greyShaded600,
                   ),
                 ),
               ],
@@ -729,8 +729,8 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
               ),
               onPressed: _showReciterSelectionDialog,
               style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 2),
-                minimumSize: Size(0, 30),
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                minimumSize: const Size(0, 30),
               ),
             ),
           ),
@@ -757,7 +757,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   style: TextStyle(
                     fontFamily: "Taha",
                     fontSize: getFontSize(context, 12),
-                    color: Colors.grey[600],
+                    color: AppStyles.greyShaded600,
                   ),
                 ),
               ],
@@ -783,8 +783,8 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
               ),
               onPressed: _showTafseerSelectionDialog,
               style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 2),
-                minimumSize: Size(0, 30),
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                minimumSize: const Size(0, 30),
               ),
             ),
           ),
@@ -862,10 +862,10 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
       width: 36,
       height: 36,
       child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 16),
+        icon: Icon(icon, color: AppStyles.white, size: 16),
         onPressed: onPressed ?? () {},
         padding: EdgeInsets.zero,
-        constraints: BoxConstraints(),
+        constraints: const BoxConstraints(),
       ),
     );
   }
@@ -895,7 +895,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
       width: 80,
       child: MaterialButton(
         onPressed: onPressed,
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -909,12 +909,12 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: AppStyles.white,
                   strokeWidth: 2,
                 ),
               )
             else if (icon != null)
-              Icon(icon, color: Colors.white, size: 14),
+              Icon(icon, color: AppStyles.white, size: 14),
             const SizedBox(width: 3),
             Flexible(
               child: FittedBox(
@@ -922,7 +922,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                 child: Text(
                   text,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppStyles.white,
                     fontFamily: "Taha",
                     fontSize: getFontSize(context, 11),
                     fontWeight: FontWeight.bold,

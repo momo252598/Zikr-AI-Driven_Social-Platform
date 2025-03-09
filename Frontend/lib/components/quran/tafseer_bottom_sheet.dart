@@ -119,7 +119,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
               width: 40,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: AppStyles.greyShaded300,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -130,7 +130,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppStyles.white,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
@@ -162,9 +162,9 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.transparent,
+                        AppStyles.trans,
                         AppStyles.lightPurple,
-                        Colors.transparent,
+                        AppStyles.trans,
                       ],
                     ),
                   ),
@@ -191,7 +191,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppStyles.white,
               borderRadius: BorderRadius.circular(15),
               border: Border.all(
                 color: AppStyles.lightPurple.withOpacity(0.3),
@@ -212,7 +212,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
                 style: TextStyle(
                   fontSize: 18.sp,
                   fontFamily: "QCF_BSML", // Using Quran font
-                  color: Colors.black,
+                  color: AppStyles.black,
                 ),
               ),
             ),
@@ -226,7 +226,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
               margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppStyles.white,
                 borderRadius: BorderRadius.circular(15),
                 boxShadow: [
                   BoxShadow(
@@ -248,7 +248,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
                             style: TextStyle(
                               fontSize: 16.sp,
                               fontFamily: "Taha",
-                              color: Colors.red,
+                              color: AppStyles.red,
                             ),
                           ),
                         )
@@ -261,7 +261,7 @@ class _TafseerBottomSheetContentState extends State<TafseerBottomSheetContent> {
                               style: TextStyle(
                                 fontSize: 16.sp,
                                 fontFamily: "Taha",
-                                color: Colors.black,
+                                color: AppStyles.black,
                                 height: 1.5,
                               ),
                             ),

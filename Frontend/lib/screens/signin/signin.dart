@@ -41,12 +41,12 @@ class LoginScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   const SizedBox(height: 53),
-                  const Align(
+                  Align(
                     alignment: Alignment.center,
                     child: Text(
                       'تسجيل الدخول', // translated text
                       style: TextStyle(
-                        color: Color(0xFF010001),
+                        color: AppStyles.black,
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Poppins',

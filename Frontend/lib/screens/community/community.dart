@@ -14,6 +14,7 @@ class CommunityPage extends StatefulWidget {
 
 class _CommunityPageState extends State<CommunityPage> {
   final TextEditingController _commentController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<dynamic>? _posts;
 
   Future<List<dynamic>> _loadPosts() async {
@@ -49,7 +50,7 @@ class _CommunityPageState extends State<CommunityPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppStyles.trans,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
         decoration: BoxDecoration(
@@ -67,7 +68,7 @@ class _CommunityPageState extends State<CommunityPage> {
               height: 5,
               width: 40,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: AppStyles.greyShaded300,
                 borderRadius: BorderRadius.circular(8),
               ),
             ),
@@ -123,10 +124,10 @@ class _CommunityPageState extends State<CommunityPage> {
                 top: 8,
               ),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppStyles.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.grey.withOpacity(0.2),
+                    color: AppStyles.grey.withOpacity(0.2),
                     blurRadius: 4,
                     offset: const Offset(0, -2),
                   ),
@@ -146,7 +147,7 @@ class _CommunityPageState extends State<CommunityPage> {
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.grey.shade100,
+                        fillColor: AppStyles.greyShaded100,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
@@ -164,9 +165,9 @@ class _CommunityPageState extends State<CommunityPage> {
                         color: AppStyles.darkPurple,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.send,
-                        color: Colors.white,
+                        color: AppStyles.white,
                         size: 20,
                       ),
                     ),
@@ -308,7 +309,7 @@ class _CommunityPageState extends State<CommunityPage> {
                 return Center(
                   child: Text(
                     'خطأ في تحميل المنشورات: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.red),
+                    style: TextStyle(color: AppStyles.red),
                   ),
                 );
               }
@@ -319,12 +320,19 @@ class _CommunityPageState extends State<CommunityPage> {
               }
 
               final posts = snapshot.data!;
-              return ListView.builder(
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  final post = posts[index];
-                  return _buildPostCard(post);
-                },
+              return Scrollbar(
+                controller: _scrollController,
+                thickness: 8.0,
+                radius: const Radius.circular(10.0),
+                thumbVisibility: kIsWeb, // Always visible on web
+                child: ListView.builder(
+                  controller: _scrollController,
+                  itemCount: posts.length,
+                  itemBuilder: (context, index) {
+                    final post = posts[index];
+                    return _buildPostCard(post);
+                  },
+                ),
               );
             },
           ),
@@ -506,6 +514,92 @@ class _CommunityPageState extends State<CommunityPage> {
                   },
                 ),
 
+                // Right arrow shows Previous (left movement)
+                if (kIsWeb && images.length > 1)
+                  Positioned(
+                    right: 10,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: currentPage,
+                        builder: (context, index, _) {
+                          return Visibility(
+                            visible: index > 0,
+                            child: Material(
+                              color: AppStyles.darkPurple.withOpacity(0.5),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () {
+                                  if (index > 0) {
+                                    pageController.previousPage(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Icon(
+                                    Icons
+                                        .arrow_back_ios, // Changed to arrow_back_ios
+                                    color: AppStyles.white,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
+                // Left arrow shows Next (right movement)
+                if (kIsWeb && images.length > 1)
+                  Positioned(
+                    left: 10,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: currentPage,
+                        builder: (context, index, _) {
+                          return Visibility(
+                            visible: index < images.length - 1,
+                            child: Material(
+                              color: AppStyles.darkPurple.withOpacity(0.5),
+                              shape: const CircleBorder(),
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
+                                onTap: () {
+                                  if (index < images.length - 1) {
+                                    pageController.nextPage(
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Icon(
+                                    Icons
+                                        .arrow_forward_ios, // Changed to arrow_forward_ios
+                                    color: AppStyles.white,
+                                    size: 24,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
                 // Bottom page indicator
                 Positioned(
                   bottom: 10,
@@ -547,6 +641,7 @@ class _CommunityPageState extends State<CommunityPage> {
   @override
   void dispose() {
     _commentController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 }

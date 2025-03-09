@@ -129,13 +129,13 @@ class PrayerCard extends StatelessWidget {
           // Change decoration if isClosest is true.
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isClosest ? AppStyles.lightPurple : Colors.purple[50],
+            color: isClosest ? AppStyles.lightPurple : AppStyles.whitePurple,
             borderRadius: BorderRadius.circular(12),
             // border:
             //     isClosest ? Border.all(color: AppStyles.grey, width: 2) : null,
             boxShadow: [
               BoxShadow(
-                color: Colors.purple.withOpacity(0.2),
+                color: AppStyles.purple.withOpacity(0.2),
                 blurRadius: 5,
                 offset: const Offset(0, 2),
               )
@@ -144,7 +144,8 @@ class PrayerCard extends StatelessWidget {
           child: Row(
             children: [
               Icon(_getIcon(prayer.name),
-                  size: 40, color: isClosest ? AppStyles.white : Colors.purple),
+                  size: 40,
+                  color: isClosest ? AppStyles.white : AppStyles.purple),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -157,13 +158,13 @@ class PrayerCard extends StatelessWidget {
                             ?.copyWith(
                                 color: isClosest
                                     ? AppStyles.white
-                                    : Colors.purple)),
+                                    : AppStyles.purple)),
                     const SizedBox(height: 4),
                     Text(
                       "الوقت: ${TimeOfDay.fromDateTime(prayer.time.toLocal()).format(context)}", // updated label
                       style: TextStyle(
                         fontSize: 16,
-                        color: isClosest ? AppStyles.white : Colors.purple,
+                        color: isClosest ? AppStyles.white : AppStyles.purple,
                       ),
                     ),
                     const SizedBox(height: 4),

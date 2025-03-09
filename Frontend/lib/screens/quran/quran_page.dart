@@ -18,6 +18,7 @@ import 'package:software_graduation_project/components/quran/verse_bottom_sheet.
 import 'package:software_graduation_project/components/quran/web_verse.dart';
 // import 'package:wakelock/wakelock.dart';
 import '../../base/res/styles/app_styles.dart';
+import 'package:software_graduation_project/base/widgets/app_bar.dart';
 
 class QuranViewPage extends StatefulWidget {
   final int pageNumber;
@@ -384,7 +385,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                               : FontWeight.normal,
                       color: ReciterManager.lastSelectedReciter == reciterId
                           ? AppStyles.txtFieldColor
-                          : Colors.black,
+                          : AppStyles.black,
                     ),
                   ),
                   selected: ReciterManager.lastSelectedReciter == reciterId,
@@ -467,39 +468,10 @@ class _QuranViewPageState extends State<QuranViewPage> {
         // Only show AppBar on mobile, not on web
         appBar: widget.isWeb
             ? null
-            : AppBar(
-                automaticallyImplyLeading: false,
-                backgroundColor: Colors.transparent,
-                elevation: 0,
-                flexibleSpace: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppStyles.darkPurple,
-                        AppStyles.lightPurple,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    image: const DecorationImage(
-                      image: AssetImage(AppMedia.pattern3),
-                      fit: BoxFit.cover,
-                      colorFilter: ColorFilter.mode(
-                        Color.fromARGB(96, 255, 255, 255),
-                        BlendMode.dstATop,
-                      ),
-                    ),
-                  ),
-                ),
-                centerTitle: true,
-                title: Text(
-                  "تطبيق القرآن الكريم",
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.bold,
-                    color: AppStyles.white,
-                  ),
-                ),
+            : const CustomAppBar(
+                title: "تطبيق القرآن الكريم",
+                showAddButton: false,
+                showBackButton: false,
               ),
         body: Stack(
           children: [
@@ -526,7 +498,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
 
                 if (index == 0) {
                   return Container(
-                    color: const Color(0xffFFFCE7),
+                    color: AppStyles.white,
                     child: Image.asset(
                       "assets/images/quran_cover_2.png",
                       fit: BoxFit.fill,
@@ -540,7 +512,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                   ),
                   child: Scaffold(
                     resizeToAvoidBottomInset: false,
-                    backgroundColor: Colors.transparent,
+                    backgroundColor: AppStyles.trans,
                     body: SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.only(right: 12.0, left: 12),
@@ -680,7 +652,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                         locale: const Locale("ar"),
                                         text: TextSpan(
                                           style: TextStyle(
-                                            color: m.Colors.black,
+                                            color: AppStyles.black,
                                             fontSize: getWebAdjustedFontSize(
                                                 23.sp.toDouble()),
                                           ),
@@ -834,7 +806,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                               i)
                                                       ? AppStyles
                                                           .buttonColor // Highlight color
-                                                      : Colors
+                                                      : AppStyles
                                                           .black, // Normal color
                                                   height: (index == 1 ||
                                                           index == 2)
@@ -858,7 +830,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                                   : 17.9.sp
                                                               : 17.9.sp),
                                                   backgroundColor:
-                                                      Colors.transparent,
+                                                      AppStyles.trans,
                                                 ),
                                                 children: const <TextSpan>[
                                                   // TextSpan(
@@ -900,7 +872,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                 top: MediaQuery.of(context).size.height / 2 - 25,
                 child: FloatingActionButton(
                   heroTag: 'prevPage',
-                  backgroundColor: Colors.grey
+                  backgroundColor: AppStyles.grey
                       .withOpacity(0.1), // Much more transparent grey
                   mini: true,
                   elevation: 1, // Reduced elevation for subtlety
@@ -913,8 +885,8 @@ class _QuranViewPageState extends State<QuranViewPage> {
                       );
                     }
                   },
-                  child: const Icon(Icons.arrow_back_ios,
-                      color: Colors.white), // Swapped icon
+                  child: Icon(Icons.arrow_back_ios,
+                      color: AppStyles.white), // Swapped icon
                 ),
               ),
 
@@ -924,7 +896,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                 top: MediaQuery.of(context).size.height / 2 - 25,
                 child: FloatingActionButton(
                   heroTag: 'nextPage',
-                  backgroundColor: Colors.grey
+                  backgroundColor: AppStyles.grey
                       .withOpacity(0.1), // Much more transparent grey
                   mini: true,
                   elevation: 1, // Reduced elevation for subtlety
@@ -937,8 +909,8 @@ class _QuranViewPageState extends State<QuranViewPage> {
                       );
                     }
                   },
-                  child: const Icon(Icons.arrow_forward_ios,
-                      color: Colors.white), // Swapped icon
+                  child: Icon(Icons.arrow_forward_ios,
+                      color: AppStyles.white), // Swapped icon
                 ),
               ),
             ],

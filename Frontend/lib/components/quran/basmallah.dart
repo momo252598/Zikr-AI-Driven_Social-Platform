@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 
 class Basmallah extends StatefulWidget {
   int index;
@@ -22,7 +23,7 @@ class _BasmallahState extends State<Basmallah> {
             bottom: 2),
         child: Image.asset(
           "assets/images/Basmala.png",
-          color: Colors.black,
+          color: AppStyles.black,
           width: MediaQuery.of(context).size.width * .4,
         ),
       ),

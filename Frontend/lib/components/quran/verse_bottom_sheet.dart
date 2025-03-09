@@ -204,8 +204,8 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
 
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('عذراً، لم نتمكن من تشغيل الآية'),
-              backgroundColor: Colors.red,
+              content: const Text('عذراً، لم نتمكن من تشغيل الآية'),
+              backgroundColor: AppStyles.red,
             ),
           );
         }
@@ -286,7 +286,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 );
                 // Add less padding between items to make list more compact
                 contentPadding:
-                EdgeInsets.symmetric(horizontal: 16, vertical: 4);
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 4);
               },
             ),
           ),
@@ -297,7 +297,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 style: TextStyle(
                   fontFamily: 'Taha',
                   fontSize: 16.sp,
-                  color: Colors.grey,
+                  color: AppStyles.grey,
                 ),
               ),
               onPressed: () {
@@ -387,7 +387,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 style: TextStyle(
                   fontFamily: 'Taha',
                   fontSize: 16.sp,
-                  color: Colors.grey,
+                  color: AppStyles.grey,
                 ),
               ),
               onPressed: () {
@@ -441,7 +441,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
               width: 40,
               height: 5,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: AppStyles.greyShaded300,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -452,7 +452,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: AppStyles.white,
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
@@ -484,9 +484,9 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.transparent,
+                        AppStyles.trans,
                         AppStyles.lightPurple,
-                        Colors.transparent,
+                        AppStyles.trans,
                       ],
                     ),
                   ),
@@ -526,7 +526,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                   style: TextStyle(
                     fontFamily: "Taha",
                     fontSize: 14.sp,
-                    color: Colors.grey[600],
+                    color: AppStyles.greyShaded600,
                   ),
                 ),
               ],
@@ -552,7 +552,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
               ),
               onPressed: _showReciterSelectionDialog,
               style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 4),
               ),
             ),
           ),
@@ -577,7 +577,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                   style: TextStyle(
                     fontFamily: "Taha",
                     fontSize: 14.sp,
-                    color: Colors.grey[600],
+                    color: AppStyles.greyShaded600,
                   ),
                 ),
               ],
@@ -603,7 +603,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
               ),
               onPressed: _showTafseerSelectionDialog,
               style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 4),
               ),
             ),
           ),
@@ -678,7 +678,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
       width: 60,
       height: 60,
       child: IconButton(
-        icon: Icon(icon, color: Colors.white, size: 28),
+        icon: Icon(icon, color: AppStyles.white, size: 28),
         onPressed: onPressed ?? () {},
       ),
     );
@@ -715,16 +715,16 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             if (showLoader)
-              const SizedBox(
+              SizedBox(
                 width: 24,
                 height: 24,
                 child: CircularProgressIndicator(
-                  color: Colors.white,
+                  color: AppStyles.white,
                   strokeWidth: 2,
                 ),
               )
             else if (icon != null)
-              Icon(icon, color: Colors.white),
+              Icon(icon, color: AppStyles.white),
             const SizedBox(width: 8),
             Flexible(
               child: FittedBox(
@@ -732,7 +732,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 child: Text(
                   text,
                   style: TextStyle(
-                    color: Colors.white,
+                    color: AppStyles.white,
                     fontFamily: "Taha",
                     fontSize: 16.sp,
                     fontWeight: FontWeight.bold,

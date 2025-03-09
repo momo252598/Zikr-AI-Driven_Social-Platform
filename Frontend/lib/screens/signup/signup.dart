@@ -19,7 +19,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true, // extend background behind AppBar
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppStyles.trans,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: AppStyles.black),

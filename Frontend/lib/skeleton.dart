@@ -17,6 +17,7 @@ import '../../base/res/styles/app_styles.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart';
 import 'package:software_graduation_project/screens/quran/quran_web/responsive_quran_layout.dart';
+import 'package:software_graduation_project/base/widgets/app_bar.dart';
 
 class Skeleton extends StatefulWidget {
   const Skeleton({super.key});
@@ -65,41 +66,10 @@ class _SkeletonState extends State<Skeleton> {
     return Directionality(
       textDirection: TextDirection.rtl, // set app to RTL
       child: Scaffold(
-        appBar: AppBar(
-          // Custom beautiful app bar with gradient and pattern image
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppStyles.darkPurple,
-                  AppStyles.lightPurple,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              image: const DecorationImage(
-                image: AssetImage(AppMedia
-                    .pattern3), // add a suitable Islamic pattern image in assets
-                fit: BoxFit.cover,
-                colorFilter: ColorFilter.mode(
-                  Color.fromARGB(96, 255, 255, 255),
-                  BlendMode.dstATop,
-                ),
-              ),
-            ),
-          ),
-          centerTitle: true,
-          title: Text(
-            "تطبيق القرآن الكريم", // translated title
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.bold,
-              color: AppStyles.white,
-            ),
-          ),
-        ),
+        appBar: const CustomAppBar(
+            title: 'تطبيق القرآن الكريم',
+            showAddButton: false,
+            showBackButton: false),
         body: _pages[_currentIndex],
         bottomNavigationBar: BottomNavigationBar(
           backgroundColor: AppStyles.bgColor,

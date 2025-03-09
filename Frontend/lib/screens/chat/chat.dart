@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // Add this import for platform detection
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
+import 'package:software_graduation_project/base/widgets/app_bar.dart'; // added im
 
 class ChatPage extends StatefulWidget {
   final int chatId;
@@ -23,6 +26,18 @@ class _ChatPageState extends State<ChatPage> {
     super.initState();
     // Load conversation data when the page initializes
     _loadConversationData();
+  }
+
+  @override
+  void didUpdateWidget(ChatPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload conversation data when chatId changes
+    if (oldWidget.chatId != widget.chatId) {
+      setState(() {
+        isLoading = true;
+      });
+      _loadConversationData();
+    }
   }
 
   Future<void> _loadConversationData() async {
@@ -124,39 +139,10 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
-      appBar: AppBar(
-        title: Text(contactName,
-            style: TextStyle(
-              color: AppStyles.white,
-            )),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppStyles.darkPurple,
-                AppStyles.lightPurple,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            image: const DecorationImage(
-              image: AssetImage(AppMedia.pattern3),
-              fit: BoxFit.cover,
-              colorFilter: ColorFilter.mode(
-                Color.fromARGB(96, 255, 255, 255),
-                BlendMode.dstATop,
-              ),
-            ),
-          ),
-        ),
-        centerTitle: true,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppStyles.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
+      appBar: CustomAppBar(
+          title: contactName,
+          showAddButton: false,
+          showBackButton: !kIsWeb), // Modified to hide back button on web
       body: Column(
         children: [
           // Expanded list of messages

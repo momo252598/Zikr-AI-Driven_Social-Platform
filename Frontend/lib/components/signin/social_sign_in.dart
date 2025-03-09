@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluentui_icons/fluentui_icons.dart';
+import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 
 class SocialSignIn extends StatelessWidget {
   const SocialSignIn({super.key});
@@ -10,9 +11,9 @@ class SocialSignIn extends StatelessWidget {
       onTap: () {
         // Implement social sign in logic here
       },
-      child: const Icon(
+      child: Icon(
         FluentSystemIcons.ic_fluent_mail_add_filled,
-        color: Color.fromARGB(255, 135, 62, 213),
+        color: AppStyles.lightPurple,
         size: 30,
       ),
     );

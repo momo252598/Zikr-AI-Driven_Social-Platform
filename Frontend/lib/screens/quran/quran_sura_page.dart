@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:software_graduation_project/models/sura.dart';
+import 'package:software_graduation_project/base/res/utils/sura.dart';
 import 'package:quran/quran.dart';
 import 'package:easy_container/easy_container.dart';
 import 'package:software_graduation_project/screens/quran/quran_page.dart';

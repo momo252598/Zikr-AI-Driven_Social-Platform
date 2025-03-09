@@ -11,10 +11,10 @@ class RegisterLink extends StatelessWidget {
     return RichText(
       textAlign: TextAlign.center,
       text: TextSpan(
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 11,
           fontFamily: 'Poppins',
-          color: Colors.black,
+          color: AppStyles.black,
         ),
         children: [
           const TextSpan(text: "ليس لديك حساب؟ "), // translated
