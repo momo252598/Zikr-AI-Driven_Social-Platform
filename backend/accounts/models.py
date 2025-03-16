@@ -37,7 +37,7 @@ class User(AbstractUser):
         verbose_name='user permissions',
     )
     
-    USERNAME_FIELD = 'email'
+    USERNAME_FIELD = 'email' # Change the default username field to email
     REQUIRED_FIELDS = ['username']
     
     def __str__(self):
