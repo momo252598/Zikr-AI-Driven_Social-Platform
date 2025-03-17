@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:convert'; // Add this import for JSON parsing
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:just_audio/just_audio.dart'; // Add this import
+import 'package:just_audio/just_audio.dart';
 import 'package:easy_container/easy_container.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' as m;
@@ -11,14 +12,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:quran/quran.dart';
 import 'package:software_graduation_project/base/res/media.dart';
-// import 'package:quran_tutorial/globalhelpers/constants.dart';
 import 'package:software_graduation_project/components/quran/basmallah.dart';
 import 'package:software_graduation_project/components/quran/header_widget.dart';
 import 'package:software_graduation_project/components/quran/verse_bottom_sheet.dart';
 import 'package:software_graduation_project/components/quran/web_verse.dart';
-// import 'package:wakelock/wakelock.dart';
 import '../../base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
+import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 
 class QuranViewPage extends StatefulWidget {
   final int pageNumber;
@@ -75,6 +75,13 @@ class _QuranViewPageState extends State<QuranViewPage> {
     'ar.minshawi': 'محمد صديق المنشاوي',
   };
 
+  // Add new state variables for cluster coloring
+  bool _isColoringEnabled = false;
+  Map<String, int> _verseClusterMap =
+      {}; // Map to store (surah:ayah) -> cluster mapping
+  List<Color> _clusterColors = []; // List of colors for each cluster (0-19)
+  bool _isClusterDataLoaded = false;
+
   highlightVerseFunction() {
     setState(() {
       shouldHighlightText = widget.shouldHighlightText;
@@ -127,6 +134,67 @@ class _QuranViewPageState extends State<QuranViewPage> {
         _playNextVerse();
       }
     });
+
+    // Add this listener for playback state to handle the loading->playing transition
+    _pageAudioPlayer.playbackEventStream.listen((event) {
+      if (_isDisposed) return;
+
+      // When audio is actually playing and we're still showing loading
+      if (_pageAudioPlayer.playing && _isLoadingAudio) {
+        if (mounted) {
+          setState(() {
+            _isLoadingAudio = false;
+          });
+        }
+      }
+    });
+
+    // Initialize the cluster data
+    _initializeClusterData();
+  }
+
+  // Method to load and initialize cluster data
+  Future<void> _initializeClusterData() async {
+    // Get cluster colors from AppStyles instead of defining them inline
+    _clusterColors = AppStyles.clusterColors;
+
+    try {
+      // Load the JSON file
+      String jsonString =
+          await rootBundle.loadString('assets/utils/df_final.json');
+      List<dynamic> clusterData = jsonDecode(jsonString);
+
+      // Populate the verse-cluster map
+      for (var item in clusterData) {
+        int surah = item['sura'];
+        int ayah = item['ayah'];
+        int cluster = item['cluster'];
+
+        // Create a key like "1:2" for surah 1, ayah 2
+        String key = "$surah:$ayah";
+        _verseClusterMap[key] = cluster;
+      }
+
+      if (mounted) {
+        setState(() {
+          _isClusterDataLoaded = true;
+        });
+      }
+    } catch (e) {
+      print("Error loading cluster data: $e");
+    }
+  }
+
+  // Helper method to get verse color based on its cluster
+  Color? _getVerseColor(int surah, int ayah) {
+    if (!_isColoringEnabled || !_isClusterDataLoaded) return null;
+
+    String key = "$surah:$ayah";
+    int? cluster = _verseClusterMap[key];
+
+    if (cluster == null) return null;
+
+    return _clusterColors[cluster];
   }
 
   @override
@@ -263,10 +331,12 @@ class _QuranViewPageState extends State<QuranViewPage> {
 
       // Set and play the audio
       await _pageAudioPlayer.setUrl(audioUrl);
+
+      // Start playing - the loading icon will be updated by the playbackEventStream listener
       await _pageAudioPlayer.play();
-      setState(() {
-        _isLoadingAudio = false;
-      });
+
+      // We're not updating _isLoadingAudio here anymore
+      // That's now handled by the playbackEventStream listener
     } catch (e) {
       // If there's an error, try to move to the next verse
       print("Error playing verse: $e");
@@ -437,20 +507,20 @@ class _QuranViewPageState extends State<QuranViewPage> {
     );
   }
 
+  // Method to adjust font size for web
+  double getWebAdjustedFontSize(double mobileSize) {
+    return widget.isWeb ? mobileSize * 0.35 : mobileSize;
+  }
+
+  // Method to adjust line height for web
+  double getWebAdjustedLineHeight(double mobileHeight) {
+    // Reduce from 0.95 to 0.75 (very compressed spacing)
+    return widget.isWeb ? mobileHeight * 0.75 : mobileHeight;
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-
-    // Keep font size as is (0.35)
-    double getWebAdjustedFontSize(double mobileSize) {
-      return widget.isWeb ? mobileSize * 0.35 : mobileSize;
-    }
-
-    // Drastically reduce line height - make it much more compressed
-    double getWebAdjustedLineHeight(double mobileHeight) {
-      // Reduce from 0.95 to 0.75 (very compressed spacing)
-      return widget.isWeb ? mobileHeight * 0.75 : mobileHeight;
-    }
 
     // Wrap Scaffold with WillPopScope to handle back button press safely
     return WillPopScope(
@@ -527,7 +597,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     SizedBox(
-                                      width: (screenSize.width * .27),
+                                      width: (screenSize.width * .25),
                                       child: Row(
                                         children: [
                                           // Only show back button on mobile
@@ -573,22 +643,63 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                       ),
                                     ),
                                     SizedBox(
-                                      width: (screenSize.width * .27),
+                                      width: (screenSize.width * .32),
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.end,
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          // Add the new toggle button for verse coloring
+                                          IconButton(
+                                            onPressed: _isClusterDataLoaded
+                                                ? () {
+                                                    setState(() {
+                                                      _isColoringEnabled =
+                                                          !_isColoringEnabled;
+                                                    });
+                                                  }
+                                                : null,
+                                            icon: Icon(
+                                              _isColoringEnabled
+                                                  ? FlutterIslamicIcons
+                                                      .solidQuran
+                                                  : FlutterIslamicIcons.quran,
+                                              color: AppStyles.txtFieldColor,
+                                              size: widget.isWeb
+                                                  ? 26
+                                                  : 22, // Larger icon for web
+                                            ),
+                                            tooltip: _isColoringEnabled
+                                                ? 'إيقاف تلوين الآيات'
+                                                : 'تلوين الآيات حسب المجموعة',
+                                            padding: widget.isWeb
+                                                ? EdgeInsets.all(
+                                                    10) // Larger padding for web
+                                                : EdgeInsets.all(
+                                                    6), // Keep mobile padding the same
+                                            constraints: BoxConstraints(),
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                          ),
+
+                                          // Increased spacing for web, tiny gap for mobile
+                                          SizedBox(
+                                              width: widget.isWeb ? 12 : 2),
+
                                           // Play Page Audio button - Updated with paused state
                                           IconButton(
                                             onPressed:
                                                 index == 0 ? null : _playPage,
                                             icon: _isLoadingAudio
                                                 ? SizedBox(
-                                                    width: 24,
-                                                    height: 24,
+                                                    width:
+                                                        widget.isWeb ? 26 : 22,
+                                                    height:
+                                                        widget.isWeb ? 26 : 22,
                                                     child:
                                                         CircularProgressIndicator(
-                                                      strokeWidth: 2,
+                                                      strokeWidth:
+                                                          widget.isWeb ? 3 : 2,
                                                       color: AppStyles
                                                           .txtFieldColor,
                                                     ),
@@ -602,14 +713,28 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                                 .play_circle_outline,
                                                     color:
                                                         AppStyles.txtFieldColor,
-                                                    size: 24,
+                                                    size:
+                                                        widget.isWeb ? 26 : 22,
                                                   ),
                                             tooltip: _isPlayingPage
                                                 ? 'إيقاف مؤقت للقراءة'
                                                 : _isPaused
                                                     ? 'استئناف القراءة'
                                                     : 'قراءة الصفحة',
+                                            padding: widget.isWeb
+                                                ? EdgeInsets.all(
+                                                    10) // Larger padding for web
+                                                : EdgeInsets.all(
+                                                    6), // Keep mobile padding the same
+                                            constraints: BoxConstraints(),
+                                            visualDensity:
+                                                VisualDensity.compact,
                                           ),
+
+                                          // Increased spacing for web, tiny gap for mobile
+                                          SizedBox(
+                                              width: widget.isWeb ? 12 : 2),
+
                                           // Settings button - now opens reciter selection
                                           IconButton(
                                             onPressed: () =>
@@ -617,9 +742,17 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                             tooltip: 'اختيار القارئ',
                                             icon: Icon(
                                               Icons.settings,
-                                              size: 24,
+                                              size: widget.isWeb ? 26 : 22,
                                               color: AppStyles.txtFieldColor,
                                             ),
+                                            padding: widget.isWeb
+                                                ? EdgeInsets.all(
+                                                    10) // Larger padding for web
+                                                : EdgeInsets.all(
+                                                    6), // Keep mobile padding the same
+                                            constraints: BoxConstraints(),
+                                            visualDensity:
+                                                VisualDensity.compact,
                                           ),
                                         ],
                                       ),
@@ -687,9 +820,8 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                 }
                                               }
 
-                                              // Verses - Modified for web/mobile detection
+                                              // Verses - Modified for web/mobile detection AND color by cluster
                                               spans.add(TextSpan(
-                                                // For web - use tap gesture
                                                 recognizer: widget.isWeb
                                                     ? (TapGestureRecognizer()
                                                       ..onTap = () {
@@ -799,15 +931,15 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                     : getVerseQCF(e["surah"], i)
                                                         .replaceAll(' ', ''),
                                                 style: TextStyle(
-                                                  // Highlight the verse if selected
+                                                  // Keep text color as black (or highlighted if needed)
                                                   color: (highlightedSurahNumber ==
                                                               e["surah"] &&
                                                           highlightedVerseNumber ==
                                                               i)
                                                       ? AppStyles
-                                                          .buttonColor // Highlight color
+                                                          .buttonColor // Highlight color (priority 1)
                                                       : AppStyles
-                                                          .black, // Normal color
+                                                          .black, // Normal color always black
                                                   height: (index == 1 ||
                                                           index == 2)
                                                       ? getWebAdjustedLineHeight(
@@ -829,23 +961,16 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                                   ? 22.5.sp
                                                                   : 17.9.sp
                                                               : 17.9.sp),
+                                                  // Apply cluster colors to background instead of text
                                                   backgroundColor:
-                                                      AppStyles.trans,
+                                                      _isColoringEnabled
+                                                          ? _getVerseColor(
+                                                                  e["surah"], i)
+                                                              ?.withOpacity(
+                                                                  0.2) // More transparent background
+                                                          : AppStyles
+                                                              .trans, // Transparent when not coloring
                                                 ),
-                                                children: const <TextSpan>[
-                                                  // TextSpan(
-                                                  //   text: getVerseQCF(e["surah"], i).substring(getVerseQCF(e["surah"], i).length - 1),
-                                                  //   style:  TextStyle(
-                                                  //     color: isVerseStarred(
-                                                  //                                                     e[
-                                                  //                                                         "surah"],
-                                                  //                                                     i)
-                                                  //                                                 ? Colors
-                                                  //                                                     .amber
-                                                  //                                                 : secondaryColors[getValue("quranPageolorsIndex")] // Change color here
-                                                  //   ),
-                                                  // ),
-                                                ],
                                               ));
                                             }
                                             return spans;

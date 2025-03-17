@@ -21,4 +21,28 @@ class AppStyles {
   static Color surahName =
       const Color.fromARGB(255, 158, 158, 158).withOpacity(.8);
   static Color trans = Colors.transparent;
+
+  // Quran verse cluster colors
+  static List<Color> clusterColors = [
+    const Color(0xFFe6194b), // '#e6194b'
+    const Color(0xFF3cb44b), // '#3cb44b'
+    const Color(0xFFffe119), // '#ffe119'
+    const Color(0xFF4363d8), // '#4363d8'
+    const Color(0xFFf58231), // '#f58231'
+    const Color(0xFF911eb4), // '#911eb4'
+    const Color(0xFF46f0f0), // '#46f0f0'
+    const Color(0xFFf032e6), // '#f032e6'
+    const Color(0xFFbcf60c), // '#bcf60c'
+    const Color(0xFFfabebe), // '#fabebe'
+    const Color(0xFF008080), // '#008080'
+    const Color(0xFFe6beff), // '#e6beff'
+    const Color(0xFF9a6324), // '#9a6324'
+    const Color.fromARGB(255, 217, 255, 200), // '#fffac8'
+    const Color(0xFF800000), // '#800000'
+    const Color(0xFFaaffc3), // '#aaffc3'
+    const Color(0xFF808000), // '#808000'
+    const Color(0xFFffd8b1), // '#ffd8b1'
+    const Color(0xFF000075), // '#000075'
+    const Color(0xFF808080), // '#808080'
+  ];
 }

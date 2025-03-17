@@ -79,6 +79,7 @@ flutter:
     - assets/utils/surahs.json
     - assets/utils/chat_ex.json
     - assets/utils/posts.json
+    - assets/utils/df_final.json
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
