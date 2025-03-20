@@ -77,3 +77,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         })
         
         return data
+
+class VerifyAccountSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    token = serializers.CharField(help_text="The 6-digit verification code sent to the user's email")

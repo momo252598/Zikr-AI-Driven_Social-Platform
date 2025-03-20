@@ -50,6 +50,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   just_audio: ^0.9.36
   flutter_secure_storage: ^9.2.4
+  shared_preferences: ^2.5.2
 
 dev_dependencies:
   flutter_test:

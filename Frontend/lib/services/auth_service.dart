@@ -1,11 +1,18 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../models/user.dart'; // We'll create this next
 
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
-  final String _baseUrl = 'http://10.0.2.2:8000/accounts';
+  late final String _baseUrl;
+
+  AuthService() {
+    // Use 127.0.0.1 when running on web, otherwise use 10.0.2.2 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '10.0.2.2';
+    _baseUrl = 'http://$host:8000/accounts';
+  }
 
   User? _currentUser;
   User? get currentUser => _currentUser;
@@ -51,11 +58,67 @@ class AuthService {
   }
 
   // Clear all stored data (for logout)
-  Future<void> logout() async {
-    await _storage.delete(key: ACCESS_TOKEN_KEY);
-    await _storage.delete(key: REFRESH_TOKEN_KEY);
-    await _storage.delete(key: USER_DATA_KEY);
-    _currentUser = null;
+  Future<Map<String, dynamic>> logout() async {
+    try {
+      // Get both tokens
+      final refreshToken = await getRefreshToken();
+      final accessToken = await getAccessToken();
+
+      if (refreshToken != null && accessToken != null) {
+        // Call the backend logout endpoint with Authorization header
+        final response = await http.post(
+          Uri.parse('$_baseUrl/logout/'),
+          headers: <String, String>{
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Authorization': 'Bearer $accessToken', // Add authorization header
+          },
+          body: jsonEncode(<String, String>{
+            'refresh': refreshToken,
+          }),
+        );
+
+        // Regardless of the response, clear the local storage
+        await _storage.delete(key: ACCESS_TOKEN_KEY);
+        await _storage.delete(key: REFRESH_TOKEN_KEY);
+        await _storage.delete(key: USER_DATA_KEY);
+        _currentUser = null;
+
+        if (response.statusCode == 200) {
+          return {
+            'success': true,
+            'message': 'Successfully logged out',
+          };
+        } else {
+          final Map<String, dynamic> responseData = json.decode(response.body);
+          return {
+            'success': false,
+            'message': responseData['error'] ?? 'Failed to logout from server',
+          };
+        }
+      } else {
+        // No tokens found, just clear the local storage
+        await _storage.delete(key: ACCESS_TOKEN_KEY);
+        await _storage.delete(key: REFRESH_TOKEN_KEY);
+        await _storage.delete(key: USER_DATA_KEY);
+        _currentUser = null;
+
+        return {
+          'success': true,
+          'message': 'Logged out locally',
+        };
+      }
+    } catch (e) {
+      // If there's an error, still clear the local storage
+      await _storage.delete(key: ACCESS_TOKEN_KEY);
+      await _storage.delete(key: REFRESH_TOKEN_KEY);
+      await _storage.delete(key: USER_DATA_KEY);
+      _currentUser = null;
+
+      return {
+        'success': false,
+        'message': 'Error during logout: ${e.toString()}',
+      };
+    }
   }
 
   // Check if user is logged in

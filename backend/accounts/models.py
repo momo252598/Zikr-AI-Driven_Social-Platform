@@ -59,3 +59,11 @@ class SheikhProfile(models.Model):
     
     def __str__(self):
         return f"Sheikh Profile for {self.user.username}"
+
+class AccountActivationToken(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    token = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"Activation token for {self.user.username}"

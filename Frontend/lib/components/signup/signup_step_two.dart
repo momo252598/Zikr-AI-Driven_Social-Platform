@@ -68,8 +68,9 @@ class _SignUpStepTwoState extends State<SignUpStepTwo> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
+        // Format date as YYYY-MM-DD for backend compatibility
         _birthDateController.text =
-            "${picked.day}/${picked.month}/${picked.year}";
+            "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}";
       });
     }
   }
@@ -252,11 +253,16 @@ class _SignUpStepTwoState extends State<SignUpStepTwo> {
             ElevatedButton(
               onPressed: () {
                 if (_formKey.currentState!.validate()) {
+                  // Ensure birthdate is properly formatted
+                  final birthdate = _selectedDate != null
+                      ? "${_selectedDate!.year}-${_selectedDate!.month.toString().padLeft(2, '0')}-${_selectedDate!.day.toString().padLeft(2, '0')}"
+                      : _birthDateController.text;
+
                   // Update user data and go to next step
                   widget.onDataUpdated({
                     'first_name': _firstNameController.text,
                     'last_name': _lastNameController.text,
-                    'birthdate': _birthDateController.text,
+                    'birthdate': birthdate,
                     'phone_number': _phoneController.text,
                     'gender': _selectedGender,
                     'account_type': _accountType,
