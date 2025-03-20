@@ -9,8 +9,11 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'user_type', 'phone_number', 'bio', 'is_verified', 'profile_picture')
-        read_only_fields = ('id',)
+        fields = ('id', 'username', 'email', 'user_type', 'phone_number', 
+                 'birth_date', 'profile_picture', 'bio', 'is_verified', 
+                 'created_at', 'first_name', 'last_name', 'date_joined', 'last_login',
+                 'gender')
+        read_only_fields = ('id', 'date_joined', 'last_login')
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -24,10 +27,21 @@ class RegisterSerializer(serializers.ModelSerializer):
         validators=[validate_password]
     )
     password2 = serializers.CharField(write_only=True, required=True)
+    birth_date = serializers.DateField(required=False)
+    first_name = serializers.CharField(required=False, allow_blank=True)
+    last_name = serializers.CharField(required=False, allow_blank=True)
+    
+    # Change gender to a ChoiceField with predefined options
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+    ]
+    gender = serializers.ChoiceField(choices=GENDER_CHOICES, required=False)
 
     class Meta:
         model = User
-        fields = ('username', 'password', 'password2', 'email', 'user_type', 'phone_number')
+        fields = ('username', 'password', 'password2', 'email', 'user_type', 
+                 'phone_number', 'birth_date', 'first_name', 'last_name', 'gender')
 
     def validate(self, attrs):
         if attrs['password'] != attrs['password2']:
@@ -53,12 +67,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
         
-        # Add extra responses
+        # Use UserSerializer to get all user fields
+        user_serializer = UserSerializer(self.user)
+        user_data = user_serializer.data
+        
+        # Add all user data to the response
         data.update({
-            'user_id': self.user.id,
-            'username': self.user.username,
-            'email': self.user.email,
-            'user_type': self.user.user_type,
+            'user': user_data
         })
         
         return data

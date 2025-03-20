@@ -26,7 +26,13 @@ class MyApp extends StatelessWidget {
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
             useMaterial3: true,
           ),
-          home: const MyHomePage(title: 'Flutter Demo Home Page'),
+          // home property removed to fix the assertion error
+          initialRoute: '/', // Explicitly setting initial route
+          routes: {
+            '/': (context) => const LoginScreen(),
+            '/skeleton': (context) => const Skeleton(),
+            // Other routes...
+          },
         );
       },
     );
@@ -45,6 +51,6 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
-    return const Skeleton();
+    return const LoginScreen();
   }
 }

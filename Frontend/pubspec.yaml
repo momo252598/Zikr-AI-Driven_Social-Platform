@@ -49,6 +49,7 @@ dependencies:
   string_validator: ^0.3.0
   flutter_screenutil: ^5.9.3
   just_audio: ^0.9.36
+  flutter_secure_storage: ^9.2.4
 
 dev_dependencies:
   flutter_test:

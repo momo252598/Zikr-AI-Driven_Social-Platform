@@ -9,6 +9,11 @@ class User(AbstractUser):
         ('admin', 'Admin'),
     )
     
+    GENDER_CHOICES = (
+        ('ذكر', 'Male'),
+        ('أنثى', 'Female'),
+    )
+    
     email = models.EmailField(_('email address'), unique=True)
     user_type = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='regular')
     phone_number = models.CharField(max_length=15, blank=True)
@@ -17,6 +22,7 @@ class User(AbstractUser):
     bio = models.TextField(blank=True)
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
     
     # Social fields
     followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)

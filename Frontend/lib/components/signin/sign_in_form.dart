@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../base/res/styles/app_styles.dart';
+import '../../services/auth_service.dart';
+// You might need to add your navigation import here
+// import 'package:go_router/go_router.dart'; or flutter navigation
 
 class SignInForm extends StatefulWidget {
   const SignInForm({super.key});
@@ -16,27 +18,45 @@ class _SignInFormState extends State<SignInForm> {
   bool _obscureText = true;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
+  bool _isLoading = false;
+  String? _errorMessage;
 
   Future<void> _signIn() async {
     if (_formKey.currentState!.validate()) {
-      final response = await http.post(
-        Uri.parse(
-            'http://10.0.2.2:8000/api/login/'), // Replace with your Django backend URL
-        headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
-        },
-        body: jsonEncode(<String, String>{
-          'email': _emailController.text,
-          'password': _passwordController.text,
-        }),
-      );
+      setState(() {
+        _isLoading = true;
+        _errorMessage = null;
+      });
 
-      if (response.statusCode == 200) {
-        // Handle successful response
-        print('Login successful');
-      } else {
-        // Handle error response
-        print('Login failed');
+      try {
+        final result = await _authService.login(
+          _emailController.text,
+          _passwordController.text,
+        );
+
+        if (result['success']) {
+          print('Login successful');
+          // Navigate to the skeleton page
+          Navigator.of(context).pushReplacementNamed('/skeleton');
+          // Or if using go_router:
+          // context.go('/skeleton');
+        } else {
+          setState(() {
+            _errorMessage =
+                result['message'] ?? 'Login failed, please try again';
+          });
+          print('Login failed: ${result['message']}');
+        }
+      } catch (e) {
+        setState(() {
+          _errorMessage = 'An unexpected error occurred: $e';
+        });
+        print('Login exception: $e');
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -54,14 +74,30 @@ class _SignInFormState extends State<SignInForm> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  if (_errorMessage != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ),
                   TextFormField(
                     controller: _emailController,
-                    textDirection: TextDirection.rtl, // set RTL direction
-                    textAlign: TextAlign.right, // added alignment
+                    textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.right,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppStyles.txtFieldColor,
-                      hintText: 'البريد الإلكتروني', // translated hint
+                      hintText: 'البريد الإلكتروني',
                       hintStyle: TextStyle(color: AppStyles.white),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -120,28 +156,29 @@ class _SignInFormState extends State<SignInForm> {
                     },
                   ),
                   const SizedBox(height: 44),
-                  ElevatedButton(
-                    onPressed: _signIn,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppStyles.buttonColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: Text(
-                      'تسجيل الدخول', // translated button text
-                      style: TextStyle(
-                        color: AppStyles.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ),
+                  _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton(
+                          onPressed: _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppStyles.buttonColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          child: Text(
+                            'تسجيل الدخول',
+                            style: TextStyle(
+                              color: AppStyles.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        ),
                   const SizedBox(height: 20),
-                  // Add the background image below the sign-in button
                 ],
               ),
             ),
