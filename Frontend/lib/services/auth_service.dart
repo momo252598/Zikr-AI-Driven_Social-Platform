@@ -21,6 +21,8 @@ class AuthService {
   static const String ACCESS_TOKEN_KEY = 'access_token';
   static const String REFRESH_TOKEN_KEY = 'refresh_token';
   static const String USER_DATA_KEY = 'user_data';
+  static const String USER_ID_KEY = 'user_id';
+  static const String USERNAME_KEY = 'username';
 
   // Store tokens securely
   Future<void> storeTokens(
@@ -48,9 +50,9 @@ class AuthService {
   }
 
   // Get access token
-  Future<String?> getAccessToken() async {
-    return await _storage.read(key: ACCESS_TOKEN_KEY);
-  }
+  // Future<String?> getAccessToken() async {
+  //   return await _storage.read(key: ACCESS_TOKEN_KEY);
+  // }
 
   // Get refresh token
   Future<String?> getRefreshToken() async {
@@ -126,8 +128,9 @@ class AuthService {
     return await getAccessToken() != null;
   }
 
-  // Login with email and password
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  // Login with email or username
+  Future<Map<String, dynamic>> login(
+      String emailOrUsername, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/login/'),
@@ -135,7 +138,8 @@ class AuthService {
           'Content-Type': 'application/json; charset=UTF-8',
         },
         body: jsonEncode(<String, String>{
-          'email': email,
+          'email':
+              emailOrUsername, // This field name is actually for either email or username
           'password': password,
         }),
       );
@@ -173,7 +177,7 @@ class AuthService {
                 lastLogin: userData['last_login'] != null
                     ? DateTime.parse(userData['last_login'])
                     : null,
-                gender: userData['gender'] ?? ''); // Include gender field
+                gender: userData['gender'] ?? '');
 
             await storeUserData(user);
           }
@@ -227,6 +231,76 @@ class AuthService {
       }
     } catch (e) {
       return false;
+    }
+  }
+
+  // Get current user ID
+  Future<int?> getCurrentUserId() async {
+    final userIdStr = await _storage.read(key: USER_ID_KEY);
+    return userIdStr != null ? int.parse(userIdStr) : null;
+  }
+
+  // Get current username
+  Future<String?> getCurrentUsername() async {
+    return await _storage.read(key: USERNAME_KEY);
+  }
+
+  // Get access token (refreshes if needed)
+  Future<String> getAccessToken() async {
+    String? accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+
+    // Check if token exists and is valid
+    if (accessToken == null) {
+      // Try to refresh
+      final refreshed = await refreshToken();
+      if (!refreshed) {
+        throw Exception('No authentication token available');
+      }
+      accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+    }
+
+    return accessToken!;
+  }
+
+  // Save user info after login
+  Future<void> saveUserInfo(Map<String, dynamic> userData, String accessToken,
+      String refreshToken) async {
+    await _storage.write(key: ACCESS_TOKEN_KEY, value: accessToken);
+    await _storage.write(key: REFRESH_TOKEN_KEY, value: refreshToken);
+    await _storage.write(key: USER_ID_KEY, value: userData['id'].toString());
+    await _storage.write(key: USERNAME_KEY, value: userData['username']);
+  }
+
+  // Get Firebase authentication token from Django backend
+  Future<String?> getFirebaseToken() async {
+    try {
+      // Make sure we have a valid access token
+      final accessToken = await getAccessToken();
+
+      // Use the chat API base URL instead of accounts
+      final host = kIsWeb ? '127.0.0.1' : '10.0.2.2';
+      final chatApiUrl = 'http://$host:8000/api/chat';
+
+      // Call Django endpoint to get a Firebase custom token
+      final response = await http.get(
+        Uri.parse('$chatApiUrl/firebase-token/'),
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['firebase_token'];
+      } else {
+        print('Failed to get Firebase token: ${response.statusCode}');
+        print('Response: ${response.body}');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting Firebase token: $e');
+      return null;
     }
   }
 }

@@ -5,9 +5,14 @@ import 'package:software_graduation_project/screens/signin/signin.dart';
 import 'package:software_graduation_project/components/signup/sign_up_form.dart';
 import 'package:software_graduation_project/skeleton.dart';
 import 'package:software_graduation_project/screens/prayers/prayers.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 

@@ -65,7 +65,54 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         return token
     
     def validate(self, attrs):
-        data = super().validate(attrs)
+        # The default USERNAME_FIELD is 'email', but we want to allow login with username too
+        
+        # Get the username/email field from attrs
+        credential = attrs.get(self.username_field)
+        password = attrs.get('password')
+        
+        if credential and password:
+            # Check if the credential is an email (contains @)
+            if '@' in credential:
+                # Try to authenticate with email
+                try:
+                    user = User.objects.get(email=credential)
+                    if user.check_password(password):
+                        self.user = user
+                    else:
+                        raise serializers.ValidationError(
+                            {'password': 'No active account found with the given credentials.'}
+                        )
+                except User.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {'email': 'No active account found with the given credentials.'}
+                    )
+            else:
+                # Try to authenticate with username
+                try:
+                    user = User.objects.get(username=credential)
+                    if user.check_password(password):
+                        self.user = user
+                    else:
+                        raise serializers.ValidationError(
+                            {'password': 'No active account found with the given credentials.'}
+                        )
+                except User.DoesNotExist:
+                    raise serializers.ValidationError(
+                        {'username': 'No active account found with the given credentials.'}
+                    )
+        else:
+            raise serializers.ValidationError(
+                {'credential': 'Both username/email and password are required.'}
+            )
+        
+        data = {}
+        
+        # Get the token
+        refresh = self.get_token(self.user)
+        
+        data['refresh'] = str(refresh)
+        data['access'] = str(refresh.access_token)
         
         # Use UserSerializer to get all user fields
         user_serializer = UserSerializer(self.user)

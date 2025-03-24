@@ -51,6 +51,10 @@ dependencies:
   just_audio: ^0.9.36
   flutter_secure_storage: ^9.2.4
   shared_preferences: ^2.5.2
+  firebase_core: ^3.9.0
+  cloud_firestore: ^5.5.0
+  firebase_auth: ^5.3.4
+  firebase_database: ^11.1.6
 
 dev_dependencies:
   flutter_test:

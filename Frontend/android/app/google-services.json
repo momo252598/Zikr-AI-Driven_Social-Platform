@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "613315271856",
+    "firebase_url": "https://zikr-94f9a-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "zikr-94f9a",
+    "storage_bucket": "zikr-94f9a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:613315271856:android:bf1aa53277d3f3f533ef75",
+        "android_client_info": {
+          "package_name": "com.example.software_graduation_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC0wnz4zWtIOLno75OKJb3eJUzDWakaBNI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

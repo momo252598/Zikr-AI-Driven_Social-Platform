@@ -92,8 +92,8 @@ class _SignInFormState extends State<SignInForm> {
                     ),
                   TextFormField(
                     controller: _emailController,
-                    textDirection: TextDirection.rtl,
-                    textAlign: TextAlign.right,
+                    // textDirection: TextDirection.rtl,
+                    textAlign: TextAlign.center,
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppStyles.txtFieldColor,
@@ -118,8 +118,8 @@ class _SignInFormState extends State<SignInForm> {
                   const SizedBox(height: 31),
                   TextFormField(
                     controller: _passwordController,
-                    textDirection: TextDirection.rtl, // set RTL direction
-                    textAlign: TextAlign.right, // added alignment
+                    // textDirection: TextDirection.rtl, // set RTL direction
+                    textAlign: TextAlign.center, // added alignment
                     obscureText: _obscureText,
                     decoration: InputDecoration(
                       filled: true,
