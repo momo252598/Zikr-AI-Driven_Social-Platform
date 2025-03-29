@@ -8,6 +8,7 @@ import 'package:software_graduation_project/components/chat/skeleton_with_chat.d
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
+import 'package:software_graduation_project/services/auth_service.dart';
 import 'new_conversation_dialog.dart';
 
 class AllChatsPage extends StatefulWidget {
@@ -28,11 +29,25 @@ class _AllChatsPageState extends State<AllChatsPage> {
   final ScrollController _scrollController = ScrollController();
   final ChatApiService _chatApiService = ChatApiService();
   final FirebaseService _firebaseService = FirebaseService();
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
     _loadChats();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkAndRefreshData();
+  }
+
+  Future<void> _checkAndRefreshData() async {
+    final route = ModalRoute.of(context);
+    if (route != null && route.isCurrent) {
+      _loadChats();
+    }
   }
 
   Future<void> _loadChats() async {
@@ -42,21 +57,26 @@ class _AllChatsPageState extends State<AllChatsPage> {
         _errorMessage = '';
       });
 
-      // API call to get real conversations
       final conversations = await _chatApiService.getConversations();
 
-      // Process the API response to ensure it has the expected format
+      print("API Response: ${conversations.length} conversations");
+      if (conversations.isNotEmpty) {
+        print("First conversation sample: ${json.encode(conversations[0])}");
+      }
+
+      final currentUserId = await _authService.getCurrentUserId();
+
       final processedChats = conversations.map((chat) {
-        // Find the other participant's name for display
         String name = chat['name'] ?? '';
-        if (name.isEmpty &&
-            chat['participants'] != null &&
-            chat['participants'] is List) {
-          // For one-on-one chats, try to get the other user's name
+
+        if (chat['participants'] != null && chat['participants'] is List) {
           final participants = chat['participants'] as List;
           if (participants.isNotEmpty) {
             for (var participant in participants) {
-              if (participant is Map && participant.containsKey('username')) {
+              if (participant is Map &&
+                  participant.containsKey('username') &&
+                  participant.containsKey('id') &&
+                  participant['id'].toString() != currentUserId.toString()) {
                 name = participant['username'];
                 break;
               }
@@ -64,17 +84,52 @@ class _AllChatsPageState extends State<AllChatsPage> {
           }
         }
 
-        // Ensure the chat object has the required fields
+        print("Chat ID ${chat['id']} - Messages: ${chat['messages']}");
+        print("Chat ID ${chat['id']} - Last message: ${chat['last_message']}");
+
+        String lastMessageText = 'لا توجد رسائل';
+        String? timestamp =
+            chat['updated_at'] ?? DateTime.now().toIso8601String();
+
+        if (chat.containsKey('last_message') && chat['last_message'] != null) {
+          if (chat['last_message'] is String) {
+            lastMessageText = chat['last_message'];
+          } else if (chat['last_message'] is Map) {
+            lastMessageText = chat['last_message']['content'] ??
+                chat['last_message']['content_preview'] ??
+                'لا توجد رسائل';
+          }
+        } else if (chat.containsKey('last_message_content') &&
+            chat['last_message_content'] != null) {
+          lastMessageText = chat['last_message_content'];
+        } else if (chat['messages'] != null &&
+            chat['messages'] is List &&
+            (chat['messages'] as List).isNotEmpty) {
+          final messages = chat['messages'] as List;
+          final lastMsg = messages.last;
+          if (lastMsg is Map) {
+            if (lastMsg.containsKey('content_preview')) {
+              lastMessageText = lastMsg['content_preview'] ?? lastMessageText;
+            } else if (lastMsg.containsKey('content')) {
+              lastMessageText = lastMsg['content'] ?? lastMessageText;
+            }
+
+            if (lastMsg.containsKey('created_at') &&
+                lastMsg['created_at'] != null) {
+              timestamp = lastMsg['created_at'];
+            } else if (lastMsg.containsKey('timestamp') &&
+                lastMsg['timestamp'] != null) {
+              timestamp = lastMsg['timestamp'].toString();
+            }
+          }
+        }
+
         return {
           'id': chat['id'],
           'name': name.isNotEmpty ? name : 'محادثة',
           'firebase_id': chat['firebase_id'] ?? '',
-          'last_message': chat['messages'] != null &&
-                  chat['messages'] is List &&
-                  (chat['messages'] as List).isNotEmpty
-              ? (chat['messages'] as List).last
-              : null,
-          'timestamp': chat['updated_at'] ?? DateTime.now().toIso8601String(),
+          'last_message_text': lastMessageText,
+          'timestamp': timestamp,
         };
       }).toList();
 
@@ -90,36 +145,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
         setState(() {
           _chats = [];
           _isLoading = false;
-          _errorMessage = 'فشل في تحميل المحادثات. الرجاء المحاولة لاحقًا.';
-        });
-      }
-
-      // Fallback to local data during development
-      _loadLocalChats();
-    }
-  }
-
-  Future<void> _loadLocalChats() async {
-    try {
-      final jsonString = await DefaultAssetBundle.of(context)
-          .loadString('assets/utils/chat_ex.json');
-      final loadedChats = json.decode(jsonString) as List<dynamic>;
-
-      loadedChats.sort((a, b) => DateTime.parse(b['timestamp'])
-          .compareTo(DateTime.parse(a['timestamp'])));
-
-      if (mounted) {
-        setState(() {
-          _chats = List<Map<String, dynamic>>.from(loadedChats);
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      print('Error loading local chats: $e');
-      if (mounted) {
-        setState(() {
-          _chats = [];
-          _isLoading = false;
+          // _errorMessage = 'فشل في تحميل المحادثات. الرجاء المحاولة لاحقًا.';
         });
       }
     }
@@ -128,9 +154,11 @@ class _AllChatsPageState extends State<AllChatsPage> {
   void _showNewConversationDialog() {
     showDialog(
       context: context,
-      builder: (context) => NewConversationDialog(
+      barrierDismissible: false,
+      builder: (dialogContext) => NewConversationDialog(
         onConversationCreated: (conversationId) {
-          _loadChats(); // Reload chats after creating a new one
+          _loadChats();
+
           if (widget.onChatSelected != null) {
             widget.onChatSelected!(conversationId);
           } else {
@@ -146,13 +174,52 @@ class _AllChatsPageState extends State<AllChatsPage> {
     );
   }
 
+  Future<void> _navigateToChat(int chatId) async {
+    if (widget.onChatSelected != null) {
+      widget.onChatSelected!(chatId);
+    } else {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatPage(chatId: chatId),
+        ),
+      );
+
+      if (result == true) {
+        _loadChats();
+      }
+    }
+  }
+
+  Future<void> updateSpecificChat(int chatId, String lastMessage) async {
+    if (_chats == null) return;
+
+    // Find the chat in the list
+    final chatIndex = _chats!.indexWhere((chat) => chat['id'] == chatId);
+    if (chatIndex == -1) return;
+
+    // Update just the last message for this chat
+    setState(() {
+      _chats![chatIndex]['last_message_text'] = lastMessage;
+      _chats![chatIndex]['timestamp'] = DateTime.now().toIso8601String();
+
+      // Move this chat to the top of the list
+      if (chatIndex > 0) {
+        final updatedChat = _chats![chatIndex];
+        _chats!.removeAt(chatIndex);
+        _chats!.insert(0, updatedChat);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
       appBar: CustomAppBar(
         title: "جميع الرسائل",
-        showAddButton: true,
+        showAddButton:
+            false, // Changed from true to false to remove the + button
         showBackButton: true,
         onAddPressed: _showNewConversationDialog,
       ),
@@ -163,7 +230,24 @@ class _AllChatsPageState extends State<AllChatsPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('لا توجد محادثات'),
+                      Icon(
+                        Icons.message_outlined,
+                        size: 80,
+                        color: AppStyles.lightPurple,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'لا توجد محادثات بعد',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'ابدأ محادثة جديدة للتواصل مع الآخرين',
+                        textAlign: TextAlign.center,
+                      ),
                       if (_errorMessage.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.all(8.0),
@@ -173,13 +257,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
                             textAlign: TextAlign.center,
                           ),
                         ),
-                      ElevatedButton(
-                        onPressed: _showNewConversationDialog,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppStyles.buttonColor,
-                        ),
-                        child: const Text('بدء محادثة جديدة'),
-                      ),
+                      // Removed the ElevatedButton that was here
                     ],
                   ),
                 )
@@ -191,52 +269,28 @@ class _AllChatsPageState extends State<AllChatsPage> {
                     itemBuilder: (context, index) {
                       final chat = _chats![index];
 
-                      // Extract the last message info
-                      final lastMessage = chat['last_message'];
-                      String messagePreview = 'لا توجد رسائل';
+                      String messagePreview =
+                          chat['last_message_text'] ?? 'لا توجد رسائل';
 
-                      if (lastMessage != null) {
-                        if (lastMessage is Map) {
-                          if (lastMessage.containsKey('content_preview')) {
-                            messagePreview = lastMessage['content_preview'] ??
-                                messagePreview;
-                          } else if (lastMessage.containsKey('content')) {
-                            messagePreview =
-                                lastMessage['content'] ?? messagePreview;
-                          }
-                        }
-                      }
+                      print(
+                          'Chat ${chat['id']} - Displaying message preview: $messagePreview');
 
-                      // Format the timestamp
                       DateTime timestamp;
-                      if (lastMessage != null &&
-                          lastMessage is Map &&
-                          lastMessage.containsKey('timestamp')) {
-                        // Handle different timestamp formats
-                        final rawTimestamp = lastMessage['timestamp'];
+                      try {
+                        final rawTimestamp = chat['timestamp'];
                         if (rawTimestamp is int) {
                           timestamp =
                               DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
                         } else {
-                          try {
-                            timestamp = DateTime.parse(rawTimestamp.toString());
-                          } catch (e) {
-                            timestamp = DateTime.now();
-                          }
+                          timestamp = DateTime.parse(rawTimestamp.toString());
                         }
-                      } else {
-                        try {
-                          timestamp =
-                              DateTime.parse(chat['timestamp'].toString());
-                        } catch (e) {
-                          timestamp = DateTime.now();
-                        }
+                      } catch (e) {
+                        timestamp = DateTime.now();
                       }
 
                       final formattedTime =
                           '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
 
-                      // Check if this chat is the selected one
                       final isSelected = widget.selectedChatId == chat['id'];
 
                       return Padding(
@@ -281,13 +335,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
                               if (widget.onChatSelected != null) {
                                 widget.onChatSelected!(chat['id']);
                               } else {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        ChatPage(chatId: chat['id']),
-                                  ),
-                                );
+                                _navigateToChat(chat['id']);
                               }
                             },
                           ),

@@ -10,6 +10,12 @@ class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService(); // Your Django auth service
 
+  Future<String> getCurrentUserId() async {
+    // Get the current user ID from Firebase Auth
+    final currentUser = FirebaseAuth.instance.currentUser;
+    return currentUser?.uid ?? '';
+  }
+
   // Sign in with custom token from Django
   Future<void> signInWithCustomToken() async {
     try {
@@ -146,7 +152,7 @@ class FirebaseService {
     });
   }
 
-  // Send a new message
+  // Modified to prevent duplicate message storage
   Future<void> sendMessage(String conversationId, String content, int senderId,
       String senderUsername) async {
     try {
@@ -164,17 +170,19 @@ class FirebaseService {
       final ref = _database.ref('messages/$conversationId').push();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
 
-      // Convert senderId to string to ensure consistent type handling in Firebase
+      // Convert senderId to string and ensure it's a Django user ID, not Firebase UID
       final senderIdString = senderId.toString();
 
-      // Log the exact data we're sending for debugging
-      print(
-          "Sending message with senderId: $senderId (as string: $senderIdString)");
+      print("Sending message with consistent senderId: $senderIdString");
+
+      // Ensure Firebase auth uid isn't used by accident
+      String firebaseUid = _auth.currentUser?.uid ?? "";
+      print("Current Firebase UID (NOT used for message): $firebaseUid");
 
       await ref.set({
         'content': content,
         'timestamp': timestamp,
-        'sender_id': senderIdString, // Store as string consistently
+        'sender_id': senderIdString, // Always use Django user ID
         'sender_username': senderUsername,
         'read_by': {senderIdString: true}
       });
@@ -183,13 +191,12 @@ class FirebaseService {
       await _database.ref('conversations/$conversationId').update({
         'last_activity': timestamp,
         'last_message': content,
-        'last_sender_id': senderIdString // Use string here too for consistency
+        'last_sender_id': senderIdString
       });
 
       print("Message successfully sent to Firebase");
     } catch (e) {
       print("Firebase sendMessage error: $e");
-      // Re-throw the error to be handled by the caller
       throw e;
     }
   }

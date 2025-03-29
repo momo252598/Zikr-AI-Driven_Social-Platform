@@ -7,7 +7,7 @@ import 'package:software_graduation_project/base/res/media.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onAddPressed;
-  final VoidCallback? onBackPressed;
+  final VoidCallback? onBackPressed; // Add this parameter
   final bool showAddButton;
   final bool showBackButton;
 
@@ -15,7 +15,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     Key? key,
     required this.title,
     this.onAddPressed,
-    this.onBackPressed,
+    this.onBackPressed, // Add this parameter
     this.showAddButton = true,
     this.showBackButton = true,
   }) : super(key: key);
@@ -71,7 +71,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       leading: showBackButton
           ? IconButton(
               icon: Icon(Icons.arrow_back, color: AppStyles.white),
-              onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+              onPressed: onBackPressed ??
+                  () => Navigator.of(context).pop(), // Use callback if provided
             )
           : null,
     );

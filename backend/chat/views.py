@@ -44,7 +44,7 @@ def start_conversation(request):
     serializer = ConversationCreateSerializer(data=request.data)
     if serializer.is_valid():
         recipient_identifier = serializer.validated_data['recipient']
-        initial_message = serializer.validated_data['message']
+        initial_message = serializer.validated_data.get('message', '')
         
         # Find the recipient user
         try:
@@ -81,15 +81,17 @@ def start_conversation(request):
             firebase_id = str(uuid.uuid4())  # Generate a Firebase reference ID
             conversation = Conversation.objects.create(firebase_id=firebase_id)
             conversation.participants.add(request.user, recipient)
-            
-        # Create an initial message reference
-        message_firebase_id = str(uuid.uuid4())
-        message = Message.objects.create(
-            conversation=conversation,
-            sender=request.user,
-            firebase_id=message_firebase_id,
-            content_preview=initial_message[:97] + '...' if len(initial_message) > 100 else initial_message
-        )
+        
+        # Only create a message reference if an initial message was provided
+        message_firebase_id = None
+        if initial_message:
+            message_firebase_id = str(uuid.uuid4())
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                firebase_id=message_firebase_id,
+                content_preview=initial_message[:97] + '...' if len(initial_message) > 100 else initial_message
+            )
         
         # Update the conversation's timestamp
         conversation.updated_at = timezone.now()
@@ -97,11 +99,17 @@ def start_conversation(request):
         
         # Return the conversation details
         serializer = ConversationSerializer(conversation)
-        return Response({
+        response_data = {
             "conversation": serializer.data,
-            "message_firebase_id": message_firebase_id,
             "success": "Conversation started successfully."
-        }, status=status.HTTP_201_CREATED)
+        }
+        
+        # Only include message info if a message was created
+        if message_firebase_id:
+            response_data["message_firebase_id"] = message_firebase_id
+            response_data["message_sent_to_firebase"] = False
+        
+        return Response(response_data, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

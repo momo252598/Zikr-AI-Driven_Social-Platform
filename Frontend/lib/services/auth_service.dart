@@ -31,10 +31,24 @@ class AuthService {
     await _storage.write(key: REFRESH_TOKEN_KEY, value: refreshToken);
   }
 
-  // Store user data
+  // Store user data - updated to also store ID and username separately
   Future<void> storeUserData(User user) async {
     _currentUser = user;
+    print(
+        "Storing user data for user ID: ${user.id}, username: ${user.username}");
+
+    // Store the whole user object
     await _storage.write(key: USER_DATA_KEY, value: jsonEncode(user.toJson()));
+
+    // Also store ID and username separately for quick access
+    if (user.id != null) {
+      await _storage.write(key: USER_ID_KEY, value: user.id.toString());
+      print("User ID stored separately: ${user.id}");
+    }
+
+    if (user.username != null) {
+      await _storage.write(key: USERNAME_KEY, value: user.username);
+    }
   }
 
   // Get user data
@@ -48,11 +62,6 @@ class AuthService {
     }
     return null;
   }
-
-  // Get access token
-  // Future<String?> getAccessToken() async {
-  //   return await _storage.read(key: ACCESS_TOKEN_KEY);
-  // }
 
   // Get refresh token
   Future<String?> getRefreshToken() async {
@@ -180,6 +189,13 @@ class AuthService {
                 gender: userData['gender'] ?? '');
 
             await storeUserData(user);
+
+            // Also store ID directly in case storeUserData didn't do it
+            if (userData['id'] != null) {
+              await _storage.write(
+                  key: USER_ID_KEY, value: userData['id'].toString());
+              print("User ID stored directly during login: ${userData['id']}");
+            }
           }
         }
       }
@@ -234,10 +250,47 @@ class AuthService {
     }
   }
 
-  // Get current user ID
+  // Get current user ID - enhanced with more logging and fallback
   Future<int?> getCurrentUserId() async {
+    // Try reading the ID directly
     final userIdStr = await _storage.read(key: USER_ID_KEY);
-    return userIdStr != null ? int.parse(userIdStr) : null;
+    print("Direct USER_ID_KEY read: $userIdStr");
+
+    if (userIdStr != null) {
+      try {
+        return int.parse(userIdStr);
+      } catch (e) {
+        print("Error parsing user ID: $e");
+      }
+    }
+
+    // If ID isn't directly available, try to get it from stored user data
+    if (_currentUser?.id != null) {
+      print("Using cached current user ID: ${_currentUser!.id}");
+      return _currentUser!.id;
+    }
+
+    // Try to extract from full user data
+    final userData = await _storage.read(key: USER_DATA_KEY);
+    if (userData != null) {
+      try {
+        final userMap = jsonDecode(userData);
+        if (userMap.containsKey('id')) {
+          final id = userMap['id'];
+          print("Extracted user ID from full user data: $id");
+
+          // Store it for future use
+          await _storage.write(key: USER_ID_KEY, value: id.toString());
+
+          return id is int ? id : int.parse(id.toString());
+        }
+      } catch (e) {
+        print("Error extracting ID from user data: $e");
+      }
+    }
+
+    print("Could not retrieve user ID from any source");
+    return null;
   }
 
   // Get current username
@@ -269,6 +322,30 @@ class AuthService {
     await _storage.write(key: REFRESH_TOKEN_KEY, value: refreshToken);
     await _storage.write(key: USER_ID_KEY, value: userData['id'].toString());
     await _storage.write(key: USERNAME_KEY, value: userData['username']);
+  }
+
+  // Debug method to inspect all stored values
+  Future<Map<String, String?>> debugInspectStorage() async {
+    final Map<String, String?> values = {};
+    values[ACCESS_TOKEN_KEY] = await _storage.read(key: ACCESS_TOKEN_KEY);
+    values[REFRESH_TOKEN_KEY] = await _storage.read(key: REFRESH_TOKEN_KEY);
+    values[USER_DATA_KEY] = await _storage.read(key: USER_DATA_KEY);
+    values[USER_ID_KEY] = await _storage.read(key: USER_ID_KEY);
+    values[USERNAME_KEY] = await _storage.read(key: USERNAME_KEY);
+
+    print("DEBUG - Stored values:");
+    values.forEach((key, value) {
+      print(
+          "$key: ${value != null ? (key.contains('TOKEN') ? '${value.substring(0, 10)}...' : value) : 'null'}");
+    });
+
+    return values;
+  }
+
+  // Directly set user ID (for testing/fixing)
+  Future<void> setCurrentUserId(int id) async {
+    await _storage.write(key: USER_ID_KEY, value: id.toString());
+    print("Manually set user ID to: $id");
   }
 
   // Get Firebase authentication token from Django backend

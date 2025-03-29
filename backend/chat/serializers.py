@@ -46,4 +46,4 @@ class UserChatSettingsSerializer(serializers.ModelSerializer):
 class ConversationCreateSerializer(serializers.Serializer):
     """Serializer for creating a new conversation"""
     recipient = serializers.CharField(help_text="Username or email of the recipient")
-    message = serializers.CharField(help_text="Initial message content")
+    message = serializers.CharField(help_text="Initial message content", required=False, allow_blank=True, default='')

@@ -7,6 +7,8 @@ import 'package:software_graduation_project/skeleton.dart';
 import 'package:software_graduation_project/screens/prayers/prayers.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:provider/provider.dart';
+import 'package:software_graduation_project/services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,21 +26,24 @@ class MyApp extends StatelessWidget {
       designSize: const Size(360, 690),
       minTextAdapt: true, // this sets _minTextAdapt
       builder: (context, child) {
-        return MaterialApp(
-          title: 'Flutter Demo',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-            useMaterial3: true,
+        return Provider(
+          create: (_) => AuthService(),
+          child: MaterialApp(
+            title: 'Flutter Demo',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              useMaterial3: true,
+            ),
+            // home property removed to fix the assertion error
+            initialRoute: '/', // Explicitly setting initial route
+            routes: {
+              '/': (context) => const LoginScreen(),
+              '/skeleton': (context) => const Skeleton(),
+              '/signup': (context) => const SignUpScreen(),
+              // Other routes...
+            },
           ),
-          // home property removed to fix the assertion error
-          initialRoute: '/', // Explicitly setting initial route
-          routes: {
-            '/': (context) => const LoginScreen(),
-            '/skeleton': (context) => const Skeleton(),
-            '/signup': (context) => const SignUpScreen(),
-            // Other routes...
-          },
         );
       },
     );

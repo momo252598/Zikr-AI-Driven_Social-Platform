@@ -1,13 +1,19 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/services/auth_service.dart';
-import 'package:software_graduation_project/services/firebase_service.dart'; // Add this import
+import 'package:software_graduation_project/services/firebase_service.dart';
 
 class ChatApiService {
-  final String baseUrl = 'http://10.0.2.2:8000/api/chat';
+  late final String baseUrl; // Change to late final
   final AuthService _authService = AuthService();
-  final FirebaseService _firebaseService =
-      FirebaseService(); // Add Firebase service
+  final FirebaseService _firebaseService = FirebaseService();
+
+  ChatApiService() {
+    // Use 127.0.0.1 when running on web, otherwise use 10.0.2.2 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '10.0.2.2';
+    baseUrl = 'http://$host:8000/api/chat';
+  }
 
   // Get user's conversations
   Future<List<Map<String, dynamic>>> getConversations() async {
@@ -23,6 +29,25 @@ class ChatApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        print(
+            "Raw API response: ${response.body.substring(0, 200)}..."); // Print first 200 chars
+
+        // Debug the structure to see what fields are available
+        if (data is List && data.isNotEmpty) {
+          print(
+              "First conversation structure keys: ${(data[0] as Map).keys.toList()}");
+
+          // Check specifically for last message fields
+          final firstChat = data[0] as Map;
+          if (firstChat.containsKey('messages')) {
+            print("Messages field exists. Sample: ${firstChat['messages']}");
+          }
+          if (firstChat.containsKey('last_message')) {
+            print(
+                "last_message field exists. Value: ${firstChat['last_message']}");
+          }
+        }
+
         return List<Map<String, dynamic>>.from(data);
       } else {
         throw Exception('Failed to load conversations: ${response.statusCode}');
@@ -56,46 +81,76 @@ class ChatApiService {
     }
   }
 
-  // Start a new conversation - update to also initialize Firebase conversation
+  // Start a new conversation - update to make initialMessage optional
   Future<Map<String, dynamic>> startConversation(
       String recipient, String initialMessage) async {
     try {
       final token = await _authService.getAccessToken();
+
+      // Prepare the request body - only include message if not empty
+      final Map<String, dynamic> requestBody = {'recipient': recipient};
+      if (initialMessage.isNotEmpty) {
+        requestBody['message'] = initialMessage;
+      }
+
       final response = await http.post(
         Uri.parse('$baseUrl/conversations/start/'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token'
         },
-        body: json.encode({'recipient': recipient, 'message': initialMessage}),
+        body: json.encode(requestBody),
       );
 
       if (response.statusCode == 201) {
-        final conversationData = json.decode(response.body);
+        final responseData = json.decode(response.body);
+        print("Full API Response: $responseData");
 
-        // Debug information
-        print("Conversation data: $conversationData");
+        // Extract the conversation data from the nested structure
+        final conversationData = responseData['conversation'] ?? responseData;
+        print("Extracted conversation data: $conversationData");
 
-        // Now also initialize the Firebase conversation with the first message
+        // Get the current user for Firebase interactions
         final user = await _authService.getCurrentUser();
-        print("Current user: ${user?.toJson()}"); // Debug user data
+        print("Current user: ${user?.toJson()}");
 
+        // Extract conversation ID and firebase_id properly
         final conversationId = conversationData['id'];
-        if (user != null && conversationId != null) {
-          // Make sure user.id is not null
-          if (user.id != null && user.username != null) {
-            await _firebaseService.sendMessage(conversationId.toString(),
-                initialMessage, user.id, user.username);
-          } else {
+        final firebaseId = conversationData['firebase_id'];
+
+        print(
+            "Extracted IDs - conversation ID: $conversationId, Firebase ID: $firebaseId");
+
+        // Only send Firebase message if there is an initial message
+        if (initialMessage.isNotEmpty &&
+            user != null &&
+            firebaseId != null &&
+            user.id != null &&
+            user.username != null) {
+          // Check if the server indicates the message was already sent to Firebase
+          final messageSentToFirebase =
+              responseData['message_sent_to_firebase'] ?? false;
+
+          if (!messageSentToFirebase) {
             print(
-                "Error: User ID or username is null. ID: ${user.id}, Username: ${user.username}");
+                "Sending initial message to Firebase with conversation ID: $firebaseId");
+            try {
+              await _firebaseService.sendMessage(firebaseId.toString(),
+                  initialMessage, user.id, user.username);
+              print("Initial message sent to Firebase successfully");
+            } catch (e) {
+              print("Error sending initial message to Firebase: $e");
+              // Continue even if Firebase fails - don't rethrow
+            }
+          } else {
+            print("Message was already sent to Firebase by server");
           }
         } else {
-          print(
-              "Error: User or conversation ID is null. User: $user, Conversation ID: $conversationId");
+          print("No initial message to send to Firebase or missing data");
         }
 
-        return conversationData;
+        // Return the full response data for maximum compatibility
+        return responseData;
       } else {
         final errorBody = json.decode(response.body);
         print("Server error response: $errorBody");
@@ -148,22 +203,8 @@ class ChatApiService {
       int conversationId, String messageContent) async {
     try {
       final token = await _authService.getAccessToken();
-      final user = await _authService.getCurrentUser();
 
-      // First, send message to Firebase if user is not null
-      if (user != null && user.id != null && user.username != null) {
-        try {
-          await _firebaseService.sendMessage(conversationId.toString(),
-              messageContent, user.id, user.username);
-        } catch (e) {
-          print("Firebase error: $e");
-          // Continue with the Django update even if Firebase fails
-        }
-      } else {
-        print("Warning: Couldn't send to Firebase - missing user data");
-      }
-
-      // Then, update Django backend with message reference
+      // Only update Django backend with message reference
       await http.post(
         Uri.parse('$baseUrl/conversations/$conversationId/messages/add/'),
         headers: {
@@ -171,6 +212,8 @@ class ChatApiService {
           'Authorization': 'Bearer $token'
         },
         body: json.encode({
+          'content':
+              messageContent, // Send full content in the 'content' field that Django expects
           'content_preview': messageContent.length > 100
               ? '${messageContent.substring(0, 97)}...'
               : messageContent

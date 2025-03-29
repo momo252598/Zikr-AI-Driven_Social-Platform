@@ -16,9 +16,7 @@ class NewConversationDialog extends StatefulWidget {
 
 class _NewConversationDialogState extends State<NewConversationDialog> {
   final TextEditingController _recipientController = TextEditingController();
-  final TextEditingController _messageController = TextEditingController();
   final ChatApiService _chatApiService = ChatApiService();
-  final FirebaseService _firebaseService = FirebaseService();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
   String _errorMessage = '';
@@ -26,25 +24,16 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
   @override
   void dispose() {
     _recipientController.dispose();
-    _messageController.dispose();
     super.dispose();
   }
 
   Future<void> _startConversation() async {
     final recipient = _recipientController.text.trim();
-    final message = _messageController.text.trim();
 
     if (recipient.isEmpty) {
       setState(() {
         _errorMessage =
             'الرجاء إدخال اسم المستخدم أو البريد الإلكتروني للمستلم';
-      });
-      return;
-    }
-
-    if (message.isEmpty) {
-      setState(() {
-        _errorMessage = 'الرجاء إدخال رسالة';
       });
       return;
     }
@@ -55,9 +44,8 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
     });
 
     try {
-      // Start conversation in Django and get the conversation details first
-      final result =
-          await _chatApiService.startConversation(recipient, message);
+      // Start conversation in Django with empty message
+      final result = await _chatApiService.startConversation(recipient, '');
 
       // Debug log the actual response
       print('Server response: $result');
@@ -67,12 +55,8 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
         throw Exception('لم يتم استلام رد من الخادم');
       }
 
-      // For debugging purposes, log the keys in the response
-      print('Response keys: ${result.keys.toList()}');
-
       // Extract the conversation ID, handling nested structure
       int? conversationId;
-      String? firebaseId;
 
       // Check if the response has a nested 'conversation' object
       if (result.containsKey('conversation') && result['conversation'] is Map) {
@@ -83,11 +67,6 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
           conversationId = conversation['id'] is int
               ? conversation['id']
               : int.tryParse(conversation['id'].toString());
-        }
-
-        // Extract Firebase ID from the conversation object
-        if (conversation.containsKey('firebase_id')) {
-          firebaseId = conversation['firebase_id'].toString();
         }
       } else {
         // Fall back to looking for ID at top level
@@ -101,12 +80,6 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
               ? result['conversation_id']
               : int.tryParse(result['conversation_id'].toString());
         }
-
-        // Look for Firebase ID at top level
-        if (result.containsKey('firebase_id') &&
-            result['firebase_id'] != null) {
-          firebaseId = result['firebase_id'].toString();
-        }
       }
 
       // If we still couldn't find a valid conversation ID
@@ -115,39 +88,57 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
             'رد غير صالح من الخادم: لا يوجد معرف للمحادثة.\nمحتوى الرد: ${result.toString()}');
       }
 
-      // Get the current user info
-      final currentUserId = await _authService.getCurrentUserId();
-      final currentUsername = await _authService.getCurrentUsername() ?? 'User';
+      // First close the dialog to prevent context issues
+      Navigator.of(context).pop();
 
-      // Only attempt Firebase operations if we have the necessary data
-      if (firebaseId != null &&
-          firebaseId.isNotEmpty &&
-          currentUserId != null) {
-        try {
-          // Ensure Firebase authentication before sending message
-          await _firebaseService.signInWithCustomToken();
-
-          // Send the first message to Firebase
-          await _firebaseService.sendMessage(
-              firebaseId, message, currentUserId, currentUsername);
-        } catch (firebaseError) {
-          // Log Firebase error but continue with Django conversation
-          print('Firebase error: $firebaseError');
-          // Don't rethrow - we'll still consider the conversation created
-        }
-      }
-
-      // Everything went well, notify the parent widget and close the dialog
+      // Then notify the parent widget to handle navigation
+      // This is done after pop() to avoid context issues
       widget.onConversationCreated(conversationId);
-      Navigator.pop(context);
     } catch (e) {
-      setState(() {
-        // Clean up the error message to make it more user-friendly
-        String errorMsg = e.toString();
-        errorMsg = errorMsg.replaceAll('Exception: ', '');
-        _errorMessage = 'فشل في بدء المحادثة: $errorMsg';
-        _isLoading = false;
-      });
+      print('Error in startConversation: $e');
+      if (mounted) {
+        setState(() {
+          String errorString = e.toString().toLowerCase();
+
+          // Check for self-messaging error specifically
+          if (errorString
+                  .contains('cannot start a conversation with yourself') ||
+              errorString.contains('conversation with yourself')) {
+            _errorMessage = 'لا يمكنك بدء محادثة مع نفسك';
+          }
+          // Handle 400 status code with missing user error message
+          else if (errorString.contains('400') &&
+              errorString.contains('user not found')) {
+            _errorMessage = 'المستخدم غير موجود';
+          }
+          // Handle generic 400 self-message error (could be just the status code)
+          else if (errorString.contains('400')) {
+            _errorMessage = 'لا يمكنك بدء محادثة مع نفسك';
+          } else {
+            // Clean up the error message
+            String errorMsg = errorString;
+            errorMsg = errorMsg.replaceAll('exception:', '').trim();
+            // Remove HTTP status codes
+            errorMsg = errorMsg.replaceAll(RegExp(r'[0-9]{3}'), '').trim();
+            // Remove common JSON formatting
+            errorMsg = errorMsg.replaceAll(RegExp(r'[\{\}"\\]'), '').trim();
+            errorMsg = errorMsg.replaceAll('error:', '').trim();
+
+            if (errorMsg.isEmpty) {
+              _errorMessage = 'فشل في بدء المحادثة';
+            } else {
+              _errorMessage = 'فشل في بدء المحادثة: $errorMsg';
+            }
+          }
+        });
+      }
+    } finally {
+      // Always reset loading state even if there was an error
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -167,18 +158,6 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
               ),
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                labelText: 'رسالتك',
-                border: OutlineInputBorder(),
-              ),
-              textAlign: TextAlign.right,
-              textDirection: TextDirection.rtl,
-              minLines: 3,
-              maxLines: 5,
             ),
             if (_errorMessage.isNotEmpty)
               Padding(
@@ -208,7 +187,7 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('إرسال'),
+              : const Text('بدء المحادثة'),
         ),
       ],
     );

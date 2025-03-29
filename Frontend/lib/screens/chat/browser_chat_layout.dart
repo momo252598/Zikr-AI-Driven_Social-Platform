@@ -12,7 +12,19 @@ class BrowserChatLayout extends StatefulWidget {
 
 class _BrowserChatLayoutState extends State<BrowserChatLayout> {
   int? selectedChatId;
-  final _allChatsKey = GlobalKey<State<AllChatsPage>>();
+  // Fix: Use generic State type instead of the private state class
+  final GlobalKey<State<AllChatsPage>> _allChatsKey =
+      GlobalKey<State<AllChatsPage>>();
+
+  // Add a method to safely update the specific chat
+  void _updateChat(int chatId, String message) {
+    // Get the current state and cast it safely
+    final currentState = _allChatsKey.currentState;
+    if (currentState != null) {
+      // Using dynamic to access the method
+      (currentState as dynamic).updateSpecificChat(chatId, message);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +48,10 @@ class _BrowserChatLayoutState extends State<BrowserChatLayout> {
               ? ChatPage(
                   key: ValueKey('chat-$selectedChatId'),
                   chatId: selectedChatId!,
+                  onMessageUpdate: (String message) {
+                    // Use the safer method to update the specific chat
+                    _updateChat(selectedChatId!, message);
+                  },
                 )
               : Container(
                   color: AppStyles.bgColor,

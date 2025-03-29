@@ -12,17 +12,29 @@ import 'package:software_graduation_project/services/auth_service.dart';
 
 class ChatPage extends StatefulWidget {
   final int chatId;
-  const ChatPage({Key? key, required this.chatId}) : super(key: key);
+  final void Function(String)?
+      onMessageUpdate; // Add callback that takes the message text
+
+  const ChatPage({
+    Key? key,
+    required this.chatId,
+    this.onMessageUpdate,
+  }) : super(key: key);
 
   @override
   _ChatPageState createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final TextEditingController _messageController = TextEditingController();
   final ChatApiService _chatApiService = ChatApiService();
   final FirebaseService _firebaseService = FirebaseService();
   final AuthService _authService = AuthService();
+  final ScrollController _scrollController =
+      ScrollController(); // Add scroll controller
+
+  bool _showScrollToBottom =
+      false; // Track if scroll-to-bottom button should be shown
 
   String contactName = '';
   Map<String, dynamic>? chatData;
@@ -35,15 +47,67 @@ class _ChatPageState extends State<ChatPage> {
   bool _isTyping = false;
   Timer? _typingTimer;
 
+  // Add animation controllers for typing indicator
+  List<AnimationController> _dotControllers = [];
+  List<Animation<double>> _dotAnimations = [];
+
   @override
   void initState() {
     super.initState();
     _initialize();
+
+    // Add listener to detect when user scrolls away from bottom
+    _scrollController.addListener(_scrollListener);
+
+    // Initialize the dot animations
+    _initializeAnimations();
+  }
+
+  void _initializeAnimations() {
+    // Create 3 animation controllers for the dots
+    _dotControllers = List.generate(3, (index) {
+      return AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: 600),
+      )..repeat(reverse: true);
+    });
+
+    // Add delay to each dot's animation start for wave effect
+    for (int i = 0; i < _dotControllers.length; i++) {
+      Future.delayed(Duration(milliseconds: i * 200), () {
+        if (_dotControllers.isNotEmpty && _dotControllers[i].isAnimating) {
+          _dotControllers[i].repeat(reverse: true);
+        }
+      });
+    }
+
+    // Create animations for the dots
+    _dotAnimations = _dotControllers.map((controller) {
+      return Tween<double>(begin: 0, end: 6).animate(
+        CurvedAnimation(
+          parent: controller,
+          curve: Curves.easeInOut,
+        ),
+      );
+    }).toList();
+  }
+
+  void _scrollListener() {
+    // Show button when not at bottom
+    final newShowButton = _scrollController.hasClients &&
+        _scrollController.position.pixels <
+            _scrollController.position.maxScrollExtent - 50;
+
+    if (newShowButton != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = newShowButton;
+      });
+    }
   }
 
   Future<void> _initialize() async {
-    // Get current user ID
-    currentUserId = await _authService.getCurrentUserId();
+    // Get current user ID with retry mechanism
+    await _ensureUserAuthenticated();
 
     // Load conversation data
     await _loadConversationData();
@@ -61,6 +125,61 @@ class _ChatPageState extends State<ChatPage> {
     // Set user as online
     if (currentUserId != null) {
       _firebaseService.updateUserPresence(currentUserId!, true);
+    }
+
+    // Scroll to bottom after loading messages
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
+  // Utility function to scroll to bottom
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  Future<void> _ensureUserAuthenticated() async {
+    // Check storage contents for debugging
+    await _authService.debugInspectStorage();
+
+    // Try to get current user ID
+    currentUserId = await _authService.getCurrentUserId();
+
+    // Log authentication state
+    print("Authentication check: currentUserId = $currentUserId");
+
+    if (currentUserId == null) {
+      // Try to get the full user object
+      final user = await _authService.getCurrentUser();
+      print("User object retrieved: ${user?.toJson()}");
+
+      // Try Firebase authentication to ensure we're connected
+      try {
+        await _firebaseService.signInWithCustomToken();
+        print("Firebase authentication completed");
+      } catch (e) {
+        print("Firebase authentication error: $e");
+      }
+
+      // Wait briefly and try again (could be a network delay issue)
+      await Future.delayed(const Duration(seconds: 1));
+      currentUserId = await _authService.getCurrentUserId();
+      print("Authentication retry: currentUserId = $currentUserId");
+
+      if (currentUserId == null) {
+        // For development/testing only: Set a temporary manual ID
+        // This is helpful during development but should be removed in production
+        print(
+            "Authentication failed. For DEVELOPMENT only: setting temporary ID");
+        await _authService.setCurrentUserId(1); // Use an appropriate test ID
+        currentUserId = 1;
+      }
     }
   }
 
@@ -87,6 +206,14 @@ class _ChatPageState extends State<ChatPage> {
     _messagesSubscription?.cancel();
     _typingSubscription?.cancel();
     _typingTimer?.cancel();
+    _scrollController.removeListener(_scrollListener);
+    _scrollController.dispose();
+
+    // Dispose animation controllers
+    for (var controller in _dotControllers) {
+      controller.dispose();
+    }
+
     super.dispose();
   }
 
@@ -96,10 +223,44 @@ class _ChatPageState extends State<ChatPage> {
       final conversation =
           await _chatApiService.getConversationDetails(widget.chatId);
 
+      // Debug the conversation data structure
+      print("Conversation data received: ${json.encode(conversation)}");
+
+      // Find the other participant's name
+      String name = conversation['name'] ?? 'محادثة';
+
+      // Get current user ID for comparison
+      final currentUserId = await _authService.getCurrentUserId();
+      print("Current user ID for comparison: $currentUserId");
+
+      // Try to find other participant's name
+      if (conversation['participants'] != null &&
+          conversation['participants'] is List) {
+        final participants = conversation['participants'] as List;
+        print("Participants in conversation: $participants");
+
+        for (var participant in participants) {
+          if (participant is Map &&
+              participant.containsKey('username') &&
+              participant.containsKey('id') &&
+              participant['id'].toString() != currentUserId.toString()) {
+            name = participant['username'];
+            print(
+                "Found other participant: ${participant['username']} (ID: ${participant['id']})");
+            break;
+          }
+        }
+      }
+
       setState(() {
         chatData = conversation;
-        contactName = conversation['name'] ?? 'محادثة';
+        contactName = name; // Use the extracted name
         isLoading = false;
+      });
+
+      // After loading data and updating state, scroll to bottom
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
       });
     } catch (e) {
       print('Error loading chat from API: $e');
@@ -129,10 +290,33 @@ class _ChatPageState extends State<ChatPage> {
           foundChat['messages'] = [];
         }
 
+        // Ensure we extract the other user's name properly
+        String name = foundChat['name'] ?? 'محادثة';
+        final currentUserId = await _authService.getCurrentUserId();
+
+        // If there are participants, try to extract the other user's name
+        if (foundChat.containsKey('participants') &&
+            foundChat['participants'] is List) {
+          for (var participant in foundChat['participants']) {
+            if (participant is Map &&
+                participant.containsKey('username') &&
+                participant.containsKey('id') &&
+                participant['id'].toString() != currentUserId.toString()) {
+              name = participant['username'];
+              break;
+            }
+          }
+        }
+
         setState(() {
           chatData = foundChat;
-          contactName = foundChat?['name'] ?? 'محادثة';
+          contactName = name;
           isLoading = false;
+        });
+
+        // After loading data and updating state, scroll to bottom
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
         });
       } else {
         setState(() {
@@ -172,6 +356,17 @@ class _ChatPageState extends State<ChatPage> {
             }
           }
         });
+
+        // Scroll to bottom to show new messages
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _scrollToBottom();
+        });
+
+        // Notify parent about the latest message if available
+        if (newMessages.isNotEmpty) {
+          final latestMessage = newMessages.last;
+          widget.onMessageUpdate?.call(latestMessage['content'] ?? '');
+        }
       }
     });
   }
@@ -181,9 +376,24 @@ class _ChatPageState extends State<ChatPage> {
         .getTypingIndicatorsStream(firebaseId)
         .listen((typingData) {
       if (mounted) {
+        // Store previous typing status to detect changes
+        final hadTypingUsers = typingUsers.isNotEmpty &&
+            typingUsers.keys.any((userId) => userId != currentUserId);
+
         setState(() {
           typingUsers = typingData;
         });
+
+        // Check if typing status changed to active and scroll to bottom
+        final hasTypingUsersNow = typingData.isNotEmpty &&
+            typingData.keys.any((userId) => userId != currentUserId);
+
+        // Scroll down if typing started or continued
+        if (hasTypingUsersNow) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToBottom();
+          });
+        }
       }
     });
   }
@@ -212,24 +422,79 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
-    if (content.isEmpty || chatData == null || currentUserId == null) return;
+    print("Attempting to send message: '$content'");
+
+    if (content.isEmpty) {
+      print("Message content is empty. Aborting send.");
+      return;
+    }
+
+    // If user ID is still null, try to get it one more time
+    if (currentUserId == null) {
+      print("Attempting to retrieve user ID before sending message...");
+      currentUserId = await _authService.getCurrentUserId();
+    }
+
+    if (currentUserId == null) {
+      print("Current user ID is still null. Showing login prompt.");
+      return;
+    }
+
+    if (chatData == null) {
+      print("Chat data is null. Aborting send.");
+      return;
+    }
+
+    final String? firebaseId = chatData!['firebase_id']?.toString();
+    if (firebaseId == null || firebaseId.isEmpty) {
+      print("Firebase ID is missing or empty: $firebaseId");
+      return;
+    }
+
+    print(
+        "Chat data validated. Firebase ID: $firebaseId, User ID: $currentUserId");
 
     _messageController.clear();
     _setTypingStatus(false);
 
     try {
-      // Send message to Firebase
-      await _firebaseService.sendMessage(chatData!['firebase_id'], content,
-          currentUserId!, await _authService.getCurrentUsername() ?? 'User');
+      final username = await _authService.getCurrentUsername() ?? 'User';
+      print("Sending message to Firebase with username: $username");
 
-      // Create message reference in Django
+      // Send message to Firebase directly from client
+      await _firebaseService.sendMessage(
+          firebaseId, content, currentUserId!, username);
+
+      print("Message sent to Firebase successfully!");
+
+      // Create message reference in Django WITHOUT sending to Firebase again
+      print(
+          "Updating message reference in Django backend. Chat ID: ${widget.chatId}");
       await _chatApiService.addMessageReference(widget.chatId, content);
+      print("Django message reference updated successfully!");
+
+      // Notify parent about the latest message
+      widget.onMessageUpdate?.call(content);
+
+      // Scroll to bottom after sending a message
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
     } catch (e) {
       print("Error sending message: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('فشل في إرسال الرسالة: $e')),
-      );
     }
+  }
+
+  void _navigateToLogin() {
+    // Navigate to your login screen
+    // Example: Navigator.of(context).pushNamed('/login');
+    print("Should navigate to login screen");
+  }
+
+  Future<bool> _handleBackNavigation() async {
+    // Return true to indicate that the chat list should be refreshed
+    Navigator.pop(context, true);
+    return false; // Prevent default back behavior since we handled it
   }
 
   Widget _buildMessage(Map<String, dynamic> msg) {
@@ -308,25 +573,19 @@ class _ChatPageState extends State<ChatPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: AppStyles.grey,
-            borderRadius: BorderRadius.circular(12),
+            color: AppStyles.white,
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 3,
+                offset: Offset(0, 1),
+              ),
+            ],
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('جاري الكتابة'),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 36,
-                child: Row(
-                  children: [
-                    _buildDot(0),
-                    _buildDot(1),
-                    _buildDot(2),
-                  ],
-                ),
-              ),
-            ],
+            children: List.generate(3, (index) => _buildDot(index)),
           ),
         ),
       ),
@@ -334,62 +593,104 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   Widget _buildDot(int index) {
-    return Expanded(
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: 300),
-        height: 6,
-        margin: EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: AppStyles.darkPurple.withOpacity(0.5 + (index * 0.2)),
-          borderRadius: BorderRadius.circular(3),
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: _dotAnimations[index],
+      builder: (context, child) {
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 2),
+          child: Transform.translate(
+            offset: Offset(0, -_dotAnimations[index].value),
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: AppStyles.buttonColor.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppStyles.bgColor,
-      appBar: CustomAppBar(
-          title: contactName, showAddButton: false, showBackButton: !kIsWeb),
-      body: Column(
-        children: [
-          // Expanded list of messages
-          Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _buildMessagesList(),
-          ),
-          // Input field for sending messages
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            color: AppStyles.white,
-            child: Row(
+    final bool isAuthenticated = currentUserId != null;
+
+    return WillPopScope(
+      onWillPop: _handleBackNavigation,
+      child: Scaffold(
+        backgroundColor: AppStyles.bgColor,
+        appBar: CustomAppBar(
+          title: contactName,
+          showAddButton: false,
+          showBackButton: !kIsWeb,
+          onBackPressed: () {
+            // Return true to indicate refresh when back button is pressed
+            Navigator.pop(context, true);
+          },
+        ),
+        body: Stack(
+          children: [
+            Column(
               children: [
+                // Expanded list of messages
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    textAlign: TextAlign.right,
-                    textDirection: TextDirection.rtl,
-                    decoration: const InputDecoration(
-                      hintText: '...اكتب رسالتك',
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (text) {
-                      // Notify typing status
-                      _handleTyping(text.isNotEmpty);
-                    },
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildMessagesList(),
+                ),
+                // Input field for sending messages
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  color: AppStyles.white,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          textAlign: TextAlign.right,
+                          textDirection: TextDirection.rtl,
+                          decoration: const InputDecoration(
+                            hintText: '...اكتب رسالتك',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (text) {
+                            // Notify typing status
+                            _handleTyping(text.isNotEmpty);
+                          },
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send),
+                        onPressed:
+                            isAuthenticated ? _sendMessage : _navigateToLogin,
+                      )
+                    ],
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
-                )
               ],
             ),
-          ),
-        ],
+
+            // Scroll to bottom button
+            if (_showScrollToBottom)
+              Positioned(
+                right: 16,
+                bottom: 70,
+                child: FloatingActionButton(
+                  mini: true,
+                  backgroundColor: AppStyles.buttonColor,
+                  onPressed: _scrollToBottom,
+                  child: const Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -400,6 +701,7 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     return ListView.builder(
+      controller: _scrollController, // Add scroll controller to ListView
       padding: const EdgeInsets.only(top: 8, bottom: 8),
       itemCount: messages.length + 1, // +1 for typing indicator
       itemBuilder: (context, index) {

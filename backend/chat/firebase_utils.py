@@ -11,7 +11,7 @@ def initialize_firebase():
     # Alternative: use environment variable (more secure for production)
     # credentials_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", credentials_path)
     
-    cred = credentials.Certificate(credentials_path)
+    cred = credentials.Certificate("D:\College\Flutter_Projects\software_graduation_project\\backend\zikr-94f9a-firebase-adminsdk-fbsvc-8c693eec91.json")
     
     # Initialize the app if it hasn't been initialized already
     if not firebase_admin._apps:
