@@ -87,6 +87,9 @@ flutter:
     - assets/utils/chat_ex.json
     - assets/utils/posts.json
     - assets/utils/df_final.json
+    - assets/utils/azkar_massa.json
+    - assets/utils/azkar_sabah.json
+    - assets/utils/PostPrayer_azkar.json
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

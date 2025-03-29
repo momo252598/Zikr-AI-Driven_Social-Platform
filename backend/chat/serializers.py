@@ -6,7 +6,7 @@ class UserMinimalSerializer(serializers.ModelSerializer):
     """Minimal user representation for chat purposes"""
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'profile_picture']
+        fields = ['id', 'username', 'email', 'profile_picture', 'first_name', 'last_name']
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserMinimalSerializer(many=True, read_only=True)

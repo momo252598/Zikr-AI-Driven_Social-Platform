@@ -50,6 +50,25 @@ class _AllChatsPageState extends State<AllChatsPage> {
     }
   }
 
+  // Replace the existing _ensureProperEncoding function with this improved version
+  String _ensureProperEncoding(String text) {
+    try {
+      if (text.contains('Ø') || text.contains('Ù') || text.contains('Ú')) {
+        // This specific pattern indicates incorrectly encoded Arabic text
+        // We need to apply Latin-1 to UTF-8 conversion
+        List<int> latinBytes = [];
+        for (int i = 0; i < text.length; i++) {
+          latinBytes.add(text.codeUnitAt(i) & 0xFF);
+        }
+        return utf8.decode(latinBytes);
+      }
+      return text; // Return original if no encoding issues detected
+    } catch (e) {
+      print('Error decoding text: $e');
+      return text; // Return original if decoding fails
+    }
+  }
+
   Future<void> _loadChats() async {
     try {
       setState(() {
@@ -74,10 +93,22 @@ class _AllChatsPageState extends State<AllChatsPage> {
           if (participants.isNotEmpty) {
             for (var participant in participants) {
               if (participant is Map &&
-                  participant.containsKey('username') &&
                   participant.containsKey('id') &&
                   participant['id'].toString() != currentUserId.toString()) {
-                name = participant['username'];
+                // Extract name from the participant data
+                if (participant.containsKey('first_name') &&
+                    participant.containsKey('last_name')) {
+                  String firstName = participant['first_name'] ?? '';
+                  String lastName = participant['last_name'] ?? '';
+
+                  if (firstName.isNotEmpty || lastName.isNotEmpty) {
+                    name = '$firstName $lastName'.trim();
+                  } else {
+                    name = participant['username'] ?? 'محادثة';
+                  }
+                } else {
+                  name = participant['username'] ?? 'محادثة';
+                }
                 break;
               }
             }
@@ -93,26 +124,29 @@ class _AllChatsPageState extends State<AllChatsPage> {
 
         if (chat.containsKey('last_message') && chat['last_message'] != null) {
           if (chat['last_message'] is String) {
-            lastMessageText = chat['last_message'];
+            lastMessageText = _ensureProperEncoding(chat['last_message']);
           } else if (chat['last_message'] is Map) {
-            lastMessageText = chat['last_message']['content'] ??
+            String contentText = chat['last_message']['content'] ??
                 chat['last_message']['content_preview'] ??
                 'لا توجد رسائل';
+            lastMessageText = _ensureProperEncoding(contentText);
           }
         } else if (chat.containsKey('last_message_content') &&
             chat['last_message_content'] != null) {
-          lastMessageText = chat['last_message_content'];
+          lastMessageText = _ensureProperEncoding(chat['last_message_content']);
         } else if (chat['messages'] != null &&
             chat['messages'] is List &&
             (chat['messages'] as List).isNotEmpty) {
           final messages = chat['messages'] as List;
           final lastMsg = messages.last;
           if (lastMsg is Map) {
+            String contentText = 'لا توجد رسائل';
             if (lastMsg.containsKey('content_preview')) {
-              lastMessageText = lastMsg['content_preview'] ?? lastMessageText;
+              contentText = lastMsg['content_preview'] ?? contentText;
             } else if (lastMsg.containsKey('content')) {
-              lastMessageText = lastMsg['content'] ?? lastMessageText;
+              contentText = lastMsg['content'] ?? contentText;
             }
+            lastMessageText = _ensureProperEncoding(contentText);
 
             if (lastMsg.containsKey('created_at') &&
                 lastMsg['created_at'] != null) {
@@ -200,7 +234,8 @@ class _AllChatsPageState extends State<AllChatsPage> {
 
     // Update just the last message for this chat
     setState(() {
-      _chats![chatIndex]['last_message_text'] = lastMessage;
+      _chats![chatIndex]['last_message_text'] =
+          _ensureProperEncoding(lastMessage);
       _chats![chatIndex]['timestamp'] = DateTime.now().toIso8601String();
 
       // Move this chat to the top of the list

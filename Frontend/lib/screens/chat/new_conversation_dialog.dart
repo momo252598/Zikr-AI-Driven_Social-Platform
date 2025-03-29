@@ -187,7 +187,10 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('بدء المحادثة'),
+              : Text(
+                  'بدء المحادثة',
+                  style: TextStyle(color: AppStyles.white),
+                ),
         ),
       ],
     );

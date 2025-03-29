@@ -16,7 +16,7 @@ class Prayer {
 }
 
 // Retrieve location and compute prayer times using adhan_dart package.
-Future<List<Prayer>> _getPrayerTimes() async {
+Future<List<Prayer>> getPrayerTimes() async {
   final Coordinates coordinates;
   final now = DateTime.now();
   if (kIsWeb) {
@@ -199,7 +199,7 @@ class _PrayersPageState extends State<PrayersPage> {
   @override
   void initState() {
     super.initState();
-    futurePrayers = _getPrayerTimes();
+    futurePrayers = getPrayerTimes();
   }
 
   @override

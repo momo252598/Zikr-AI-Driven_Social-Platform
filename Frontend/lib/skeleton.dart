@@ -67,9 +67,7 @@ class _SkeletonState extends State<Skeleton> {
       textDirection: TextDirection.rtl, // set app to RTL
       child: Scaffold(
         appBar: const CustomAppBar(
-            title: 'تطبيق القرآن الكريم',
-            showAddButton: false,
-            showBackButton: false),
+            title: 'ذكر', showAddButton: false, showBackButton: false),
         body: _pages[_currentIndex],
         bottomNavigationBar: BottomNavigationBar(
           backgroundColor: AppStyles.bgColor,

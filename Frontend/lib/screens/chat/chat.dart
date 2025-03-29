@@ -237,16 +237,25 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       if (conversation['participants'] != null &&
           conversation['participants'] is List) {
         final participants = conversation['participants'] as List;
-        print("Participants in conversation: $participants");
 
         for (var participant in participants) {
           if (participant is Map &&
-              participant.containsKey('username') &&
               participant.containsKey('id') &&
               participant['id'].toString() != currentUserId.toString()) {
-            name = participant['username'];
-            print(
-                "Found other participant: ${participant['username']} (ID: ${participant['id']})");
+            // Extract name from the participant data
+            if (participant.containsKey('first_name') &&
+                participant.containsKey('last_name')) {
+              String firstName = participant['first_name'] ?? '';
+              String lastName = participant['last_name'] ?? '';
+
+              if (firstName.isNotEmpty || lastName.isNotEmpty) {
+                name = '$firstName $lastName'.trim();
+              } else {
+                name = participant['username'] ?? 'محادثة';
+              }
+            } else {
+              name = participant['username'] ?? 'محادثة';
+            }
             break;
           }
         }
