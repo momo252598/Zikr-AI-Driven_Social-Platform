@@ -35,8 +35,18 @@ class _HomePageState extends State<HomePage> {
 
   // Get user's first name
   Future<String?> _getUserFirstName(AuthService authService) async {
-    final user = await authService.getCurrentUser();
-    return user?.firstName ?? '';
+    try {
+      final user = await authService.getCurrentUser();
+      if (user?.firstName == null || user!.firstName.isEmpty) {
+        return '';
+      }
+
+      // Direct return of firstName without any encoding manipulation
+      return user.firstName;
+    } catch (e) {
+      print('Error fetching user name: $e');
+      return '';
+    }
   }
 
   // Determine if it's morning or evening

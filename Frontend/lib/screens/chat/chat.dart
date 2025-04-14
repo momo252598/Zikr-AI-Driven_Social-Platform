@@ -9,6 +9,7 @@ import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
+import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
 
 class ChatPage extends StatefulWidget {
   final int chatId;
@@ -228,6 +229,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
       // Find the other participant's name
       String name = conversation['name'] ?? 'محادثة';
+      name = TextUtils.fixArabicEncoding(name);
 
       // Get current user ID for comparison
       final currentUserId = await _authService.getCurrentUserId();
@@ -245,16 +247,20 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
             // Extract name from the participant data
             if (participant.containsKey('first_name') &&
                 participant.containsKey('last_name')) {
-              String firstName = participant['first_name'] ?? '';
-              String lastName = participant['last_name'] ?? '';
+              String firstName =
+                  TextUtils.fixArabicEncoding(participant['first_name'] ?? '');
+              String lastName =
+                  TextUtils.fixArabicEncoding(participant['last_name'] ?? '');
 
               if (firstName.isNotEmpty || lastName.isNotEmpty) {
                 name = '$firstName $lastName'.trim();
               } else {
-                name = participant['username'] ?? 'محادثة';
+                name = TextUtils.fixArabicEncoding(
+                    participant['username'] ?? 'محادثة');
               }
             } else {
-              name = participant['username'] ?? 'محادثة';
+              name = TextUtils.fixArabicEncoding(
+                  participant['username'] ?? 'محادثة');
             }
             break;
           }
@@ -301,6 +307,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
         // Ensure we extract the other user's name properly
         String name = foundChat['name'] ?? 'محادثة';
+        name = TextUtils.fixArabicEncoding(name);
         final currentUserId = await _authService.getCurrentUserId();
 
         // If there are participants, try to extract the other user's name
@@ -311,7 +318,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 participant.containsKey('username') &&
                 participant.containsKey('id') &&
                 participant['id'].toString() != currentUserId.toString()) {
-              name = participant['username'];
+              name = TextUtils.fixArabicEncoding(participant['username']);
               break;
             }
           }
@@ -433,7 +440,10 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     final content = _messageController.text.trim();
     print("Attempting to send message: '$content'");
 
-    if (content.isEmpty) {
+    // Ensure the text is properly encoded before sending
+    final contentToSend = TextUtils.prepareForSending(content);
+
+    if (contentToSend.isEmpty) {
       print("Message content is empty. Aborting send.");
       return;
     }
@@ -472,18 +482,18 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
       // Send message to Firebase directly from client
       await _firebaseService.sendMessage(
-          firebaseId, content, currentUserId!, username);
+          firebaseId, contentToSend, currentUserId!, username);
 
       print("Message sent to Firebase successfully!");
 
       // Create message reference in Django WITHOUT sending to Firebase again
       print(
           "Updating message reference in Django backend. Chat ID: ${widget.chatId}");
-      await _chatApiService.addMessageReference(widget.chatId, content);
+      await _chatApiService.addMessageReference(widget.chatId, contentToSend);
       print("Django message reference updated successfully!");
 
       // Notify parent about the latest message
-      widget.onMessageUpdate?.call(content);
+      widget.onMessageUpdate?.call(contentToSend);
 
       // Scroll to bottom after sending a message
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -551,7 +561,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                     width: 1),
               ),
               child: Text(
-                msg['content'],
+                TextUtils.fixArabicEncoding(msg['content']),
                 style: TextStyle(
                   color: isSentByMe ? AppStyles.white : AppStyles.black,
                 ),

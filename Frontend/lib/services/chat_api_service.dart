@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
+import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
 
 class ChatApiService {
   late final String baseUrl; // Change to late final
@@ -87,10 +88,14 @@ class ChatApiService {
     try {
       final token = await _authService.getAccessToken();
 
+      // Fix any encoding issues with the message before sending
+      final String processedMessage =
+          TextUtils.prepareForSending(initialMessage);
+
       // Prepare the request body - only include message if not empty
       final Map<String, dynamic> requestBody = {'recipient': recipient};
-      if (initialMessage.isNotEmpty) {
-        requestBody['message'] = initialMessage;
+      if (processedMessage.isNotEmpty) {
+        requestBody['message'] = processedMessage;
       }
 
       final response = await http.post(
@@ -122,7 +127,7 @@ class ChatApiService {
             "Extracted IDs - conversation ID: $conversationId, Firebase ID: $firebaseId");
 
         // Only send Firebase message if there is an initial message
-        if (initialMessage.isNotEmpty &&
+        if (processedMessage.isNotEmpty &&
             user != null &&
             firebaseId != null &&
             user.id != null &&
@@ -136,7 +141,7 @@ class ChatApiService {
                 "Sending initial message to Firebase with conversation ID: $firebaseId");
             try {
               await _firebaseService.sendMessage(firebaseId.toString(),
-                  initialMessage, user.id, user.username);
+                  processedMessage, user.id, user.username);
               print("Initial message sent to Firebase successfully");
             } catch (e) {
               print("Error sending initial message to Firebase: $e");
@@ -204,6 +209,9 @@ class ChatApiService {
     try {
       final token = await _authService.getAccessToken();
 
+      // Fix any encoding issues with the message
+      final processedContent = TextUtils.prepareForSending(messageContent);
+
       // Only update Django backend with message reference
       await http.post(
         Uri.parse('$baseUrl/conversations/$conversationId/messages/add/'),
@@ -212,11 +220,10 @@ class ChatApiService {
           'Authorization': 'Bearer $token'
         },
         body: json.encode({
-          'content':
-              messageContent, // Send full content in the 'content' field that Django expects
-          'content_preview': messageContent.length > 100
-              ? '${messageContent.substring(0, 97)}...'
-              : messageContent
+          'content': processedContent, // Send properly encoded content
+          'content_preview': processedContent.length > 100
+              ? '${processedContent.substring(0, 97)}...'
+              : processedContent
         }),
       );
     } catch (e) {

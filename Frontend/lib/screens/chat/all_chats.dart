@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 import 'package:software_graduation_project/skeleton.dart';
+import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
 import 'chat.dart';
 import 'package:software_graduation_project/components/chat/skeleton_with_chat.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
@@ -52,21 +53,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
 
   // Replace the existing _ensureProperEncoding function with this improved version
   String _ensureProperEncoding(String text) {
-    try {
-      if (text.contains('Ø') || text.contains('Ù') || text.contains('Ú')) {
-        // This specific pattern indicates incorrectly encoded Arabic text
-        // We need to apply Latin-1 to UTF-8 conversion
-        List<int> latinBytes = [];
-        for (int i = 0; i < text.length; i++) {
-          latinBytes.add(text.codeUnitAt(i) & 0xFF);
-        }
-        return utf8.decode(latinBytes);
-      }
-      return text; // Return original if no encoding issues detected
-    } catch (e) {
-      print('Error decoding text: $e');
-      return text; // Return original if decoding fails
-    }
+    return TextUtils.fixArabicEncoding(text);
   }
 
   Future<void> _loadChats() async {
@@ -124,16 +111,17 @@ class _AllChatsPageState extends State<AllChatsPage> {
 
         if (chat.containsKey('last_message') && chat['last_message'] != null) {
           if (chat['last_message'] is String) {
-            lastMessageText = _ensureProperEncoding(chat['last_message']);
+            lastMessageText = TextUtils.fixArabicEncoding(chat['last_message']);
           } else if (chat['last_message'] is Map) {
             String contentText = chat['last_message']['content'] ??
                 chat['last_message']['content_preview'] ??
                 'لا توجد رسائل';
-            lastMessageText = _ensureProperEncoding(contentText);
+            lastMessageText = TextUtils.fixArabicEncoding(contentText);
           }
         } else if (chat.containsKey('last_message_content') &&
             chat['last_message_content'] != null) {
-          lastMessageText = _ensureProperEncoding(chat['last_message_content']);
+          lastMessageText =
+              TextUtils.fixArabicEncoding(chat['last_message_content']);
         } else if (chat['messages'] != null &&
             chat['messages'] is List &&
             (chat['messages'] as List).isNotEmpty) {
@@ -146,7 +134,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
             } else if (lastMsg.containsKey('content')) {
               contentText = lastMsg['content'] ?? contentText;
             }
-            lastMessageText = _ensureProperEncoding(contentText);
+            lastMessageText = TextUtils.fixArabicEncoding(contentText);
 
             if (lastMsg.containsKey('created_at') &&
                 lastMsg['created_at'] != null) {
@@ -160,7 +148,8 @@ class _AllChatsPageState extends State<AllChatsPage> {
 
         return {
           'id': chat['id'],
-          'name': name.isNotEmpty ? name : 'محادثة',
+          'name':
+              name.isNotEmpty ? TextUtils.fixArabicEncoding(name) : 'محادثة',
           'firebase_id': chat['firebase_id'] ?? '',
           'last_message_text': lastMessageText,
           'timestamp': timestamp,
@@ -235,7 +224,7 @@ class _AllChatsPageState extends State<AllChatsPage> {
     // Update just the last message for this chat
     setState(() {
       _chats![chatIndex]['last_message_text'] =
-          _ensureProperEncoding(lastMessage);
+          TextUtils.fixArabicEncoding(lastMessage);
       _chats![chatIndex]['timestamp'] = DateTime.now().toIso8601String();
 
       // Move this chat to the top of the list

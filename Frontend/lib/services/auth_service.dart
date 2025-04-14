@@ -144,7 +144,8 @@ class AuthService {
       final response = await http.post(
         Uri.parse('$_baseUrl/login/'),
         headers: <String, String>{
-          'Content-Type': 'application/json; charset=UTF-8',
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept-Charset': 'utf-8',
         },
         body: jsonEncode(<String, String>{
           'email':
@@ -153,7 +154,9 @@ class AuthService {
         }),
       );
 
-      final Map<String, dynamic> responseData = json.decode(response.body);
+      // Use utf8.decode to properly handle Arabic characters
+      final decodedBody = utf8.decode(response.bodyBytes);
+      final Map<String, dynamic> responseData = json.decode(decodedBody);
 
       if (response.statusCode == 200) {
         if (responseData.containsKey('access') &&
