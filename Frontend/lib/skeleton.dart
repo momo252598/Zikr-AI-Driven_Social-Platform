@@ -11,6 +11,7 @@ import 'screens/chat/all_chats.dart';
 import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
 import 'screens/community/community.dart';
+import 'screens/community/create_post.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 import '../../base/res/styles/app_styles.dart';

@@ -22,14 +22,6 @@ class Post(models.Model):
     
     def __str__(self):
         return f"{self.author.username}'s post: {self.content[:50]}"
-    
-    @property
-    def likes_count(self):
-        return self.likes.count()
-    
-    @property
-    def comments_count(self):
-        return self.comments.count()
 
 class MediaPost(models.Model):
     """Model for storing media attachments for posts"""
@@ -52,14 +44,10 @@ class Comment(models.Model):
     is_edited = models.BooleanField(default=False)
     
     class Meta:
-        ordering = ['created_at']
+        ordering = ['-created_at']
     
     def __str__(self):
-        return f"Comment by {self.author.username} on {self.post.id}"
-    
-    @property
-    def likes_count(self):
-        return self.likes.count()
+        return f"{self.author.username}'s comment: {self.content[:30]}"
     
     @property
     def replies_count(self):

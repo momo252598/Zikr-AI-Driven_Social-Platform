@@ -26,7 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void initState() {
     super.initState();
     // Set base URL based on platform
-    final host = kIsWeb ? '127.0.0.1' : '10.0.2.2';
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
     _baseUrl = 'http://$host:8000';
   }
 
