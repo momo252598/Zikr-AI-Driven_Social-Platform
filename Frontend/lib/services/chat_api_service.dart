@@ -11,8 +11,8 @@ class ChatApiService {
   final FirebaseService _firebaseService = FirebaseService();
 
   ChatApiService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.9 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.19 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.19';
     baseUrl = 'http://$host:8000/api/chat';
   }
 

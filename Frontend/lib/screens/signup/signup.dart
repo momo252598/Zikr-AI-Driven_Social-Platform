@@ -26,7 +26,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void initState() {
     super.initState();
     // Set base URL based on platform
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.19';
     _baseUrl = 'http://$host:8000';
   }
 
@@ -90,7 +90,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       print('Sending signup data: ${json.encode(signupData)}');
 
       final response = await http.post(
-        Uri.parse('$_baseUrl/accounts/signup/'),
+        Uri.parse('$_baseUrl/api/accounts/signup/'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

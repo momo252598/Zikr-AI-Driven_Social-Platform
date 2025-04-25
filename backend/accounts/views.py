@@ -10,7 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from rest_framework import generics, status, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer, UserSerializer, VerifyAccountSerializer
+from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer, UserSerializer, VerifyAccountSerializer, ChangePasswordSerializer
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -492,5 +492,35 @@ def update_profile(request):
         
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change user password
+    """
+    serializer = ChangePasswordSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        # Check if old password is correct
+        user = request.user
+        old_password = serializer.validated_data['old_password']
+        
+        if not user.check_password(old_password):
+            return Response(
+                {"old_password": ["Wrong password."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set the new password
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        
+        return Response(
+            {"success": "Password changed successfully."},
+            status=status.HTTP_200_OK
+        )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

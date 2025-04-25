@@ -91,8 +91,7 @@ class _SkeletonState extends State<Skeleton> {
             BottomNavigationBarItem(
                 icon: Icon(FlutterIslamicIcons.solidCommunity),
                 label: 'المجتمع'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.person), label: 'الملف الشخصي'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
           ],
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:software_graduation_project/screens/chat/all_chats.dart';
 import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart';
 import 'package:software_graduation_project/services/social_api_service.dart';
 import 'package:software_graduation_project/screens/community/create_post.dart';
+import 'package:software_graduation_project/screens/profile/profile.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({Key? key}) : super(key: key);
@@ -24,6 +25,7 @@ class _CommunityPageState extends State<CommunityPage> {
   String? _error;
   int _currentPage = 1;
   bool _hasMorePages = true;
+  final Set<dynamic> _loadedPostIds = <dynamic>{};
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _CommunityPageState extends State<CommunityPage> {
 
     // Set up scroll listener for pagination
     _scrollController.addListener(() {
+      // Only trigger loading more if we're near the bottom, not already loading, and have more pages
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent * 0.8 &&
           !_isLoading &&
@@ -58,13 +61,27 @@ class _CommunityPageState extends State<CommunityPage> {
         print("First post structure: ${json.encode(posts.first)}");
       }
 
+      // Check if widget is still mounted before updating state
+      if (!mounted) return;
+
       setState(() {
         _posts = posts;
         _isLoading = false;
         _currentPage = 1;
+        // Reset loaded post IDs and populate with current posts
+        _loadedPostIds.clear();
+        for (final post in posts) {
+          if (post['id'] != null) {
+            _loadedPostIds.add(post['id'].toString());
+          }
+        }
       });
     } catch (e) {
       print("Error fetching posts: $e");
+
+      // Check if widget is still mounted before updating state
+      if (!mounted) return;
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -73,7 +90,19 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   Future<void> _loadMorePosts() async {
+    // Guard clauses to prevent unnecessary API calls
     if (_isLoadingMore) return;
+    if (!_hasMorePages) {
+      print("No more pages to load - skipping API call");
+      return;
+    }
+
+    print(
+        "Loading more posts - Current page: $_currentPage, Next page to load: ${_currentPage + 1}");
+    print("Currently loaded post IDs: ${_loadedPostIds.length}");
+
+    // Check if widget is still mounted before updating state
+    if (!mounted) return;
 
     setState(() {
       _isLoadingMore = true;
@@ -83,20 +112,50 @@ class _CommunityPageState extends State<CommunityPage> {
       final nextPage = _currentPage + 1;
       final morePosts = await _socialService.getPosts(page: nextPage);
 
-      if (morePosts.isNotEmpty) {
-        setState(() {
-          _posts?.addAll(morePosts);
-          _currentPage = nextPage;
-        });
-      } else {
-        _hasMorePages = false;
+      // Check if we got any posts
+      print("Received ${morePosts.length} posts from page $nextPage");
+
+      // Filter out duplicates
+      final List<dynamic> newPosts = [];
+      for (final post in morePosts) {
+        if (post['id'] != null &&
+            !_loadedPostIds.contains(post['id'].toString())) {
+          newPosts.add(post);
+          _loadedPostIds.add(post['id'].toString());
+        } else {
+          print("Skipping duplicate post ID: ${post['id']}");
+        }
       }
+
+      print("After filtering duplicates: ${newPosts.length} new posts to add");
+
+      // Check if widget is still mounted before updating state
+      if (!mounted) return;
+
+      setState(() {
+        if (newPosts.isNotEmpty) {
+          // Add only non-duplicate posts
+          _posts?.addAll(newPosts);
+          _currentPage = nextPage;
+        } else {
+          // If no new unique posts were found, end pagination
+          _hasMorePages = false;
+          print("No more unique posts available - reached the end");
+        }
+        _isLoadingMore = false;
+      });
     } catch (e) {
+      print("Error loading more posts: $e");
+
+      // Only show snackbar if still mounted
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('فشل في تحميل المزيد من المنشورات: $e')),
       );
-    } finally {
+
       setState(() {
+        _hasMorePages = false;
         _isLoadingMore = false;
       });
     }
@@ -105,6 +164,9 @@ class _CommunityPageState extends State<CommunityPage> {
   Future<void> _likePost(dynamic postId) async {
     try {
       final isLiked = await _socialService.togglePostLike(postId);
+
+      // Check if widget is still mounted before updating state
+      if (!mounted) return;
 
       setState(() {
         // Use toString() on both sides to ensure consistent comparison
@@ -118,6 +180,9 @@ class _CommunityPageState extends State<CommunityPage> {
         }
       });
     } catch (e) {
+      // Only show snackbar if still mounted
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ: $e')),
       );
@@ -137,7 +202,9 @@ class _CommunityPageState extends State<CommunityPage> {
         print("No comments returned");
       }
 
-      // Update the post with comments
+      // Update the post with comments - check mounted first
+      if (!mounted) return comments; // Return comments even if widget unmounted
+
       setState(() {
         final postIndex =
             _posts!.indexWhere((p) => p['id'].toString() == postId.toString());
@@ -149,9 +216,14 @@ class _CommunityPageState extends State<CommunityPage> {
       return comments;
     } catch (e) {
       print("Error fetching comments: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load comments: $e')),
-      );
+
+      // Only show snackbar if still mounted
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load comments: $e')),
+        );
+      }
+
       return [];
     }
   }
@@ -246,6 +318,44 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
+  // Navigate to user profile when username is clicked - updated to use overlay
+  void _navigateToUserProfile(dynamic authorDetails) {
+    if (authorDetails != null && authorDetails['id'] != null) {
+      // Show profile overlay instead of navigating to a new screen
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize:
+              0.92, // Almost full screen but keeps app bar visible
+          minChildSize: 0.5, // Allow drag to half screen
+          maxChildSize: 0.92,
+          builder: (context, scrollController) => Container(
+            decoration: BoxDecoration(
+              color: AppStyles.bgColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+              child: ProfilePage(
+                userId: authorDetails['id'].toString(),
+                scrollController: scrollController,
+                isOverlay: true,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -330,8 +440,8 @@ class _CommunityPageState extends State<CommunityPage> {
                             thumbVisibility: kIsWeb,
                             child: ListView.builder(
                               controller: _scrollController,
-                              itemCount:
-                                  _posts!.length + (_isLoadingMore ? 1 : 0),
+                              itemCount: _posts!.length +
+                                  (_isLoadingMore && _hasMorePages ? 1 : 0),
                               itemBuilder: (context, index) {
                                 try {
                                   if (index >= _posts!.length) {
@@ -377,6 +487,8 @@ class _CommunityPageState extends State<CommunityPage> {
           ? post['comments_count']
           : (int.tryParse(post['comments_count']?.toString() ?? '0') ?? 0);
 
+      final authorDetails = post['author_details'];
+
       // Debug print to see the structure
       print("Post ID: $postId, Type: ${postId.runtimeType}");
 
@@ -397,11 +509,9 @@ class _CommunityPageState extends State<CommunityPage> {
                   CircleAvatar(
                     backgroundColor: AppStyles.lightPurple.withOpacity(0.2),
                     child: Text(
-                      (post['author_details'] != null &&
-                              post['author_details']['username'] != null)
-                          ? post['author_details']['username']
-                              .toString()
-                              .substring(0, 1)
+                      (authorDetails != null &&
+                              authorDetails['username'] != null)
+                          ? authorDetails['username'].toString().substring(0, 1)
                           : "?",
                       style: TextStyle(
                         color: AppStyles.darkPurple,
@@ -414,15 +524,18 @@ class _CommunityPageState extends State<CommunityPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          (post['author_details'] != null)
-                              ? post['author_details']['username']
-                                      ?.toString() ??
-                                  "Unknown User"
-                              : "Unknown User",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        // Make username clickable to navigate to user profile
+                        GestureDetector(
+                          onTap: () => _navigateToUserProfile(authorDetails),
+                          child: Text(
+                            (authorDetails != null)
+                                ? authorDetails['username']?.toString() ??
+                                    "Unknown User"
+                                : "Unknown User",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                         Text(
@@ -649,11 +762,17 @@ class _CommentsSheetState extends State<CommentsSheet> {
       final comments =
           await _socialService.getPostComments(postId, parentOnly: true);
 
+      // Check if widget is still mounted
+      if (!mounted) return;
+
       setState(() {
         _comments = comments;
         _isLoading = false;
       });
     } catch (e) {
+      // Check if widget is still mounted
+      if (!mounted) return;
+
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -689,6 +808,8 @@ class _CommentsSheetState extends State<CommentsSheet> {
         'is_adding': true, // Flag to show loading state
       };
 
+      if (!mounted) return;
+
       setState(() {
         _comments = [...(_comments ?? []), tempComment];
         _commentCount++;
@@ -700,12 +821,16 @@ class _CommentsSheetState extends State<CommentsSheet> {
       // Actually send to API
       final result = await _socialService.createComment(postIdInt, comment);
 
-      // Remove temp comment and add real one
+      // Remove temp comment and add real one - check if still mounted
+      if (!mounted) return;
+
       setState(() {
         _comments!.removeWhere((c) => c['id'] == tempComment['id']);
         _comments!.add(result);
       });
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ: $e')),
       );

@@ -9,8 +9,8 @@ class ApiService {
   late final String _baseUrl;
 
   ApiService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.9 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.19 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.19';
     _baseUrl = 'http://$host:8000/api';
   }
 
@@ -173,6 +173,37 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error in update profile request: $e');
+    }
+  }
+
+  // Method to change user password
+  Future<dynamic> changePassword(
+      String oldPassword, String newPassword, String confirmPassword) async {
+    try {
+      final token = await _authService.getAccessToken();
+      final response = await http.post(
+        Uri.parse('$_baseUrl/accounts/change-password/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: json.encode({
+          'old_password': oldPassword,
+          'new_password': newPassword,
+          'confirm_password': confirmPassword,
+        }),
+      );
+
+      final decodedBody = utf8.decode(response.bodyBytes);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return json.decode(decodedBody);
+      } else {
+        throw Exception(
+            'Failed to change password: ${response.statusCode} - $decodedBody');
+      }
+    } catch (e) {
+      throw Exception('Error in change password request: $e');
     }
   }
 }

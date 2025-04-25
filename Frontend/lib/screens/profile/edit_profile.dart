@@ -34,9 +34,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _lastNameController = TextEditingController(text: widget.user.lastName);
     _phoneNumberController =
         TextEditingController(text: widget.user.phoneNumber);
-    // Bio controller initialization removed
     _birthDate = widget.user.birthDate;
-    _gender = widget.user.gender;
+    _gender = _toArabicGender(widget.user.gender);
   }
 
   @override
@@ -87,8 +86,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           'first_name': _firstNameController.text,
           'last_name': _lastNameController.text,
           'phone_number': _phoneNumberController.text,
-          // 'bio' field removed
-          'gender': _gender,
+          'gender': _toEnglishGender(_gender),
         };
 
         // Only add birth_date if it exists
@@ -103,11 +101,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
           const SnackBar(content: Text('تم تحديث الملف الشخصي بنجاح')),
         );
 
-        // Return to profile page with updated user
+        // Return to account settings page with updated user
         Navigator.pop(context, User.fromJson(response));
       } catch (e) {
+        String errorMessage = 'فشل تحديث الملف الشخصي$e';
+
+        // Check for username already exists error
+        if (e.toString().toLowerCase().contains('username') &&
+            e.toString().toLowerCase().contains('exist')) {
+          errorMessage = 'اسم المستخدم مستخدم، الرجاء اختيار اسم آخر';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('فشل تحديث الملف الشخصي: $e')),
+          SnackBar(content: Text(errorMessage)),
         );
       } finally {
         setState(() {
@@ -115,6 +121,22 @@ class _EditProfilePageState extends State<EditProfilePage> {
         });
       }
     }
+  }
+
+  // Helper method to convert English gender values to Arabic
+  String? _toArabicGender(String? gender) {
+    if (gender == null) return null;
+    if (gender.toLowerCase() == 'male') return 'ذكر';
+    if (gender.toLowerCase() == 'female') return 'أنثى';
+    return gender;
+  }
+
+  // Helper method to convert Arabic gender values to English
+  String? _toEnglishGender(String? gender) {
+    if (gender == null) return null;
+    if (gender == 'ذكر') return 'male';
+    if (gender == 'أنثى') return 'female';
+    return gender;
   }
 
   @override

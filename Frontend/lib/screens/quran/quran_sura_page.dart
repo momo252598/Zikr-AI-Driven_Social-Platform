@@ -36,6 +36,9 @@ class _QuranPageState extends State<QuranPage2> {
 
   addFilteredData() async {
     await Future.delayed(const Duration(milliseconds: 600));
+    // Add mounted check before calling setState
+    if (!mounted) return;
+
     setState(() {
       filteredData = widget.suraJsonData;
       isLoading = false;
@@ -92,6 +95,9 @@ class _QuranPageState extends State<QuranPage2> {
                       textDirection: TextDirection.rtl,
                       controller: textEditingController,
                       onChanged: (value) {
+                        // Check if mounted before calling setState in onChanged callback
+                        if (!mounted) return;
+
                         setState(() {
                           searchQuery = value;
                         });
@@ -100,6 +106,9 @@ class _QuranPageState extends State<QuranPage2> {
                           filteredData = widget.suraJsonData;
 
                           pageNumbers = [];
+
+                          // Check if mounted before calling setState
+                          if (!mounted) return;
 
                           setState(() {});
                         }
@@ -113,6 +122,9 @@ class _QuranPageState extends State<QuranPage2> {
 
                         if (searchQuery.length > 3 ||
                             searchQuery.toString().contains(" ")) {
+                          // Check if mounted before calling setState
+                          if (!mounted) return;
+
                           setState(() {
                             ayatFiltered = [];
 
@@ -331,5 +343,12 @@ class _QuranPageState extends State<QuranPage2> {
               ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    // Clean up controller to prevent memory leaks
+    textEditingController.dispose();
+    super.dispose();
   }
 }

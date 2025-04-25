@@ -40,7 +40,7 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
   void initState() {
     super.initState();
     // Set base URL based on platform
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.19';
     _baseUrl = 'http://$host:8000';
   }
 
@@ -73,7 +73,7 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
 
         // Only verify the account since it has already been created
         final verifyResponse = await http.post(
-          Uri.parse('$_baseUrl/accounts/api/verify-account/'),
+          Uri.parse('$_baseUrl/api/accounts/api/verify-account/'),
           headers: <String, String>{
             'Content-Type': 'application/json; charset=UTF-8',
           },
@@ -156,7 +156,7 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
 
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/accounts/api/resend-verification/'),
+        Uri.parse('$_baseUrl/api/accounts/api/resend-verification/'),
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

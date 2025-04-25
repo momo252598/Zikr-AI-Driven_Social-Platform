@@ -596,11 +596,15 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    SizedBox(
-                                      width: (screenSize.width * .25),
+                                    // Limit surah name width more strictly and add ellipsis
+                                    Flexible(
+                                      flex:
+                                          3, // Allocate appropriate flex ratio
                                       child: Row(
+                                        mainAxisSize: MainAxisSize
+                                            .min, // Take only needed space
                                         children: [
-                                          // Only show back button on mobile
+                                          // Only show back button on mobile with reduced padding
                                           if (!widget.isWeb)
                                             IconButton(
                                               onPressed: () {
@@ -610,44 +614,73 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                 Icons.arrow_back_ios,
                                                 size: 24,
                                               ),
+                                              padding: EdgeInsets
+                                                  .zero, // Remove padding
+                                              visualDensity: VisualDensity(
+                                                  horizontal: -4, vertical: 0),
+                                              constraints: BoxConstraints(),
                                             ),
-                                          // Keep the text in both mobile and web
-                                          Text(
-                                              widget.jsonData[
-                                                  getPageData(index)[0]
-                                                          ["surah"] -
-                                                      1]["name"],
-                                              style: const TextStyle(
+                                          // Replace negative SizedBox with a proper spacing approach
+                                          // Keep the text in both mobile and web with overflow handling
+                                          Flexible(
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                  left: !widget.isWeb
+                                                      ? 0
+                                                      : 8), // Add padding only if web
+                                              child: Text(
+                                                widget.jsonData[
+                                                    getPageData(index)[0]
+                                                            ["surah"] -
+                                                        1]["name"],
+                                                style: const TextStyle(
                                                   fontFamily: "Taha",
-                                                  fontSize: 14)),
+                                                  fontSize: 14,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: 1,
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
-                                    EasyContainer(
-                                      borderRadius: 12,
-                                      color: AppStyles.txtFieldColor,
-                                      showBorder: true,
-                                      height: 20,
-                                      width: 120,
-                                      padding: 0,
-                                      margin: 0,
+
+                                    // Shift page number container slightly right by using Flexible with proper flex
+                                    Flexible(
+                                      flex: 4, // More space for center
                                       child: Center(
-                                        child: Text(
-                                          "${"page"} $index ",
-                                          style: TextStyle(
-                                            fontFamily: 'aldahabi',
-                                            fontSize: 12,
-                                            color: AppStyles.white,
+                                        child: EasyContainer(
+                                          borderRadius: 12,
+                                          color: AppStyles.txtFieldColor,
+                                          showBorder: true,
+                                          height: 20,
+                                          width: 120,
+                                          padding: 0,
+                                          customMargin: EdgeInsets.only(
+                                              right:
+                                                  16), // Add margin to shift right
+                                          child: Center(
+                                            child: Text(
+                                              "${"page"} $index ",
+                                              style: TextStyle(
+                                                fontFamily: 'aldahabi',
+                                                fontSize: 12,
+                                                color: AppStyles.white,
+                                              ),
+                                            ),
                                           ),
                                         ),
                                       ),
                                     ),
-                                    SizedBox(
-                                      width: (screenSize.width * .32),
+
+                                    // Keep the icons section as is
+                                    Flexible(
+                                      flex:
+                                          3, // Match with first section for balance
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.end,
-                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           // Add the new toggle button for verse coloring
                                           IconButton(
@@ -666,25 +699,22 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                   : FlutterIslamicIcons.quran,
                                               color: AppStyles.txtFieldColor,
                                               size: widget.isWeb
-                                                  ? 26
-                                                  : 22, // Larger icon for web
+                                                  ? 24
+                                                  : 22, // Slightly smaller for web
                                             ),
                                             tooltip: _isColoringEnabled
                                                 ? 'إيقاف تلوين الآيات'
                                                 : 'تلوين الآيات حسب المجموعة',
-                                            padding: widget.isWeb
-                                                ? EdgeInsets.all(
-                                                    10) // Larger padding for web
-                                                : EdgeInsets.all(
-                                                    6), // Keep mobile padding the same
+                                            padding: EdgeInsets
+                                                .zero, // Remove padding
                                             constraints: BoxConstraints(),
-                                            visualDensity:
-                                                VisualDensity.compact,
+                                            visualDensity: VisualDensity(
+                                                horizontal: -4,
+                                                vertical: -4), // More compact
                                           ),
 
-                                          // Increased spacing for web, tiny gap for mobile
-                                          SizedBox(
-                                              width: widget.isWeb ? 12 : 2),
+                                          // Smaller spacing
+                                          SizedBox(width: widget.isWeb ? 8 : 0),
 
                                           // Play Page Audio button - Updated with paused state
                                           IconButton(
@@ -693,9 +723,9 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                             icon: _isLoadingAudio
                                                 ? SizedBox(
                                                     width:
-                                                        widget.isWeb ? 26 : 22,
+                                                        widget.isWeb ? 24 : 22,
                                                     height:
-                                                        widget.isWeb ? 26 : 22,
+                                                        widget.isWeb ? 24 : 22,
                                                     child:
                                                         CircularProgressIndicator(
                                                       strokeWidth:
@@ -714,26 +744,23 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                     color:
                                                         AppStyles.txtFieldColor,
                                                     size:
-                                                        widget.isWeb ? 26 : 22,
+                                                        widget.isWeb ? 24 : 22,
                                                   ),
                                             tooltip: _isPlayingPage
                                                 ? 'إيقاف مؤقت للقراءة'
                                                 : _isPaused
                                                     ? 'استئناف القراءة'
                                                     : 'قراءة الصفحة',
-                                            padding: widget.isWeb
-                                                ? EdgeInsets.all(
-                                                    10) // Larger padding for web
-                                                : EdgeInsets.all(
-                                                    6), // Keep mobile padding the same
+                                            padding: EdgeInsets
+                                                .zero, // Remove padding
                                             constraints: BoxConstraints(),
-                                            visualDensity:
-                                                VisualDensity.compact,
+                                            visualDensity: VisualDensity(
+                                                horizontal: -4,
+                                                vertical: -4), // More compact
                                           ),
 
-                                          // Increased spacing for web, tiny gap for mobile
-                                          SizedBox(
-                                              width: widget.isWeb ? 12 : 2),
+                                          // Smaller spacing
+                                          SizedBox(width: widget.isWeb ? 8 : 0),
 
                                           // Settings button - now opens reciter selection
                                           IconButton(
@@ -742,17 +769,15 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                             tooltip: 'اختيار القارئ',
                                             icon: Icon(
                                               Icons.settings,
-                                              size: widget.isWeb ? 26 : 22,
+                                              size: widget.isWeb ? 24 : 22,
                                               color: AppStyles.txtFieldColor,
                                             ),
-                                            padding: widget.isWeb
-                                                ? EdgeInsets.all(
-                                                    10) // Larger padding for web
-                                                : EdgeInsets.all(
-                                                    6), // Keep mobile padding the same
+                                            padding: EdgeInsets
+                                                .zero, // Remove padding
                                             constraints: BoxConstraints(),
-                                            visualDensity:
-                                                VisualDensity.compact,
+                                            visualDensity: VisualDensity(
+                                                horizontal: -4,
+                                                vertical: -4), // More compact
                                           ),
                                         ],
                                       ),

@@ -7,6 +7,13 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
+    # Define gender as a ChoiceField with custom handling for quotes
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+    ]
+    gender = serializers.ChoiceField(choices=GENDER_CHOICES, required=False)
+    
     class Meta:
         model = User
         fields = ('id', 'username', 'email', 'user_type', 'phone_number', 
@@ -14,6 +21,26 @@ class UserSerializer(serializers.ModelSerializer):
                  'created_at', 'first_name', 'last_name', 'date_joined', 'last_login',
                  'gender')
         read_only_fields = ('id', 'date_joined', 'last_login')
+    
+    def validate_gender(self, value):
+        """
+        Handle quoted gender values from frontend.
+        """
+        if value is None:
+            return value
+            
+        # Handle potential quoted strings
+        if isinstance(value, str):
+            # Remove any quotes that might be in the string
+            clean_value = value.replace('"', '').replace("'", '').strip().lower()
+            
+            # Check if the cleaned value is valid
+            valid_choices = [choice[0] for choice in self.GENDER_CHOICES]
+            if clean_value in valid_choices:
+                return clean_value
+                
+        # If we get here with the original value, validate as normal
+        return value
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -128,3 +155,13 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 class VerifyAccountSerializer(serializers.Serializer):
     email = serializers.EmailField()
     token = serializers.CharField(help_text="The 6-digit verification code sent to the user's email")
+
+class ChangePasswordSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, validators=[validate_password])
+    confirm_password = serializers.CharField(required=True)
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Password fields didn't match."})
+        return attrs
