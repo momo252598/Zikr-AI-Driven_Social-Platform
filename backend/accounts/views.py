@@ -10,7 +10,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from rest_framework import generics, status, permissions
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import RegisterSerializer, CustomTokenObtainPairSerializer, UserSerializer, VerifyAccountSerializer, ChangePasswordSerializer
+from .serializers import PublicUserProfileSerializer, RegisterSerializer, CustomTokenObtainPairSerializer, UserSerializer, VerifyAccountSerializer, ChangePasswordSerializer
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
@@ -524,3 +524,19 @@ def change_password(request):
         )
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_user_public_profile(request, user_id):
+    """
+    Retrieve basic public profile information for a specific user by ID.
+    """
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = PublicUserProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found"},
+            status=status.HTTP_404_NOT_FOUND
+        )

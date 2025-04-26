@@ -4,10 +4,10 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import './api_service.dart';
+import '../models/user.dart';
 
 class SocialService {
   final ApiService _apiService = ApiService();
-
   // Get all posts with pagination
   Future<List<dynamic>> getPosts({int? page}) async {
     try {
@@ -160,6 +160,33 @@ class SocialService {
     } catch (e) {
       print("Error uploading image: $e");
       throw Exception("Failed to upload image: $e");
+    }
+  }
+
+  Future<User> getUserProfileById(String userId) async {
+    try {
+      // Make the API call to fetch user profile
+      final dynamic responseData =
+          await _apiService.get('/accounts/user-profile/$userId/');
+
+      // Debug the response data
+      print('User profile data: $responseData');
+
+      // Convert from Map<dynamic, dynamic> to Map<String, dynamic>
+      final Map<String, dynamic> data = {};
+      if (responseData is Map) {
+        responseData.forEach((key, value) {
+          data[key.toString()] = value;
+        });
+      } else {
+        throw Exception('Unexpected response format: $responseData');
+      }
+
+      // Convert the response data to a User object
+      return User.fromJson(data);
+    } catch (e) {
+      print('Error in getUserProfileById: $e');
+      rethrow; // Make sure to rethrow so it can be caught in the UI
     }
   }
 }

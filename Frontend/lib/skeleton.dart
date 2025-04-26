@@ -69,7 +69,14 @@ class _SkeletonState extends State<Skeleton> {
       child: Scaffold(
         appBar: const CustomAppBar(
             title: 'ذكر', showAddButton: false, showBackButton: false),
-        body: _pages[_currentIndex],
+        body: MediaQuery(
+          // Make the MediaQuery explicitly RTL to affect text rendering
+          data: MediaQuery.of(context),
+          child: Directionality(
+            textDirection: TextDirection.rtl,
+            child: _pages[_currentIndex],
+          ),
+        ),
         bottomNavigationBar: BottomNavigationBar(
           backgroundColor: AppStyles.bgColor,
           type: BottomNavigationBarType.fixed,

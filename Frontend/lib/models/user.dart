@@ -44,12 +44,21 @@ class User {
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
+    // Check if this is a minimal public profile response
+    final isPublicProfile = json.containsKey('name') &&
+        !json.containsKey('email') &&
+        !json.containsKey('created_at');
+
     return User(
       id: json['id'],
       username: json['username'],
       name: json['name'] ??
           "${json['first_name'] ?? ''} ${json['last_name'] ?? ''}".trim(),
-      email: json['email'],
+
+      // For public profile responses, use placeholder values for required fields
+      email:
+          json['email'] ?? (isPublicProfile ? 'not_available@example.com' : ''),
+
       userType: json['user_type'] ?? 'regular',
       phoneNumber: json['phone_number'] ?? '',
       birthDate: json['birth_date'] != null
@@ -58,9 +67,12 @@ class User {
       profilePicture: json['profile_picture'] ?? '',
       bio: json['bio'] ?? '',
       isVerified: json['is_verified'] ?? false,
+
+      // Use current date as fallback for created_at
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+
       followerIds:
           json['followers'] != null ? List<int>.from(json['followers']) : [],
       followingIds:
@@ -68,7 +80,6 @@ class User {
       sheikhProfile: json['sheikh_profile'] != null
           ? SheikhProfile.fromJson(json['sheikh_profile'])
           : null,
-      // Parse new fields
       firstName: json['first_name'] ?? '',
       lastName: json['last_name'] ?? '',
       dateJoined: json['date_joined'] != null
@@ -77,7 +88,7 @@ class User {
       lastLogin: json['last_login'] != null
           ? DateTime.parse(json['last_login'])
           : null,
-      gender: json['gender'] ?? '', // Parse gender field
+      gender: json['gender'] ?? '',
     );
   }
 

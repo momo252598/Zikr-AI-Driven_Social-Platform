@@ -165,3 +165,17 @@ class ChangePasswordSerializer(serializers.Serializer):
         if attrs['new_password'] != attrs['confirm_password']:
             raise serializers.ValidationError({"confirm_password": "Password fields didn't match."})
         return attrs
+
+class PublicUserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for public-facing user profile data"""
+    name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'name', 'profile_picture', 'user_type', 'is_verified')
+    
+    def get_name(self, obj):
+        # Combine first_name and last_name into a single field
+        if obj.first_name or obj.last_name:
+            return f"{obj.first_name} {obj.last_name}".strip()
+        return obj.username
