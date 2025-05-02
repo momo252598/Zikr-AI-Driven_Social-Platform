@@ -201,3 +201,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'mohammad.r.hamdallah@gmail.com'
 EMAIL_HOST_PASSWORD = 'lwnayxhrwwboummh'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Supabase Storage configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "post_images")

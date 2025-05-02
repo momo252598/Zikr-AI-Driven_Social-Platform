@@ -7,6 +7,7 @@ import 'package:software_graduation_project/components/signup/signup_step_two.da
 import 'package:software_graduation_project/components/signup/signup_step_three.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:software_graduation_project/utils/safe_animation_controller.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,12 +16,15 @@ class SignUpScreen extends StatefulWidget {
   _SignUpScreenState createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends State<SignUpScreen>
+    with SingleTickerProviderStateMixin {
   int _currentStep = 0;
   String? _selectedGender;
   bool _isLoading = false;
   String? _errorMessage;
   late final String _baseUrl;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
   @override
   void initState() {
@@ -28,6 +32,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
     // Set base URL based on platform
     final host = kIsWeb ? '127.0.0.1' : '192.168.1.7';
     _baseUrl = 'http://$host:8000';
+
+    _animationController = createSafeAnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   // User data that will be collected throughout the signup process
@@ -135,6 +155,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
     setState(() {
       if (_currentStep > 0) {
         _currentStep--;
+        _animationController.reset();
+        _animationController.forward();
       }
     });
   }
@@ -171,80 +193,123 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
       ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Stack(
-          children: [
-            Container(
-              decoration: const BoxDecoration(),
-            ),
-            SingleChildScrollView(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppStyles.whitePurple,
+              AppStyles.white,
+            ],
+          ),
+        ),
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: FadeTransition(
+            opacity: _animation,
+            child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.only(
                   top: kToolbarHeight + 10,
                   left: 32,
                   right: 32,
-                  bottom: 11,
+                  bottom: 32,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    // Icon changes based on gender selection
-                    Icon(
-                      _selectedGender == 'أنثى'
-                          ? FlutterIslamicIcons.muslimah2
-                          : FlutterIslamicIcons.muslim2,
-                      size: 200,
-                      color: AppStyles.black,
-                    ),
-                    Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        'إنشاء حساب',
-                        style: TextStyle(
-                          color: AppStyles.black,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins',
-                        ),
+                    // Icon with animated container
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppStyles.whitePurple,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppStyles.lightPurple.withOpacity(0.2),
+                            blurRadius: 15,
+                            spreadRadius: 5,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        _selectedGender == 'أنثى'
+                            ? FlutterIslamicIcons.muslimah2
+                            : FlutterIslamicIcons.muslim2,
+                        size: 120,
+                        color: AppStyles.darkPurple,
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    // Step indicator
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    const SizedBox(height: 24),
+
+                    // Title with decorative underline
+                    Column(
                       children: [
-                        for (int i = 0; i < 3; i++)
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 4),
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: i == _currentStep
-                                  ? AppStyles.buttonColor
-                                  : AppStyles.txtFieldColor,
-                            ),
+                        Text(
+                          'إنشاء حساب',
+                          style: TextStyle(
+                            color: AppStyles.darkPurple,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
                           ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 60,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: AppStyles.lightPurple,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 30),
+
+                    // Modern step indicators with labels
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _buildStepIndicator(0, "الحساب"),
+                          _buildStepConnector(0),
+                          _buildStepIndicator(1, "معلومات"),
+                          _buildStepConnector(1),
+                          _buildStepIndicator(2, "التحقق"),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 40),
 
                     // Error message for account creation
                     if (_errorMessage != null)
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        margin: const EdgeInsets.only(bottom: 20),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          color: AppStyles.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border:
+                              Border.all(color: AppStyles.red.withOpacity(0.3)),
                         ),
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline, color: AppStyles.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(
+                                  color: AppStyles.red,
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.right,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -255,47 +320,128 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           const SizedBox(height: 20),
                           CircularProgressIndicator(
                               color: AppStyles.buttonColor),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 16),
                           Text(
                             'جاري إنشاء الحساب...',
                             style: TextStyle(
-                              color: AppStyles.black,
-                              fontSize: 14,
+                              color: AppStyles.darkPurple,
+                              fontSize: 15,
                             ),
                           ),
                         ],
                       )
                     else
-                    // Forms for different steps
-                    if (_currentStep == 0)
-                      SignUpStepOne(
-                        userData: _userData,
-                        onDataUpdated: _updateUserData,
-                        onNext: _nextStep,
-                      )
-                    else if (_currentStep == 1)
-                      SignUpStepTwo(
-                        userData: _userData,
-                        onDataUpdated: _updateUserData,
-                        onNext: _nextStep,
-                        onGenderChanged: (value) {
-                          setState(() {
-                            _selectedGender = value;
-                          });
-                        },
-                      )
-                    else if (_currentStep == 2)
-                      SignUpStepThree(
-                        userData: _userData,
-                        onSubmit: _submitData,
+                      // Forms for different steps with card container
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppStyles.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppStyles.boxShadow.withOpacity(0.08),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(24),
+                        child: _currentStep == 0
+                            ? SignUpStepOne(
+                                userData: _userData,
+                                onDataUpdated: _updateUserData,
+                                onNext: _nextStep,
+                              )
+                            : _currentStep == 1
+                                ? SignUpStepTwo(
+                                    userData: _userData,
+                                    onDataUpdated: _updateUserData,
+                                    onNext: _nextStep,
+                                    onGenderChanged: (value) {
+                                      setState(() {
+                                        _selectedGender = value;
+                                        _animationController.reset();
+                                        _animationController.forward();
+                                      });
+                                    },
+                                  )
+                                : SignUpStepThree(
+                                    userData: _userData,
+                                    onSubmit: _submitData,
+                                  ),
                       ),
                   ],
                 ),
               ),
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildStepIndicator(int step, String label) {
+    final bool isActive = _currentStep >= step;
+    return Expanded(
+      child: Column(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: isActive ? AppStyles.buttonColor : AppStyles.whitePurple,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isActive ? AppStyles.buttonColor : AppStyles.lightPurple,
+                width: 2,
+              ),
+              boxShadow: isActive
+                  ? [
+                      BoxShadow(
+                        color: AppStyles.buttonColor.withOpacity(0.3),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      )
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: isActive
+                  ? Icon(
+                      _currentStep > step ? Icons.check : Icons.circle,
+                      color: AppStyles.white,
+                      size: _currentStep > step ? 20 : 12,
+                    )
+                  : Text(
+                      (step + 1).toString(),
+                      style: TextStyle(
+                        color: AppStyles.lightPurple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: TextStyle(
+              color: isActive ? AppStyles.darkPurple : AppStyles.grey,
+              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepConnector(int step) {
+    final bool isActive = _currentStep > step;
+    return Container(
+      width: 40,
+      height: 2,
+      color: isActive
+          ? AppStyles.buttonColor
+          : AppStyles.lightPurple.withOpacity(0.3),
     );
   }
 }

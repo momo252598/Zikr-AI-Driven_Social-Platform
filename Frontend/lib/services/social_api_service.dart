@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import './api_service.dart';
 import '../models/user.dart';
+import 'package:http_parser/http_parser.dart'; // Add this import for MediaType
 
 class SocialService {
   final ApiService _apiService = ApiService();
@@ -61,16 +62,49 @@ class SocialService {
 
   // Add media to a post
   Future<Map<String, dynamic>> addMediaToPost(
-      dynamic postId, String fileUrl, String fileType) async {
-    final int postIdInt = postId is int ? postId : int.parse(postId.toString());
-    final data = {
-      'file_url': fileUrl,
-      'file_type': fileType,
-    };
+      dynamic postId, XFile image, String fileType) async {
+    try {
+      final int postIdInt =
+          postId is int ? postId : int.parse(postId.toString());
 
-    final response =
-        await _apiService.post('/social/posts/$postIdInt/add_media/', data);
-    return response;
+      // Create multipart request
+      var uri = Uri.parse(
+          '${_apiService.baseUrl}/social/posts/$postIdInt/add_media/');
+      var request = http.MultipartRequest('POST', uri);
+
+      // Add authorization headers
+      final headers = await _apiService.getHeaders();
+      request.headers.addAll(headers);
+
+      // Read file as bytes
+      final bytes = await image.readAsBytes();
+
+      // Add file to request
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: image.name,
+        contentType: MediaType('image', 'jpeg'), // Adjust based on file type
+      ));
+
+      // Add file type
+      request.fields['file_type'] = fileType;
+
+      // Send the request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode != 201) {
+        throw Exception('Failed to upload image: ${response.body}');
+      }
+
+      // Parse response
+      final responseData = json.decode(response.body);
+      return responseData;
+    } catch (e) {
+      print("Error uploading image: $e");
+      throw Exception("Failed to upload image: $e");
+    }
   }
 
   // Get comments for a post

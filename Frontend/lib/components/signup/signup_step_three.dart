@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../base/res/styles/app_styles.dart';
 import '../../services/auth_service.dart'; // Import AuthService
+import 'package:software_graduation_project/utils/safe_animation_controller.dart';
 
 class SignUpStepThree extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -19,22 +20,23 @@ class SignUpStepThree extends StatefulWidget {
   _SignUpStepThreeState createState() => _SignUpStepThreeState();
 }
 
-class _SignUpStepThreeState extends State<SignUpStepThree> {
+class _SignUpStepThreeState extends State<SignUpStepThree>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  // Replace single controller with list of controllers
   final List<TextEditingController> _codeControllers = List.generate(
     6,
     (index) => TextEditingController(),
   );
-  // Add focus nodes to manage focus
   final List<FocusNode> _focusNodes = List.generate(
     6,
     (index) => FocusNode(),
   );
   bool _isLoading = false;
   String? _errorMessage;
-  final AuthService _authService = AuthService(); // Create AuthService instance
+  final AuthService _authService = AuthService();
   late final String _baseUrl;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
 
   @override
   void initState() {
@@ -42,6 +44,26 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
     // Set base URL based on platform
     final host = kIsWeb ? '127.0.0.1' : '192.168.1.7';
     _baseUrl = 'http://$host:8000';
+
+    _animationController = createSafeAnimationController(
+      duration: Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+
+    // Set up focus listeners for animation effects
+    for (int i = 0; i < _focusNodes.length; i++) {
+      _focusNodes[i].addListener(() {
+        if (_focusNodes[i].hasFocus) {
+          _animationController.forward();
+        } else {
+          _animationController.reverse();
+        }
+      });
+    }
   }
 
   @override
@@ -53,6 +75,7 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
     for (var node in _focusNodes) {
       node.dispose();
     }
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -198,83 +221,160 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Message about verification code
-            Text(
-              'تم إرسال رمز التحقق إلى بريدك الإلكتروني.',
-              style: TextStyle(
-                color: AppStyles.black,
-                fontSize: 14,
-                fontWeight: FontWeight.normal,
-              ),
-              textAlign: TextAlign.center,
+            // Title with verification icon
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.verified_user,
+                  color: AppStyles.darkPurple,
+                  size: 24,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'التحقق من الحساب',
+                  style: TextStyle(
+                    color: AppStyles.darkPurple,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-            Text(
-              'الرجاء إدخال الرمز المكون من 6 أرقام أدناه',
-              style: TextStyle(
-                color: AppStyles.black,
-                fontSize: 14,
-                fontWeight: FontWeight.normal,
+            const SizedBox(height: 24),
+
+            // Message about verification code with better styling
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppStyles.whitePurple,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppStyles.lightPurple.withOpacity(0.3),
+                ),
               ),
-              textAlign: TextAlign.center,
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.email_outlined, color: AppStyles.darkPurple),
+                      const SizedBox(width: 8),
+                      Text(
+                        'تم إرسال رمز التحقق إلى:',
+                        style: TextStyle(
+                          color: AppStyles.darkPurple,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.userData['email'] ?? '',
+                    style: TextStyle(
+                      color: AppStyles.buttonColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    textDirection: TextDirection.ltr,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'الرجاء إدخال الرمز المكون من 6 أرقام أدناه',
+                    style: TextStyle(
+                      color: AppStyles.greyShaded600,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 30),
 
-            // Replace with explicit LTR Row
+            // Verification code input with animation
             Directionality(
-              textDirection: TextDirection.ltr, // Force left-to-right direction
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  6,
-                  (index) => Container(
-                    width: 45,
-                    height: 55,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    child: TextFormField(
-                      controller: _codeControllers[index],
-                      focusNode: _focusNodes[index],
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: AppStyles.txtFieldColor,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide.none,
+              textDirection: TextDirection.ltr,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: AnimatedBuilder(
+                    animation: _animation,
+                    builder: (context, child) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          6,
+                          (index) => Container(
+                            width: 40, // Reduced from 45 to 40
+                            height: 50, // Slightly reduced from 55 to 50
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 3), // Reduced margin from 4 to 3
+                            decoration: BoxDecoration(
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _focusNodes[index].hasFocus
+                                      ? AppStyles.buttonColor.withOpacity(0.3)
+                                      : AppStyles.boxShadow.withOpacity(0.1),
+                                  blurRadius: _focusNodes[index].hasFocus
+                                      ? 6
+                                      : 3, // Reduced blur radius
+                                  spreadRadius: _focusNodes[index].hasFocus
+                                      ? 1
+                                      : 0, // Reduced spread
+                                ),
+                              ],
+                            ),
+                            child: TextFormField(
+                              controller: _codeControllers[index],
+                              focusNode: _focusNodes[index],
+                              decoration: InputDecoration(
+                                filled: true,
+                                fillColor: _focusNodes[index].hasFocus
+                                    ? AppStyles.buttonColor
+                                    : AppStyles.txtFieldColor,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(
+                                      10), // Slightly reduced from 12
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppStyles.white,
+                                fontSize: 22, // Slightly reduced from 24
+                                fontWeight: FontWeight.bold,
+                              ),
+                              keyboardType: TextInputType.number,
+                              maxLength: 1,
+                              buildCounter: (context,
+                                      {required currentLength,
+                                      required isFocused,
+                                      maxLength}) =>
+                                  null,
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  // Move to next field
+                                  if (index < 5) {
+                                    _focusNodes[index + 1].requestFocus();
+                                  } else {
+                                    // Last field - hide keyboard
+                                    FocusScope.of(context).unfocus();
+                                  }
+                                }
+                              },
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return '';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
                         ),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppStyles.white,
-                        fontSize: 24,
-                      ),
-                      keyboardType: TextInputType.number,
-                      maxLength: 1,
-                      buildCounter: (context,
-                              {required currentLength,
-                              required isFocused,
-                              maxLength}) =>
-                          null,
-                      onChanged: (value) {
-                        if (value.isNotEmpty) {
-                          // Move to next field
-                          if (index < 5) {
-                            _focusNodes[index + 1].requestFocus();
-                          } else {
-                            // Last field - hide keyboard
-                            FocusScope.of(context).unfocus();
-                          }
-                        }
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return '';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ),
+                      );
+                    }),
               ),
             ),
             const SizedBox(height: 10),
@@ -285,65 +385,120 @@ class _SignUpStepThreeState extends State<SignUpStepThree> {
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
                   'الرجاء إدخال جميع الأرقام الستة',
-                  style: TextStyle(color: Colors.red, fontSize: 12),
+                  style: TextStyle(color: AppStyles.red, fontSize: 13),
                   textAlign: TextAlign.center,
                 ),
               ),
 
-            // Error message
+            // Error message with better styling
             if (_errorMessage != null)
               Container(
-                padding: const EdgeInsets.all(10),
+                margin: const EdgeInsets.only(top: 16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppStyles.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppStyles.red.withOpacity(0.3)),
                 ),
-                child: Text(
-                  _errorMessage!,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontSize: 12,
-                  ),
-                  textAlign: TextAlign.center,
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: AppStyles.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          color: AppStyles.red,
+                          fontSize: 13,
+                        ),
+                        textAlign: TextAlign.right,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-            // Resend code option
-            TextButton(
+            // Didn't receive code text
+            Text(
+              'لم تستلم الرمز؟',
+              style: TextStyle(
+                color: AppStyles.greyShaded600,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+
+            // Resend code button with better styling
+            TextButton.icon(
               onPressed: _isLoading ? null : _resendVerificationCode,
-              child: Text(
+              icon: Icon(
+                Icons.refresh,
+                color: AppStyles.buttonColor,
+              ),
+              label: Text(
                 'إعادة إرسال الرمز',
                 style: TextStyle(
                   color: AppStyles.buttonColor,
-                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
                 ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
               ),
             ),
             const SizedBox(height: 30),
 
-            // Submit button
-            ElevatedButton(
-              onPressed: _isLoading ? null : _verifyAndSubmit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppStyles.buttonColor,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            // Submit button with gradient
+            Container(
+              height: 50,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                gradient: LinearGradient(
+                  colors: _isLoading
+                      ? [AppStyles.grey, AppStyles.grey]
+                      : [AppStyles.buttonColor, AppStyles.darkPurple],
+                  begin: Alignment.centerRight,
+                  end: Alignment.centerLeft,
                 ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                minimumSize: const Size(double.infinity, 50),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppStyles.buttonColor.withOpacity(0.4),
+                    spreadRadius: 1,
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(
-                      'تأكيد',
-                      style: TextStyle(
-                        color: AppStyles.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Poppins',
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _verifyAndSubmit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'تأكيد الحساب',
+                            style: TextStyle(
+                              color: AppStyles.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.verified, color: AppStyles.white),
+                        ],
                       ),
-                    ),
+              ),
             ),
           ],
         ),

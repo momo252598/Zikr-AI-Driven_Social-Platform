@@ -14,6 +14,19 @@ class ApiService {
     _baseUrl = 'http://$host:8000/api';
   }
 
+  // Add this getter to access the base URL
+  String get baseUrl => _baseUrl;
+
+  // Add this method to get headers for requests
+  Future<Map<String, String>> getHeaders() async {
+    final token = await _authService.getAccessToken();
+    return {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json; charset=utf-8',
+      'Accept-Charset': 'utf-8',
+    };
+  }
+
   // Add this helper method to your ApiService class
   dynamic _ensureCorrectTypes(dynamic data) {
     if (data is Map) {

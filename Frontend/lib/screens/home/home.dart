@@ -6,6 +6,7 @@ import 'package:software_graduation_project/base/res/media.dart';
 import 'package:software_graduation_project/services/quran_service.dart'; // Import Quran service
 import 'package:software_graduation_project/skeleton.dart'; // Import Quran screen
 import 'package:software_graduation_project/screens/quran/quran_page.dart'; // Import Quran page
+import 'package:software_graduation_project/screens/chat/all_chats.dart'; // Import All Chats screen
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart' show rootBundle;
@@ -420,6 +421,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMobileLayout(BuildContext context, double screenWidth) {
+    // Calculate a standard card width for mobile
+    final standardCardWidth = (screenWidth - 60) / 3;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -428,7 +432,6 @@ class _HomePageState extends State<HomePage> {
 
         // Next Prayer Widget
         Padding(
-          // Update padding to include right side
           padding:
               const EdgeInsets.only(top: 15, bottom: 5, left: 20, right: 20),
           child: Text(
@@ -457,16 +460,29 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
               const SizedBox(height: 10),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Updates for Quran card to handle continue reading
-                  _buildQuranFeatureCard(context, screenWidth),
-                  _buildFeatureCard(context, Icons.volunteer_activism,
-                      "الأذكار", AppStyles.purple, screenWidth),
-                  _buildFeatureCard(context, Icons.compass_calibration,
-                      "القبلة", AppStyles.darkPurple, screenWidth),
-                ],
+              // Replace the two rows with a horizontally scrollable view
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    // Updates for Quran card
+                    _buildQuranFeatureCard(context, standardCardWidth),
+                    const SizedBox(width: 12),
+                    // Add chat feature card
+                    _buildFeatureCard(context, Icons.chat_bubble_outline,
+                        "الدردشة", AppStyles.lightPurple, standardCardWidth,
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const AllChatsPage()))),
+                    const SizedBox(width: 12),
+                    _buildFeatureCard(context, Icons.volunteer_activism,
+                        "الأذكار", AppStyles.purple, standardCardWidth),
+                    const SizedBox(width: 12),
+                    _buildFeatureCard(context, Icons.compass_calibration,
+                        "القبلة", AppStyles.darkPurple, standardCardWidth),
+                  ],
+                ),
               ),
 
               // Zikr section
@@ -490,6 +506,9 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildWebLayout(
       BuildContext context, double screenWidth, ScreenSize screenSize) {
+    // Calculate a standard card width for web
+    final standardCardWidth = 150.0;
+
     return Column(
       children: [
         // Welcome widget
@@ -537,25 +556,46 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(height: 15),
-                        Wrap(
-                          spacing: 15,
-                          runSpacing: 15,
-                          alignment: WrapAlignment.start,
-                          children: [
-                            // Update Quran card for web layout
-                            _buildQuranFeatureCard(context, screenWidth,
-                                isWeb: true),
-                            _buildFeatureCard(context, Icons.volunteer_activism,
-                                "الأذكار", AppStyles.purple, screenWidth,
-                                isWeb: true),
-                            _buildFeatureCard(
-                                context,
-                                Icons.compass_calibration,
-                                "القبلة",
-                                AppStyles.darkPurple,
-                                screenWidth,
-                                isWeb: true),
-                          ],
+                        // Replace Wrap widget with horizontally scrollable view
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: [
+                              // Update Quran card for web layout
+                              _buildQuranFeatureCard(context, standardCardWidth,
+                                  isWeb: true),
+                              const SizedBox(width: 15),
+                              _buildFeatureCard(
+                                  context,
+                                  Icons.volunteer_activism,
+                                  "الأذكار",
+                                  AppStyles.purple,
+                                  standardCardWidth,
+                                  isWeb: true),
+                              const SizedBox(width: 15),
+                              _buildFeatureCard(
+                                  context,
+                                  Icons.compass_calibration,
+                                  "القبلة",
+                                  AppStyles.darkPurple,
+                                  standardCardWidth,
+                                  isWeb: true),
+                              const SizedBox(width: 15),
+                              // Add chat feature card for web layout
+                              _buildFeatureCard(
+                                  context,
+                                  Icons.chat_bubble_outline,
+                                  "الدردشة",
+                                  AppStyles.lightPurple,
+                                  standardCardWidth,
+                                  isWeb: true,
+                                  onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const AllChatsPage()))),
+                            ],
+                          ),
                         ),
                       ],
                     ),
@@ -593,11 +633,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   // New method specifically for the Quran card with continue reading feature
-  Widget _buildQuranFeatureCard(BuildContext context, double screenWidth,
+  Widget _buildQuranFeatureCard(BuildContext context, double cardWidth,
       {bool isWeb = false}) {
-    final cardWidth = isWeb
-        ? 150.0 // Fixed width for web
-        : (screenWidth - 60) / 3; // Dynamic width for mobile
+    // Define a fixed height for the card to match other feature cards
+    final cardHeight = isWeb ? 140.0 : 120.0;
 
     return FutureBuilder<List<dynamic>>(
       // Use Future.wait to load both the last read page and Quran data
@@ -647,6 +686,7 @@ class _HomePageState extends State<HomePage> {
               : () => _navigateToLastReadPage(context, lastPage, quranData),
           child: Container(
             width: cardWidth,
+            height: cardHeight, // Set fixed height
             padding: EdgeInsets.symmetric(
               vertical: isWeb ? 20 : 15,
               horizontal: isWeb ? 15 : 5,
@@ -869,38 +909,41 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildFeatureCard(BuildContext context, IconData icon, String title,
-      Color color, double screenWidth,
-      {bool isWeb = false}) {
-    final cardWidth = isWeb
-        ? 150.0 // Fixed width for web
-        : (screenWidth - 60) / 3; // Dynamic width for mobile
+      Color color, double cardWidth,
+      {bool isWeb = false, VoidCallback? onTap}) {
+    // Define a fixed height for the card to match the Quran card
+    final cardHeight = isWeb ? 140.0 : 120.0;
 
-    return Container(
-      width: cardWidth,
-      padding: EdgeInsets.symmetric(
-        vertical: isWeb ? 20 : 15,
-        horizontal: isWeb ? 15 : 5,
-      ),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(15),
-        border: isWeb ? Border.all(color: color.withOpacity(0.3)) : null,
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: color, size: isWeb ? 36 : 32),
-          SizedBox(height: isWeb ? 12 : 10),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: isWeb ? 14 : 12,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: cardWidth,
+        height: cardHeight, // Set fixed height
+        padding: EdgeInsets.symmetric(
+          vertical: isWeb ? 20 : 15,
+          horizontal: isWeb ? 15 : 5,
+        ),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(15),
+          border: isWeb ? Border.all(color: color.withOpacity(0.3)) : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: isWeb ? 36 : 32),
+            SizedBox(height: isWeb ? 12 : 10),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: isWeb ? 14 : 12,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

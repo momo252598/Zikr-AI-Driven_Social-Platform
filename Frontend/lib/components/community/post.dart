@@ -182,58 +182,142 @@ class PostCard extends StatelessWidget {
     }
   }
 
-  Widget _buildImageGallery(List<dynamic> imageUrls) {
+  Widget _buildImageGallery(List<dynamic> media) {
+    if (media.isEmpty) {
+      return SizedBox.shrink();
+    }
+
+    // Extract image URLs from media objects
+    List<String> imageUrls = [];
+    for (var item in media) {
+      if (item is Map &&
+          item.containsKey('file_url') &&
+          item['file_type'] == 'image') {
+        imageUrls.add(item['file_url']);
+      }
+    }
+
     if (imageUrls.isEmpty) {
-      return const SizedBox.shrink();
+      return SizedBox.shrink();
     }
 
-    // Helper function to handle image display with error handling
-    Widget displayImage(String imageUrl) {
-      return Image.network(
-        imageUrl,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          print("Image error: $error");
-          return Container(
-            color: AppStyles.grey.withOpacity(0.2),
-            child: Center(
-              child: Icon(Icons.image_not_supported,
-                  color: AppStyles.darkPurple.withOpacity(0.5), size: 40),
-            ),
-          );
-        },
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child;
-          return Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
-            ),
-          );
-        },
-      );
-    }
-
+    // Display a single image or grid of images
     if (imageUrls.length == 1) {
-      return Container(
-        constraints: const BoxConstraints(maxHeight: 300),
-        width: double.infinity,
-        child: displayImage(imageUrls[0].toString()),
-      );
-    } else {
-      return Container(
-        height: 300,
-        width: double.infinity,
-        child: PageView.builder(
-          itemCount: imageUrls.length,
-          itemBuilder: (context, index) {
-            return displayImage(imageUrls[index].toString());
-          },
+      return Builder(
+        builder: (context) => Container(
+          margin: EdgeInsets.only(top: 8),
+          constraints: BoxConstraints(maxHeight: 300),
+          width: double.infinity,
+          child: GestureDetector(
+            onTap: () => _openPhotoViewer(context, imageUrls, 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrls.first,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.grey[300],
+                    child: Center(child: Icon(Icons.broken_image)),
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       );
+    } else {
+      // Grid layout for multiple images (up to 4 visible)
+      return Container(
+        margin: EdgeInsets.only(top: 8),
+        child: _buildPhotoGrid(imageUrls),
+      );
     }
+  }
+
+  // Helper method to build a photo grid
+  Widget _buildPhotoGrid(List<String> imageUrls) {
+    final int totalImages = imageUrls.length;
+    final int imagesToShow = totalImages > 4 ? 4 : totalImages;
+
+    // Calculate aspect ratio based on number of images
+    double aspectRatio = totalImages == 2 ? 2 : 1;
+
+    return AspectRatio(
+      aspectRatio: aspectRatio,
+      child: GridView.builder(
+        physics: NeverScrollableScrollPhysics(),
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: _getGridCrossAxisCount(totalImages),
+          crossAxisSpacing: 2,
+          mainAxisSpacing: 2,
+        ),
+        itemCount: imagesToShow,
+        itemBuilder: (context, index) {
+          return GestureDetector(
+            onTap: () => _openPhotoViewer(context, imageUrls, index),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.network(
+                    imageUrls[index],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[300],
+                        child: Center(child: Icon(Icons.broken_image)),
+                      );
+                    },
+                  ),
+                ),
+                // Show overlay with count for the 4th image if there are more than 4 images
+                if (index == 3 && totalImages > 4)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: Text(
+                        "+${totalImages - 4}",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Helper to determine grid cross-axis count based on number of images
+  int _getGridCrossAxisCount(int imageCount) {
+    if (imageCount == 1) return 1;
+    if (imageCount == 2) return 2;
+    return 2; // For 3 or more images, use a 2x2 grid
+  }
+
+  // Open full-screen photo viewer
+  void _openPhotoViewer(
+      BuildContext context, List<String> imageUrls, int initialIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PhotoViewerPage(
+          imageUrls: imageUrls,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
   }
 
   // Helper method to get display name from author details
@@ -845,14 +929,15 @@ class PostUtils {
   }
 
   // Helper method to safely extract media URLs
-  static List<String> extractMediaUrls(dynamic mediaList) {
+  static List<dynamic> extractMediaUrls(dynamic mediaList) {
     try {
-      if (mediaList == null || !(mediaList is List)) return [];
+      if (mediaList == null || !(mediaList is List)) {
+        print("MediaList is null or not a list: $mediaList");
+        return [];
+      }
 
-      return List<String>.from((mediaList as List).map((m) {
-        if (m == null || !(m is Map) || m['file_url'] == null) return "";
-        return m['file_url'].toString();
-      }).where((url) => url.isNotEmpty));
+      // Return the complete media objects from the API, not just URLs
+      return mediaList as List;
     } catch (e) {
       print("Error extracting media URLs: $e");
       return [];
@@ -869,6 +954,124 @@ class PostUtils {
       builder: (context) => CommentsSheet(
         post: post,
         onCommentAdded: onCommentAdded,
+      ),
+    );
+  }
+}
+
+// Add a new PhotoViewerPage widget for displaying enlarged photos
+class PhotoViewerPage extends StatefulWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  const PhotoViewerPage({
+    Key? key,
+    required this.imageUrls,
+    required this.initialIndex,
+  }) : super(key: key);
+
+  @override
+  _PhotoViewerPageState createState() => _PhotoViewerPageState();
+}
+
+class _PhotoViewerPageState extends State<PhotoViewerPage> {
+  late PageController _pageController;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black.withOpacity(0.6),
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.white),
+        title: Text(
+          "${_currentIndex + 1}/${widget.imageUrls.length}",
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(),
+        child: Stack(
+          children: [
+            // Main photo viewer with zoom capabilities
+            PageView.builder(
+              controller: _pageController,
+              itemCount: widget.imageUrls.length,
+              onPageChanged: (index) {
+                setState(() {
+                  _currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Image.network(
+                      widget.imageUrls[index],
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) => Center(
+                        child: Icon(Icons.broken_image,
+                            color: Colors.white60, size: 64),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            // Navigation arrows if there are multiple photos
+            if (widget.imageUrls.length > 1)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 20,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.imageUrls.length,
+                    (index) => Container(
+                      width: 8,
+                      height: 8,
+                      margin: EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _currentIndex == index
+                            ? Colors.white
+                            : Colors.white38,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

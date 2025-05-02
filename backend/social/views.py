@@ -1,14 +1,16 @@
-from django.shortcuts import render
-
-# Create your views here.
+import os
+import uuid
+from django.conf import settings
+from supabase import create_client, Client
 from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Count, Q
 
 from .models import Post, Comment, Like, MediaPost
-from .serializers import PostSerializer, CommentSerializer
+from .serializers import PostSerializer, CommentSerializer, MediaPostSerializer
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.annotate(
@@ -55,27 +57,60 @@ class PostViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'liked'})
     
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], parser_classes=[MultiPartParser, FormParser])
     def add_media(self, request, pk=None):
-        post = self.get_object()
-        file_url = request.data.get('file_url')
-        file_type = request.data.get('file_type', 'image')
-        thumbnail_url = request.data.get('thumbnail_url', '')
-        
-        if not file_url:
-            return Response(
-                {'error': 'File URL is required'}, 
-                status=status.HTTP_400_BAD_REQUEST
+        """
+        Upload media file for a post and store it in Supabase
+        """
+        try:
+            # Get the post object
+            post = self.get_object()
+            
+            # Get the file from request
+            file_obj = request.FILES.get('file')
+            if not file_obj:
+                return Response({'error': 'No file provided'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Get file type from request or infer from content type
+            file_type = request.data.get('file_type', 'image')
+            
+            # Create a unique filename with original extension
+            original_name = file_obj.name
+            extension = os.path.splitext(original_name)[1].lower()
+            unique_filename = f"{uuid.uuid4()}{extension}"
+            
+            # Get file content
+            file_content = file_obj.read()
+            
+            # Initialize Supabase client
+            supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+            
+            # Upload to Supabase
+            supabase.storage.from_(settings.SUPABASE_BUCKET).upload(
+                unique_filename,
+                file_content,
+                file_options={"contentType": file_obj.content_type}
             )
-        
-        media = MediaPost.objects.create(
-            post=post,
-            file_url=file_url,
-            file_type=file_type,
-            thumbnail_url=thumbnail_url
-        )
-        
-        return Response({'id': media.id, 'file_url': media.file_url}, status=status.HTTP_201_CREATED)
+            
+            # Get the public URL
+            file_url = supabase.storage.from_(settings.SUPABASE_BUCKET).get_public_url(unique_filename)
+            
+            # Create MediaPost object
+            media_post = MediaPost.objects.create(
+                post=post,
+                file_url=file_url,
+                file_type=file_type
+            )
+            
+            # Return the created media post
+            serializer = MediaPostSerializer(media_post)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to upload media: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()
