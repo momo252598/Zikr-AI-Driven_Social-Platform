@@ -797,7 +797,7 @@ class _CommentsSheetState extends State<CommentsSheet> {
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: AppStyles.greyShaded100,
+                        fillColor: AppStyles.grey,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,

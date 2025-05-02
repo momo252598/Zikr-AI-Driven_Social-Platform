@@ -10,6 +10,7 @@ import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
+import 'package:software_graduation_project/screens/profile/profile.dart'; // Import ProfilePage
 
 class ChatPage extends StatefulWidget {
   final int chatId;
@@ -51,6 +52,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   // Add animation controllers for typing indicator
   List<AnimationController> _dotControllers = [];
   List<Animation<double>> _dotAnimations = [];
+
+  int? contactUserId; // Add variable to store contact's user ID
 
   @override
   void initState() {
@@ -235,7 +238,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       final currentUserId = await _authService.getCurrentUserId();
       print("Current user ID for comparison: $currentUserId");
 
-      // Try to find other participant's name
+      // Try to find other participant's name and ID
       if (conversation['participants'] != null &&
           conversation['participants'] is List) {
         final participants = conversation['participants'] as List;
@@ -244,6 +247,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           if (participant is Map &&
               participant.containsKey('id') &&
               participant['id'].toString() != currentUserId.toString()) {
+            // Extract user ID for profile navigation
+            contactUserId = participant['id'];
+
             // Extract name from the participant data
             if (participant.containsKey('first_name') &&
                 participant.containsKey('last_name')) {
@@ -310,7 +316,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         name = TextUtils.fixArabicEncoding(name);
         final currentUserId = await _authService.getCurrentUserId();
 
-        // If there are participants, try to extract the other user's name
+        // If there are participants, try to extract the other user's name and ID
         if (foundChat.containsKey('participants') &&
             foundChat['participants'] is List) {
           for (var participant in foundChat['participants']) {
@@ -319,6 +325,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                 participant.containsKey('id') &&
                 participant['id'].toString() != currentUserId.toString()) {
               name = TextUtils.fixArabicEncoding(participant['username']);
+              contactUserId = participant['id'];
               break;
             }
           }
@@ -516,6 +523,48 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     return false; // Prevent default back behavior since we handled it
   }
 
+  // Update method to display contact's profile in a modal sheet
+  void _navigateToContactProfile() {
+    if (contactUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('لا يمكن عرض الملف الشخصي للمستخدم')),
+      );
+      return;
+    }
+
+    // Show profile in a modal bottom sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.92, // Almost full screen but keeps app bar visible
+        minChildSize: 0.5, // Allow drag to half screen
+        maxChildSize: 0.92,
+        builder: (context, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: AppStyles.bgColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+          ),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+            ),
+            child: ProfilePage(
+              userId: contactUserId.toString(),
+              scrollController: scrollController,
+              isOverlay: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessage(Map<String, dynamic> msg) {
     final timestamp =
         DateTime.fromMillisecondsSinceEpoch(msg['timestamp'] as int);
@@ -649,6 +698,14 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
             // Return true to indicate refresh when back button is pressed
             Navigator.pop(context, true);
           },
+          // Add actions parameter with profile button
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person, color: Colors.white),
+              onPressed: _navigateToContactProfile,
+              tooltip: 'الملف الشخصي',
+            ),
+          ],
         ),
         body: Stack(
           children: [

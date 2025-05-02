@@ -21,7 +21,25 @@ import 'package:software_graduation_project/screens/quran/quran_web/responsive_q
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 
 class Skeleton extends StatefulWidget {
+  // We need to make sure the key is properly passed when creating the Skeleton widget
   const Skeleton({super.key});
+
+  // Use a static instance to access the state
+  static final GlobalKey<_SkeletonState> navigatorKey =
+      GlobalKey<_SkeletonState>();
+
+  // Modified method to only use Skeleton navigation (no fallbacks)
+  static void navigateToPrayers(BuildContext context) {
+    print("Attempting to navigate to prayers tab");
+    final state = navigatorKey.currentState;
+    if (state != null) {
+      state.navigateToTab(2); // 2 is the index for prayers
+      print("Navigation state found, navigating to tab 2");
+    } else {
+      print("Navigation state is null - no navigation occurred");
+      // Do not use direct navigation as fallback
+    }
+  }
 
   @override
   _SkeletonState createState() => _SkeletonState();
@@ -29,6 +47,13 @@ class Skeleton extends StatefulWidget {
 
 class _SkeletonState extends State<Skeleton> {
   var widgetjsonData;
+
+  // Add a method to navigate to a specific page
+  void navigateToTab(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   loadJsonAsset() async {
     final String jsonString =
@@ -64,42 +89,68 @@ class _SkeletonState extends State<Skeleton> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl, // set app to RTL
-      child: Scaffold(
-        appBar: const CustomAppBar(
-            title: 'ذكر', showAddButton: false, showBackButton: false),
-        body: MediaQuery(
-          // Make the MediaQuery explicitly RTL to affect text rendering
-          data: MediaQuery.of(context),
-          child: Directionality(
-            textDirection: TextDirection.rtl,
-            child: _pages[_currentIndex],
+    return WillPopScope(
+      onWillPop: () async {
+        // If we're not on the home tab, navigate to it
+        if (_currentIndex != 0) {
+          setState(() {
+            _currentIndex = 0;
+          });
+          return false; // Prevent app from closing
+        }
+        // Show confirmation dialog when trying to exit app
+        return await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('تأكيد الخروج'),
+                content: const Text('هل تريد الخروج من التطبيق؟'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('لا'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('نعم'),
+                  ),
+                ],
+              ),
+            ) ??
+            false;
+      },
+      child: Directionality(
+        textDirection: TextDirection.rtl, // set app to RTL
+        child: Scaffold(
+          appBar: const CustomAppBar(
+              title: 'ذكر', showAddButton: false, showBackButton: false),
+          body: _pages[
+              _currentIndex], // Directly use the page without extra wrappers
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: AppStyles.bgColor,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: AppStyles.lightPurple,
+            unselectedItemColor:
+                AppStyles.grey, // Updated color for better visibility
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+            },
+            items: const [
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.home), label: 'الرئيسية'),
+              BottomNavigationBarItem(
+                  icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
+              BottomNavigationBarItem(
+                  icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
+              BottomNavigationBarItem(
+                  icon: Icon(FlutterIslamicIcons.solidCommunity),
+                  label: 'المجتمع'),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.person), label: 'الحساب'),
+            ],
           ),
-        ),
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: AppStyles.bgColor,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppStyles.lightPurple,
-          unselectedItemColor:
-              AppStyles.grey, // Updated color for better visibility
-          currentIndex: _currentIndex,
-          onTap: (index) {
-            setState(() {
-              _currentIndex = index;
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
-            BottomNavigationBarItem(
-                icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
-            BottomNavigationBarItem(
-                icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
-            BottomNavigationBarItem(
-                icon: Icon(FlutterIslamicIcons.solidCommunity),
-                label: 'المجتمع'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
-          ],
         ),
       ),
     );

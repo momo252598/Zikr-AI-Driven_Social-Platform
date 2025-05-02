@@ -16,6 +16,8 @@ import 'package:software_graduation_project/components/quran/basmallah.dart';
 import 'package:software_graduation_project/components/quran/header_widget.dart';
 import 'package:software_graduation_project/components/quran/verse_bottom_sheet.dart';
 import 'package:software_graduation_project/components/quran/web_verse.dart';
+import 'package:software_graduation_project/screens/quran/bookmarks_screen.dart'; // Import the bookmarks screen
+import 'package:software_graduation_project/services/quran_service.dart'; // Import the QuranService
 import '../../base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
@@ -26,6 +28,7 @@ class QuranViewPage extends StatefulWidget {
   final bool shouldHighlightText;
   final String highlightVerse;
   final bool isWeb;
+  final String initialSurahName; // New property to receive surah name
 
   const QuranViewPage({
     Key? key,
@@ -34,6 +37,7 @@ class QuranViewPage extends StatefulWidget {
     required this.shouldHighlightText,
     required this.highlightVerse,
     this.isWeb = false,
+    this.initialSurahName = "", // Default to empty string
   }) : super(key: key);
 
   @override
@@ -47,10 +51,14 @@ class _QuranViewPageState extends State<QuranViewPage> {
   String selectedSpan = "";
   var highlightVerse;
   var shouldHighlightText;
+  String _currentSurahName = ""; // Store current surah name
   List<GlobalKey> richTextKeys = List.generate(
     604, // Replace with the number of pages in your PageView
     (_) => GlobalKey(),
   );
+  final QuranService _quranService =
+      QuranService(); // Add QuranService instance
+  Timer? _readingProgressTimer; // Timer to update reading progress periodically
 
   int? highlightedSurahNumber;
   int? highlightedVerseNumber;
@@ -86,35 +94,57 @@ class _QuranViewPageState extends State<QuranViewPage> {
     setState(() {
       shouldHighlightText = widget.shouldHighlightText;
     });
-    if (widget.shouldHighlightText) {
-      setState(() {
-        highlightVerse = widget.highlightVerse;
-      });
 
-      timer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
-        // Now we're assigning to the class property
-        if (mounted) {
-          setState(() {
-            shouldHighlightText = false;
-          });
-        }
-        Timer(const Duration(milliseconds: 200), () {
+    if (widget.shouldHighlightText && widget.highlightVerse.isNotEmpty) {
+      // Parse the verse information immediately
+      List<String> verseParts = widget.highlightVerse.split(':');
+      if (verseParts.length == 2) {
+        setState(() {
+          highlightVerse = widget.highlightVerse;
+          highlightedSurahNumber = int.tryParse(verseParts[0]);
+          highlightedVerseNumber = int.tryParse(verseParts[1]);
+        });
+
+        // IMMEDIATE: Show the verse bottom sheet right away
+        // Use a minimal delay to ensure the UI has updated with the highlight first
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (mounted &&
+              highlightedSurahNumber != null &&
+              highlightedVerseNumber != null) {
+            showVerseBottomSheet(
+              context,
+              index,
+              highlightedSurahNumber!,
+              highlightedVerseNumber!,
+              onClose: () {
+                // Keep the verse highlighted after closing
+              },
+            );
+          }
+        });
+
+        // Continue with the blinking effect for better visibility
+        // Reduce cycles from 4 to 3 for faster completion
+        timer = Timer.periodic(const Duration(milliseconds: 350), (timer) {
           if (mounted) {
             setState(() {
-              shouldHighlightText = true;
+              shouldHighlightText = !shouldHighlightText;
             });
           }
-          if (timer.tick == 4) {
+
+          // After 3 cycles (instead of 4), stop the blinking but keep verse highlighted
+          if (timer.tick == 3) {
             if (mounted) {
               setState(() {
                 highlightVerse = "";
                 shouldHighlightText = false;
+                // Keep highlight colors on the verse
               });
             }
             timer.cancel();
           }
         });
-      });
+      }
     }
   }
 
@@ -123,7 +153,24 @@ class _QuranViewPageState extends State<QuranViewPage> {
     super.initState();
     index = widget.pageNumber;
     _pageController = PageController(initialPage: index);
+
+    // Initialize with the provided surah name if available
+    if (widget.initialSurahName.isNotEmpty) {
+      _currentSurahName = widget.initialSurahName;
+    }
+
+    // Setup highlighting and automatically show bottom sheet
     highlightVerseFunction();
+
+    // Parse highlightVerse to set up highlighting for selected verse
+    if (widget.shouldHighlightText && widget.highlightVerse.isNotEmpty) {
+      List<String> verseParts = widget.highlightVerse.split(':');
+      if (verseParts.length == 2) {
+        highlightedSurahNumber = int.tryParse(verseParts[0]);
+        highlightedVerseNumber = int.tryParse(verseParts[1]);
+      }
+    }
+
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
     // Set up audio player completion listener
@@ -151,6 +198,46 @@ class _QuranViewPageState extends State<QuranViewPage> {
 
     // Initialize the cluster data
     _initializeClusterData();
+
+    // Set up timer to track reading progress - update every 5 seconds
+    _readingProgressTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _updateReadingProgress();
+    });
+
+    // Force update to display surah name correctly - needed when navigating from home
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          // This refresh ensures correct surah name display
+        });
+      }
+    });
+
+    // Setup a delayed task to ensure the UI correctly shows the surah name
+    Future.delayed(Duration.zero, () {
+      if (mounted) {
+        setState(() {
+          // If no initial surah name was provided, try to determine it
+          if (_currentSurahName.isEmpty) {
+            _currentSurahName = _getSurahName(index);
+          }
+          print("Setting surah name: $_currentSurahName for page $index");
+        });
+      }
+    });
+  }
+
+  // Method to update the user's reading progress
+  void _updateReadingProgress() async {
+    if (index > 0) {
+      // Only update if on an actual Quran page (not cover)
+      try {
+        await _quranService.updateLastReadPage(index);
+      } catch (e) {
+        print('Error updating reading progress: $e');
+        // Don't show error to user as this is a background operation
+      }
+    }
   }
 
   // Method to load and initialize cluster data
@@ -200,6 +287,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
   @override
   void didUpdateWidget(QuranViewPage oldWidget) {
     super.didUpdateWidget(oldWidget);
+
     // If the page number changes, update the controller
     if (oldWidget.pageNumber != widget.pageNumber) {
       setState(() {
@@ -207,6 +295,17 @@ class _QuranViewPageState extends State<QuranViewPage> {
       });
       // Jump to the new page
       _pageController.jumpToPage(index);
+
+      // If we're navigating with a highlighted verse
+      if (widget.shouldHighlightText && widget.highlightVerse.isNotEmpty) {
+        // Cancel any existing timers to prevent multiple bottom sheets
+        if (timer != null && timer!.isActive) {
+          timer!.cancel();
+        }
+
+        // Apply the highlight and show bottom sheet
+        highlightVerseFunction();
+      }
     }
   }
 
@@ -220,6 +319,12 @@ class _QuranViewPageState extends State<QuranViewPage> {
   // Safely clean up all resources - separate method for reuse
   void _cleanupResources() {
     _isDisposed = true;
+
+    // Cancel the reading progress timer
+    if (_readingProgressTimer != null && _readingProgressTimer!.isActive) {
+      _readingProgressTimer!.cancel();
+    }
+
     // Cancel any active timers - safely check if timer exists and is active
     if (timer != null && timer!.isActive) {
       timer!.cancel();
@@ -251,6 +356,20 @@ class _QuranViewPageState extends State<QuranViewPage> {
         print("Error in resource cleanup: $innerError");
       }
     }
+
+    // Update reading progress one last time before leaving
+    _updateReadingProgress();
+  }
+
+  // Navigate to bookmarks screen
+  void _navigateToBookmarks() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => BookmarksScreen(
+          jsonData: widget.jsonData,
+        ),
+      ),
+    );
   }
 
   // Method to prepare the list of verses on the current page
@@ -518,6 +637,61 @@ class _QuranViewPageState extends State<QuranViewPage> {
     return widget.isWeb ? mobileHeight * 0.75 : mobileHeight;
   }
 
+  // Improved method to get surah name with fallbacks
+  String _getSurahName(int index) {
+    try {
+      // Cover page has no surah name
+      if (index == 0) return "";
+
+      final pageData = getPageData(index);
+
+      // Check if pageData has content
+      if (pageData.isEmpty) return "";
+
+      // Get the surah number
+      final surahNumber = pageData[0]["surah"];
+
+      // First try to get name directly from the Quran package
+      String name = getSurahNameArabic(surahNumber);
+      if (name.isNotEmpty) {
+        return name;
+      }
+
+      // Fall back to jsonData if the direct method failed
+      if (widget.jsonData != null) {
+        final surahIndex = surahNumber - 1;
+        if (surahIndex >= 0 && surahIndex < widget.jsonData.length) {
+          name = widget.jsonData[surahIndex]["name"]?.toString() ?? "";
+          if (name.isNotEmpty) {
+            return name;
+          }
+        }
+      }
+
+      // Fallback: Just return the surah number if we can't get the name
+      return "سورة $surahNumber";
+    } catch (e) {
+      print('Error getting surah name: $e');
+      return "";
+    }
+  }
+
+  // Update current surah name when page changes
+  void _updateCurrentPage(int newIndex) {
+    if (index != newIndex) {
+      setState(() {
+        index = newIndex;
+        selectedSpan = "";
+        _currentSurahName = _getSurahName(newIndex);
+
+        // Stop any playing audio when page changes
+        if (_isPlayingPage || _isPaused) {
+          _stopPlayback();
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
@@ -539,7 +713,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
         appBar: widget.isWeb
             ? null
             : const CustomAppBar(
-                title: "تطبيق القرآن الكريم",
+                title: "القرآن الكريم",
                 showAddButton: false,
                 showBackButton: false,
               ),
@@ -550,14 +724,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
               reverse: true,
               scrollDirection: Axis.horizontal,
               onPageChanged: (a) {
-                setState(() {
-                  selectedSpan = "";
-                  // Stop any playing audio and reset position when page changes
-                  if (_isPlayingPage || _isPaused) {
-                    _stopPlayback();
-                  }
-                });
-                index = a;
+                _updateCurrentPage(a);
               },
               controller: _pageController,
               // onPageChanged: _onPageChanged,
@@ -596,13 +763,11 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceBetween,
                                   children: [
-                                    // Limit surah name width more strictly and add ellipsis
+                                    // Left side: Back button (mobile) and Bookmarks
                                     Flexible(
-                                      flex:
-                                          3, // Allocate appropriate flex ratio
+                                      flex: 3,
                                       child: Row(
-                                        mainAxisSize: MainAxisSize
-                                            .min, // Take only needed space
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           // Only show back button on mobile with reduced padding
                                           if (!widget.isWeb)
@@ -614,25 +779,21 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                 Icons.arrow_back_ios,
                                                 size: 24,
                                               ),
-                                              padding: EdgeInsets
-                                                  .zero, // Remove padding
+                                              padding: EdgeInsets.zero,
                                               visualDensity: VisualDensity(
                                                   horizontal: -4, vertical: 0),
                                               constraints: BoxConstraints(),
                                             ),
-                                          // Replace negative SizedBox with a proper spacing approach
-                                          // Keep the text in both mobile and web with overflow handling
+
+                                          // Surah name - use the state variable that persists across rebuilds
                                           Flexible(
                                             child: Padding(
                                               padding: EdgeInsets.only(
-                                                  left: !widget.isWeb
-                                                      ? 0
-                                                      : 8), // Add padding only if web
+                                                  left: !widget.isWeb ? 0 : 8),
                                               child: Text(
-                                                widget.jsonData[
-                                                    getPageData(index)[0]
-                                                            ["surah"] -
-                                                        1]["name"],
+                                                index == this.index
+                                                    ? _currentSurahName
+                                                    : _getSurahName(index),
                                                 style: const TextStyle(
                                                   fontFamily: "Taha",
                                                   fontSize: 14,
@@ -646,9 +807,9 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                       ),
                                     ),
 
-                                    // Shift page number container slightly right by using Flexible with proper flex
+                                    // Center: Page number
                                     Flexible(
-                                      flex: 4, // More space for center
+                                      flex: 4,
                                       child: Center(
                                         child: EasyContainer(
                                           borderRadius: 12,
@@ -657,9 +818,8 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                           height: 20,
                                           width: 120,
                                           padding: 0,
-                                          customMargin: EdgeInsets.only(
-                                              right:
-                                                  16), // Add margin to shift right
+                                          customMargin:
+                                              EdgeInsets.only(right: 16),
                                           child: Center(
                                             child: Text(
                                               "${"page"} $index ",
@@ -674,10 +834,9 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                       ),
                                     ),
 
-                                    // Keep the icons section as is
+                                    // Right side: Action buttons
                                     Flexible(
-                                      flex:
-                                          3, // Match with first section for balance
+                                      flex: 3,
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.end,
@@ -698,19 +857,15 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                       .solidQuran
                                                   : FlutterIslamicIcons.quran,
                                               color: AppStyles.txtFieldColor,
-                                              size: widget.isWeb
-                                                  ? 24
-                                                  : 22, // Slightly smaller for web
+                                              size: widget.isWeb ? 24 : 22,
                                             ),
                                             tooltip: _isColoringEnabled
                                                 ? 'إيقاف تلوين الآيات'
                                                 : 'تلوين الآيات حسب المجموعة',
-                                            padding: EdgeInsets
-                                                .zero, // Remove padding
+                                            padding: EdgeInsets.zero,
                                             constraints: BoxConstraints(),
                                             visualDensity: VisualDensity(
-                                                horizontal: -4,
-                                                vertical: -4), // More compact
+                                                horizontal: -4, vertical: -4),
                                           ),
 
                                           // Smaller spacing
@@ -751,12 +906,10 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                 : _isPaused
                                                     ? 'استئناف القراءة'
                                                     : 'قراءة الصفحة',
-                                            padding: EdgeInsets
-                                                .zero, // Remove padding
+                                            padding: EdgeInsets.zero,
                                             constraints: BoxConstraints(),
                                             visualDensity: VisualDensity(
-                                                horizontal: -4,
-                                                vertical: -4), // More compact
+                                                horizontal: -4, vertical: -4),
                                           ),
 
                                           // Smaller spacing
@@ -772,12 +925,10 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                               size: widget.isWeb ? 24 : 22,
                                               color: AppStyles.txtFieldColor,
                                             ),
-                                            padding: EdgeInsets
-                                                .zero, // Remove padding
+                                            padding: EdgeInsets.zero,
                                             constraints: BoxConstraints(),
                                             visualDensity: VisualDensity(
-                                                horizontal: -4,
-                                                vertical: -4), // More compact
+                                                horizontal: -4, vertical: -4),
                                           ),
                                         ],
                                       ),

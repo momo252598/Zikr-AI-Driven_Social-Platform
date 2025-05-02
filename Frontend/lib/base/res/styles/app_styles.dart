@@ -18,6 +18,7 @@ class AppStyles {
   static Color greyShaded600 = Colors.grey.shade600;
   static Color greyShaded300 = Colors.grey.shade300;
   static Color greyShaded100 = Colors.grey.shade100;
+  static final Color green = const Color(0xff4caf50);
   static Color surahName =
       const Color.fromARGB(255, 158, 158, 158).withOpacity(.8);
   static Color trans = Colors.transparent;

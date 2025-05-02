@@ -7,21 +7,47 @@ import 'package:software_graduation_project/base/res/media.dart';
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final VoidCallback? onAddPressed;
-  final VoidCallback? onBackPressed; // Add this parameter
+  final VoidCallback? onBackPressed;
   final bool showAddButton;
   final bool showBackButton;
+  final List<Widget>? actions; // Add this parameter for custom actions
 
   const CustomAppBar({
     Key? key,
     required this.title,
     this.onAddPressed,
-    this.onBackPressed, // Add this parameter
+    this.onBackPressed,
     this.showAddButton = true,
     this.showBackButton = true,
+    this.actions, // Add this parameter to constructor
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    // Create a list for actions
+    List<Widget> appBarActions = [];
+
+    // Add custom actions if provided
+    if (actions != null) {
+      appBarActions.addAll(actions!);
+    }
+
+    // Add the default add button if required
+    if (showAddButton) {
+      appBarActions.add(
+        IconButton(
+          icon: Icon(
+            Icons.add,
+            color: AppStyles.white,
+          ),
+          onPressed: onAddPressed ??
+              () {
+                // New chat functionality to be implemented later
+              },
+        ),
+      );
+    }
+
     return AppBar(
       automaticallyImplyLeading: showBackButton,
       title: Text(
@@ -54,25 +80,11 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
       backgroundColor: AppStyles.trans,
-      actions: showAddButton
-          ? [
-              IconButton(
-                icon: Icon(
-                  Icons.add,
-                  color: AppStyles.white,
-                ),
-                onPressed: onAddPressed ??
-                    () {
-                      // New chat functionality to be implemented later
-                    },
-              )
-            ]
-          : [],
+      actions: appBarActions,
       leading: showBackButton
           ? IconButton(
               icon: Icon(Icons.arrow_back, color: AppStyles.white),
-              onPressed: onBackPressed ??
-                  () => Navigator.of(context).pop(), // Use callback if provided
+              onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
             )
           : null,
     );

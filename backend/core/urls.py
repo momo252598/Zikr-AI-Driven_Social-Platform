@@ -25,5 +25,6 @@ urlpatterns = [
     path("api/chat/", include("chat.urls", namespace="chat")),
     path("api/accounts/", include("accounts.urls")),  # Include accounts app URLs
     path("api/social/", include("social.urls", namespace="social")),
+    path("api/quran/", include("quran.urls")),  # Include quran app URLs
     # path("chat/", include("chat.urls")),  # Include chat app URLs
 ]

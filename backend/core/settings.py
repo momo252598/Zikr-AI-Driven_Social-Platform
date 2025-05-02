@@ -31,8 +31,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     '127.0.0.1',
-    '192.168.1.8',
-    '192.168.1.6'
+    '192.168.1.7',
+    '192.168.1.5'
 ]
 
 
@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'chat',
-    # 'quran',
+    'quran',  # Uncommented/added the quran app
     'social',
     # 'notifications'
 ]

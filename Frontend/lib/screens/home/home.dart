@@ -3,9 +3,13 @@ import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/screens/prayers/prayers.dart'; // Import prayer functionality
 import 'package:software_graduation_project/services/auth_service.dart'; // Import auth service
 import 'package:software_graduation_project/base/res/media.dart';
+import 'package:software_graduation_project/services/quran_service.dart'; // Import Quran service
+import 'package:software_graduation_project/skeleton.dart'; // Import Quran screen
+import 'package:software_graduation_project/screens/quran/quran_page.dart'; // Import Quran page
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:quran/quran.dart'; // Add this import for getPageData function
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -18,6 +22,8 @@ class _HomePageState extends State<HomePage> {
   late Future<List<Prayer>> futurePrayers;
   late Future<String?> futureUserFirstName;
   late Future<Map<String, dynamic>> futureRandomZikr;
+  late Future<int> futureLastReadPage; // Add future for last read page
+  late Future<dynamic> futureQuranJsonData; // Add future for Quran JSON data
 
   @override
   void initState() {
@@ -31,6 +37,39 @@ class _HomePageState extends State<HomePage> {
 
     // Get random zikr
     futureRandomZikr = _getRandomZikr();
+
+    // Get last read Quran page
+    final quranService = QuranService();
+    futureLastReadPage = quranService.getLastReadPage();
+
+    // Load Quran JSON data
+    futureQuranJsonData = _loadQuranData();
+  }
+
+  // Load Quran JSON data
+  Future<dynamic> _loadQuranData() async {
+    try {
+      // First try to load the hafs_smart_v8.json file
+      try {
+        final String jsonString =
+            await rootBundle.loadString('assets/utils/hafs_smart_v8.json');
+        return json.decode(jsonString);
+      } catch (e) {
+        // If that fails, try to use quran.json instead
+        try {
+          final String jsonString =
+              await rootBundle.loadString('assets/utils/quran.json');
+          return json.decode(jsonString);
+        } catch (secondError) {
+          print(
+              'Error loading Quran data (tried both files): $e, $secondError');
+          return null;
+        }
+      }
+    } catch (e) {
+      print('Error loading Quran data: $e');
+      return null;
+    }
   }
 
   // Get user's first name
@@ -93,109 +132,121 @@ class _HomePageState extends State<HomePage> {
 
   // Next Prayer Widget
   Widget _nextPrayerWidget(Prayer nextPrayer, Duration timeLeft) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppStyles.lightPurple, AppStyles.purple],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppStyles.purple.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+    return GestureDetector(
+      onTap: () {
+        print("Prayer widget tapped - navigating via Skeleton only");
+
+        // Only use Skeleton navigation, no direct navigation
+        Skeleton.navigateToPrayers(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppStyles.lightPurple, AppStyles.purple],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          children: [
-            Positioned(
-              right: -20,
-              top: -20,
-              child: Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppStyles.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: AppStyles.purple.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -20,
+                top: -20,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppStyles.white.withOpacity(0.1),
+                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(15),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "الصلاة القادمة",
-                        style: TextStyle(
-                          color: AppStyles.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppStyles.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "${timeLeft.inHours.toString().padLeft(2, '0')}:${(timeLeft.inMinutes % 60).toString().padLeft(2, '0')} متبقي",
-                          style: TextStyle(
-                            color: AppStyles.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(
-                        _getPrayerIcon(nextPrayer.name),
-                        color: AppStyles.white,
-                        size: 36,
-                      ),
-                      const SizedBox(width: 15),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nextPrayer.name,
+              Padding(
+                padding: const EdgeInsets.all(15),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Padding(
+                          // Add right padding to fix the spacing issue
+                          padding: const EdgeInsets.only(right: 5),
+                          child: Text(
+                            "الصلاة القادمة",
                             style: TextStyle(
                               color: AppStyles.white,
-                              fontSize: 24,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 5),
-                          Text(
-                            "الوقت: ${TimeOfDay.fromDateTime(nextPrayer.time.toLocal()).format(context)}",
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppStyles.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            "${timeLeft.inHours.toString().padLeft(2, '0')}:${(timeLeft.inMinutes % 60).toString().padLeft(2, '0')} متبقي",
                             style: TextStyle(
-                              color: AppStyles.white.withOpacity(0.9),
-                              fontSize: 16,
+                              color: AppStyles.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(
+                          _getPrayerIcon(nextPrayer.name),
+                          color: AppStyles.white,
+                          size: 36,
+                        ),
+                        const SizedBox(width: 15),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nextPrayer.name,
+                              style: TextStyle(
+                                color: AppStyles.white,
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              "الوقت: ${TimeOfDay.fromDateTime(nextPrayer.time.toLocal()).format(context)}",
+                              style: TextStyle(
+                                color: AppStyles.white.withOpacity(0.9),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -298,6 +349,45 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Handle Quran card tap to navigate to last read page - IMPROVED VERSION
+  void _navigateToLastReadPage(
+      BuildContext context, int pageNumber, dynamic jsonData) {
+    if (jsonData == null) {
+      // Show error if Quran data couldn't be loaded
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('فشل تحميل بيانات القرآن')),
+      );
+      return;
+    }
+
+    // Get the surah name for the page to pass it to QuranViewPage
+    String surahName = "";
+    try {
+      final pageData = getPageData(pageNumber);
+      if (pageData.isNotEmpty) {
+        final surahNumber = pageData[0]["surah"];
+        surahName = getSurahNameArabic(surahNumber);
+      }
+    } catch (e) {
+      print('Error getting surah name for navigation: $e');
+    }
+
+    // Navigate to the last read page with the QuranViewPage
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuranViewPage(
+          pageNumber: pageNumber,
+          jsonData: jsonData,
+          shouldHighlightText: false,
+          highlightVerse: "",
+          isWeb: false,
+          initialSurahName: surahName, // Pass the surah name
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenSize = _getScreenSize(context);
@@ -338,7 +428,9 @@ class _HomePageState extends State<HomePage> {
 
         // Next Prayer Widget
         Padding(
-          padding: const EdgeInsets.only(top: 15, bottom: 5, left: 20),
+          // Update padding to include right side
+          padding:
+              const EdgeInsets.only(top: 15, bottom: 5, left: 20, right: 20),
           child: Text(
             "الصلاة القادمة",
             style: TextStyle(
@@ -368,8 +460,8 @@ class _HomePageState extends State<HomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildFeatureCard(context, Icons.menu_book_rounded,
-                      "القرآن الكريم", AppStyles.lightPurple, screenWidth),
+                  // Updates for Quran card to handle continue reading
+                  _buildQuranFeatureCard(context, screenWidth),
                   _buildFeatureCard(context, Icons.volunteer_activism,
                       "الأذكار", AppStyles.purple, screenWidth),
                   _buildFeatureCard(context, Icons.compass_calibration,
@@ -415,7 +507,9 @@ class _HomePageState extends State<HomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(left: 20, bottom: 10),
+                    // Update padding to include right side
+                    padding:
+                        const EdgeInsets.only(left: 20, right: 20, bottom: 10),
                     child: Text(
                       "الصلاة القادمة",
                       style: TextStyle(
@@ -448,12 +542,8 @@ class _HomePageState extends State<HomePage> {
                           runSpacing: 15,
                           alignment: WrapAlignment.start,
                           children: [
-                            _buildFeatureCard(
-                                context,
-                                Icons.menu_book_rounded,
-                                "القرآن الكريم",
-                                AppStyles.lightPurple,
-                                screenWidth,
+                            // Update Quran card for web layout
+                            _buildQuranFeatureCard(context, screenWidth,
                                 isWeb: true),
                             _buildFeatureCard(context, Icons.volunteer_activism,
                                 "الأذكار", AppStyles.purple, screenWidth,
@@ -499,6 +589,135 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ],
+    );
+  }
+
+  // New method specifically for the Quran card with continue reading feature
+  Widget _buildQuranFeatureCard(BuildContext context, double screenWidth,
+      {bool isWeb = false}) {
+    final cardWidth = isWeb
+        ? 150.0 // Fixed width for web
+        : (screenWidth - 60) / 3; // Dynamic width for mobile
+
+    return FutureBuilder<List<dynamic>>(
+      // Use Future.wait to load both the last read page and Quran data
+      future: Future.wait([futureLastReadPage, futureQuranJsonData]),
+      builder: (context, snapshot) {
+        bool isLoading = snapshot.connectionState == ConnectionState.waiting;
+        int lastPage = 1; // Default to first page
+        dynamic quranData;
+        String surahName = "";
+
+        // Check if data is loaded successfully
+        if (snapshot.hasData) {
+          lastPage = snapshot.data![0] as int;
+          quranData = snapshot.data![1];
+
+          // Get surah name for the last read page - IMPROVED VERSION
+          try {
+            if (lastPage > 0 && quranData != null) {
+              final pageData = getPageData(lastPage);
+              if (pageData.isNotEmpty) {
+                final surahNumber = pageData[0]["surah"];
+
+                // Try to get surah name directly from getSurahNameArabic function
+                surahName = getSurahNameArabic(surahNumber);
+
+                // If that didn't work, try from JSON data
+                if (surahName.isEmpty) {
+                  final surahIndex = surahNumber - 1;
+                  if (surahIndex >= 0 && surahIndex < quranData.length) {
+                    surahName = quranData[surahIndex]["name"] ?? "";
+                  }
+                }
+
+                // Debug output
+                print(
+                    "Found surah name for page $lastPage: $surahName (surah #$surahNumber)");
+              }
+            }
+          } catch (e) {
+            print("Error getting surah name: $e");
+          }
+        }
+
+        return GestureDetector(
+          onTap: isLoading
+              ? null
+              : () => _navigateToLastReadPage(context, lastPage, quranData),
+          child: Container(
+            width: cardWidth,
+            padding: EdgeInsets.symmetric(
+              vertical: isWeb ? 20 : 15,
+              horizontal: isWeb ? 15 : 5,
+            ),
+            decoration: BoxDecoration(
+              color: AppStyles.lightPurple.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(15),
+              border: isWeb
+                  ? Border.all(color: AppStyles.lightPurple.withOpacity(0.3))
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                isLoading
+                    ? SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: CircularProgressIndicator(
+                          color: AppStyles.lightPurple,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Icon(Icons.menu_book_rounded,
+                        color: AppStyles.lightPurple, size: isWeb ? 36 : 32),
+                SizedBox(height: isWeb ? 12 : 10),
+                Text(
+                  isLoading ? "جاري التحميل..." : "القرآن الكريم",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppStyles.lightPurple,
+                    fontWeight: FontWeight.bold,
+                    fontSize: isWeb ? 14 : 12,
+                  ),
+                ),
+                if (!isLoading) ...[
+                  SizedBox(height: isWeb ? 8 : 6),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWeb ? 10 : 5,
+                      vertical: isWeb ? 5 : 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppStyles.lightPurple.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppStyles.lightPurple.withOpacity(0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      surahName.isNotEmpty
+                          ? "متابعة القراءة (${lastPage} - $surahName)"
+                          : "متابعة القراءة (${lastPage})",
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: isWeb ? 2 : 1,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: isWeb
+                            ? 12
+                            : 8.5, // Slightly smaller for mobile to fit text
+                        color: AppStyles.lightPurple,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

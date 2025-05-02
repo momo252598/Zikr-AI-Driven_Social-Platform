@@ -9,75 +9,98 @@ class LoginScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SizedBox.expand(
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppStyles.bgColor,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: AppStyles.boxShadow,
-                blurRadius: 100,
-                offset: const Offset(40, 40),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            physics: const NeverScrollableScrollPhysics(),
-            child: Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 32, vertical: 110),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 100, // Set the desired width
-                    height: 100, // Set the desired height
-                    child: Image.asset(
-                      AppMedia.quran, // Replace with your image path
-                      fit: BoxFit.cover,
-                    ),
+    return WillPopScope(
+      onWillPop: () async {
+        // Show confirmation dialog when trying to exit the app
+        return await showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('تأكيد الخروج'),
+                content: const Text('هل تريد الخروج من التطبيق؟'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('لا'),
                   ),
-                  const SizedBox(height: 6),
-                  const SizedBox(height: 53),
-                  Align(
-                    alignment: Alignment.center,
-                    child: Text(
-                      'تسجيل الدخول', // translated text
-                      style: TextStyle(
-                        color: AppStyles.black,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 22),
-                  const SignInForm(),
-                  // const SizedBox(height: 36),
-                  // const SizedBox(height: 30),
-                  ConstrainedBox(
-                    constraints:
-                        const BoxConstraints(maxWidth: 500, minWidth: 400),
-                    child: Stack(
-                      alignment: Alignment.topCenter,
-                      children: [
-                        Image.asset(
-                          AppMedia.mosque, // Replace with your image path
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                        ),
-                        const Column(
-                          children: [
-                            SizedBox(height: 20),
-                            RegisterLink(),
-                          ],
-                        ),
-                      ],
-                    ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('نعم'),
                   ),
                 ],
+              ),
+            ) ??
+            false;
+      },
+      child: Scaffold(
+        body: SizedBox.expand(
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppStyles.bgColor,
+              borderRadius: BorderRadius.circular(40),
+              boxShadow: [
+                BoxShadow(
+                  color: AppStyles.boxShadow,
+                  blurRadius: 100,
+                  offset: const Offset(40, 40),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 32, vertical: 110),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 100, // Set the desired width
+                      height: 100, // Set the desired height
+                      child: Image.asset(
+                        AppMedia.quran, // Replace with your image path
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const SizedBox(height: 53),
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        'تسجيل الدخول', // translated text
+                        style: TextStyle(
+                          color: AppStyles.black,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    const SignInForm(),
+                    // const SizedBox(height: 36),
+                    // const SizedBox(height: 30),
+                    ConstrainedBox(
+                      constraints:
+                          const BoxConstraints(maxWidth: 500, minWidth: 400),
+                      child: Stack(
+                        alignment: Alignment.topCenter,
+                        children: [
+                          Image.asset(
+                            AppMedia.mosque, // Replace with your image path
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
+                          const Column(
+                            children: [
+                              SizedBox(height: 20),
+                              RegisterLink(),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

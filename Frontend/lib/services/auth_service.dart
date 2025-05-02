@@ -9,8 +9,8 @@ class AuthService {
   late final String _baseUrl;
 
   AuthService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.8 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.8';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.7 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.7';
     _baseUrl = 'http://$host:8000/api/accounts';
   }
 
@@ -358,7 +358,7 @@ class AuthService {
       final accessToken = await getAccessToken();
 
       // Use the chat API base URL instead of accounts
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.8';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.7';
       final chatApiUrl = 'http://$host:8000/api/chat';
 
       // Call Django endpoint to get a Firebase custom token

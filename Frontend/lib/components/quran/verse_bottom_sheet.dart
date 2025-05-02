@@ -4,6 +4,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:quran/quran.dart';
 import '../../base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/res/utils/tafseer.dart';
+import 'package:software_graduation_project/services/quran_service.dart'; // Import the new QuranService
 import 'tafseer_bottom_sheet.dart';
 
 // Static variable to remember last selected reciter across all bottom sheets
@@ -89,6 +90,8 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
   late String _selectedReciter;
   bool _isOperationInProgress = false;
   late String _selectedTafseer; // Changed from initialization to late
+  bool _isBookmarked = false; // New state to track bookmark status
+  bool _isBookmarkLoading = false; // New state to track bookmark loading state
 
   // Map of reciter IDs to their Arabic names - added three new reciters
   final Map<String, String> _reciters = {
@@ -136,6 +139,97 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
         });
       }
     });
+
+    // Check if verse is bookmarked
+    _checkBookmarkStatus();
+  }
+
+  // Check if the current verse is bookmarked
+  Future<void> _checkBookmarkStatus() async {
+    setState(() {
+      _isBookmarkLoading = true;
+    });
+
+    try {
+      final quranService = QuranService();
+      final bookmarks = await quranService.getBookmarks();
+
+      // Check if this verse is in the bookmarks
+      final isBookmarked = bookmarks.any((bookmark) =>
+          bookmark.surah == widget.surahNumber &&
+          bookmark.verse == widget.verseNumber);
+
+      if (mounted) {
+        setState(() {
+          _isBookmarked = isBookmarked;
+          _isBookmarkLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isBookmarkLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في التحقق من المفضلة'),
+            backgroundColor: AppStyles.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Toggle bookmark status
+  Future<void> _toggleBookmark() async {
+    if (_isBookmarkLoading) return; // Prevent multiple requests
+
+    setState(() {
+      _isBookmarkLoading = true;
+    });
+
+    try {
+      final quranService = QuranService();
+
+      if (_isBookmarked) {
+        // Remove from bookmarks
+        await quranService.removeBookmark(
+            widget.surahNumber, widget.verseNumber);
+      } else {
+        // Add to bookmarks
+        await quranService.addBookmark(
+            widget.surahNumber, widget.verseNumber, widget.pageNumber);
+      }
+
+      if (mounted) {
+        setState(() {
+          _isBookmarked = !_isBookmarked;
+          _isBookmarkLoading = false;
+        });
+
+        // Show confirmation
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_isBookmarked
+                ? 'تمت إضافة الآية للمفضلة'
+                : 'تمت إزالة الآية من المفضلة'),
+            backgroundColor: _isBookmarked ? AppStyles.green : AppStyles.grey,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isBookmarkLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ في تحديث المفضلة'),
+            backgroundColor: AppStyles.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -621,10 +715,18 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Bookmark Button
+                    // Bookmark Button - Updated with dynamic state
                     _buildIconButton(
-                      icon: Icons.bookmark_border,
-                      backgroundColor: AppStyles.lightPurple,
+                      icon: _isBookmarkLoading
+                          ? null // No icon during loading
+                          : _isBookmarked
+                              ? Icons.bookmark
+                              : Icons.bookmark_border,
+                      backgroundColor: _isBookmarked
+                          ? AppStyles.green // Green when bookmarked
+                          : AppStyles.lightPurple,
+                      onPressed: _toggleBookmark,
+                      showLoader: _isBookmarkLoading,
                     ),
 
                     // Play/Stop Button - Updated with dynamic content
@@ -663,11 +765,12 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
     );
   }
 
-  // Helper method to build icon buttons
+  // Helper method to build icon buttons with loading state support
   Widget _buildIconButton({
-    required IconData icon,
+    IconData? icon,
     required Color backgroundColor,
     VoidCallback? onPressed,
+    bool showLoader = false,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -684,8 +787,17 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
       width: 60,
       height: 60,
       child: IconButton(
-        icon: Icon(icon, color: AppStyles.white, size: 28),
-        onPressed: onPressed ?? () {},
+        icon: showLoader
+            ? SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppStyles.white,
+                  strokeWidth: 2,
+                ),
+              )
+            : Icon(icon ?? Icons.error, color: AppStyles.white, size: 28),
+        onPressed: onPressed,
       ),
     );
   }

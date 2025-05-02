@@ -15,7 +15,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -35,11 +35,11 @@ class MyApp extends StatelessWidget {
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
               useMaterial3: true,
             ),
-            // home property removed to fix the assertion error
-            initialRoute: '/', // Explicitly setting initial route
+            home: const LoginScreen(),
             routes: {
-              '/': (context) => const LoginScreen(),
-              '/skeleton': (context) => const Skeleton(),
+              // Remove '/' route to avoid conflict with home
+              '/skeleton': (context) =>
+                  Skeleton(key: Skeleton.navigatorKey), // Move key here
               '/signup': (context) => const SignUpScreen(),
               // Other routes...
             },
