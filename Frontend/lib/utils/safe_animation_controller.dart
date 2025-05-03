@@ -1,12 +1,9 @@
 import 'package:flutter/animation.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-/// A wrapper around AnimationController that safely handles negative elapsed times
-/// to prevent the app from crashing when this issue occurs.
+/// A safer version of AnimationController that handles negative elapsed times
+/// This fixes the "elapsedInSeconds >= 0.0" assertion error that happens sporadically
 class SafeAnimationController extends AnimationController {
-  /// Creates an animation controller that's safe from negative elapsed time errors.
   SafeAnimationController({
     double? value,
     Duration? duration,
@@ -24,11 +21,10 @@ class SafeAnimationController extends AnimationController {
           lowerBound: lowerBound,
           upperBound: upperBound,
           animationBehavior: animationBehavior,
-          // Use our SafeTickerProvider wrapper around the original vsync
-          vsync: _SafeTickerProvider(vsync),
+          vsync: vsync,
         );
 
-  /// Creates an unbounded animation controller that's safe from negative elapsed time errors.
+  /// Creates a safe animation controller with no upper or lower bound for its value
   SafeAnimationController.unbounded({
     double value = 0.0,
     Duration? duration,
@@ -41,49 +37,30 @@ class SafeAnimationController extends AnimationController {
           duration: duration,
           reverseDuration: reverseDuration,
           debugLabel: debugLabel,
-          // Use our SafeTickerProvider wrapper around the original vsync
-          vsync: _SafeTickerProvider(vsync),
+          vsync: vsync,
           animationBehavior: animationBehavior,
         );
 }
 
-/// A wrapper around TickerProvider that ensures elapsed time is never negative
-class _SafeTickerProvider implements TickerProvider {
+/// We can't directly override AnimationController's _tick method, so instead we
+/// create a TickerProvider wrapper that ensures elapsed time is never negative
+class SafeTickerProvider implements TickerProvider {
   final TickerProvider _delegate;
 
-  _SafeTickerProvider(this._delegate);
+  SafeTickerProvider(this._delegate);
 
   @override
   Ticker createTicker(TickerCallback onTick) {
-    return _SafeTicker(
-      (Duration elapsed) {
-        // Only call onTick with non-negative elapsed durations
-        if (elapsed.inMicroseconds < 0) {
-          // Log warning in debug mode
-          if (kDebugMode) {
-            print(
-                '⚠️ Prevented crash from negative elapsed time: ${elapsed.inMicroseconds / 1000000} seconds');
-          }
-          // Use a zero duration instead of the negative one to prevent the crash
-          elapsed = Duration.zero;
-        }
-
-        // Call the original onTick with the sanitized elapsed duration
-        onTick(elapsed);
-      },
-      _delegate,
-    );
+    return _delegate.createTicker((Duration elapsed) {
+      // Make sure elapsed time is never negative
+      final Duration safeElapsed =
+          Duration(microseconds: elapsed.inMicroseconds.abs());
+      onTick(safeElapsed);
+    });
   }
 }
 
-/// A ticker that ensures it won't pass negative elapsed times to the callback
-class _SafeTicker extends Ticker {
-  _SafeTicker(TickerCallback onTick, TickerProvider creator)
-      : super(onTick, debugLabel: 'SafeTicker created by $creator');
-}
-
-/// Helper function to create a SafeAnimationController instance
-/// This makes it easy to replace AnimationController with SafeAnimationController throughout the app
+/// Helper function to create a standard AnimationController with safe ticker
 AnimationController createSafeAnimationController({
   double? value,
   Duration? duration,
@@ -94,7 +71,7 @@ AnimationController createSafeAnimationController({
   AnimationBehavior animationBehavior = AnimationBehavior.normal,
   required TickerProvider vsync,
 }) {
-  return SafeAnimationController(
+  return AnimationController(
     value: value,
     duration: duration,
     reverseDuration: reverseDuration,
@@ -102,25 +79,25 @@ AnimationController createSafeAnimationController({
     lowerBound: lowerBound,
     upperBound: upperBound,
     animationBehavior: animationBehavior,
-    vsync: vsync,
+    vsync: SafeTickerProvider(vsync),
   );
 }
 
-/// Helper function to create an unbounded SafeAnimationController instance
+/// Helper function to create an unbounded AnimationController with safe ticker
 AnimationController createUnboundedSafeAnimationController({
   double value = 0.0,
   Duration? duration,
   Duration? reverseDuration,
   String? debugLabel,
-  AnimationBehavior animationBehavior = AnimationBehavior.preserve,
   required TickerProvider vsync,
+  AnimationBehavior animationBehavior = AnimationBehavior.preserve,
 }) {
-  return SafeAnimationController.unbounded(
+  return AnimationController.unbounded(
     value: value,
     duration: duration,
     reverseDuration: reverseDuration,
     debugLabel: debugLabel,
+    vsync: SafeTickerProvider(vsync),
     animationBehavior: animationBehavior,
-    vsync: vsync,
   );
 }

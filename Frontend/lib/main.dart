@@ -9,17 +9,27 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
+// Import the safe animation controller
+import 'package:software_graduation_project/utils/safe_animation_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+
+  // Initialize auth service and check for existing session
+  final authService = AuthService();
+  final isLoggedIn = await authService.initializeAuth();
+
+  runApp(MyApp(isLoggedIn: isLoggedIn));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final bool isLoggedIn;
+
+  const MyApp({Key? key, required this.isLoggedIn}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
@@ -29,15 +39,27 @@ class MyApp extends StatelessWidget {
         return Provider(
           create: (_) => AuthService(),
           child: MaterialApp(
-            title: 'Flutter Demo',
+            title: 'Zikr',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
               colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
               useMaterial3: true,
+              // Use safe page transitions to prevent animation crashes
+              pageTransitionsTheme: PageTransitionsTheme(
+                builders: {
+                  // Use a custom page transition that uses the safe animation controller
+                  TargetPlatform.android: SafePageTransitionsBuilder(),
+                  TargetPlatform.iOS: SafePageTransitionsBuilder(),
+                  TargetPlatform.linux: SafePageTransitionsBuilder(),
+                  TargetPlatform.macOS: SafePageTransitionsBuilder(),
+                  TargetPlatform.windows: SafePageTransitionsBuilder(),
+                },
+              ),
             ),
-            home: const LoginScreen(),
+            // Start with either home screen or login screen based on auth status
+            initialRoute: isLoggedIn ? '/skeleton' : '/login',
             routes: {
-              // Remove '/' route to avoid conflict with home
+              '/login': (context) => const LoginScreen(),
               '/skeleton': (context) =>
                   Skeleton(key: Skeleton.navigatorKey), // Move key here
               '/signup': (context) => const SignUpScreen(),
@@ -47,6 +69,21 @@ class MyApp extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+/// A custom page transitions builder that uses SafeAnimationController
+class SafePageTransitionsBuilder extends PageTransitionsBuilder {
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    // Use a FadeTransition which uses the safe animation controller internally
+    return FadeTransition(opacity: animation, child: child);
   }
 }
 

@@ -71,64 +71,14 @@ class AuthService {
   // Clear all stored data (for logout)
   Future<Map<String, dynamic>> logout() async {
     try {
-      // Get both tokens
-      final refreshToken = await getRefreshToken();
-      final accessToken = await getAccessToken();
-
-      if (refreshToken != null && accessToken != null) {
-        // Call the backend logout endpoint with Authorization header
-        final response = await http.post(
-          Uri.parse('$_baseUrl/logout/'),
-          headers: <String, String>{
-            'Content-Type': 'application/json; charset=UTF-8',
-            'Authorization': 'Bearer $accessToken', // Add authorization header
-          },
-          body: jsonEncode(<String, String>{
-            'refresh': refreshToken,
-          }),
-        );
-
-        // Regardless of the response, clear the local storage
-        await _storage.delete(key: ACCESS_TOKEN_KEY);
-        await _storage.delete(key: REFRESH_TOKEN_KEY);
-        await _storage.delete(key: USER_DATA_KEY);
-        _currentUser = null;
-
-        if (response.statusCode == 200) {
-          return {
-            'success': true,
-            'message': 'Successfully logged out',
-          };
-        } else {
-          final Map<String, dynamic> responseData = json.decode(response.body);
-          return {
-            'success': false,
-            'message': responseData['error'] ?? 'Failed to logout from server',
-          };
-        }
-      } else {
-        // No tokens found, just clear the local storage
-        await _storage.delete(key: ACCESS_TOKEN_KEY);
-        await _storage.delete(key: REFRESH_TOKEN_KEY);
-        await _storage.delete(key: USER_DATA_KEY);
-        _currentUser = null;
-
-        return {
-          'success': true,
-          'message': 'Logged out locally',
-        };
-      }
-    } catch (e) {
-      // If there's an error, still clear the local storage
-      await _storage.delete(key: ACCESS_TOKEN_KEY);
-      await _storage.delete(key: REFRESH_TOKEN_KEY);
-      await _storage.delete(key: USER_DATA_KEY);
+      // Clear all stored tokens and user data
+      await _storage.deleteAll();
       _currentUser = null;
 
-      return {
-        'success': false,
-        'message': 'Error during logout: ${e.toString()}',
-      };
+      return {'success': true, 'message': 'Logged out successfully'};
+    } catch (e) {
+      print('Error during logout: $e');
+      return {'success': false, 'message': 'Error during logout: $e'};
     }
   }
 
@@ -302,20 +252,20 @@ class AuthService {
   }
 
   // Get access token (refreshes if needed)
-  Future<String> getAccessToken() async {
+  Future<String?> getAccessToken() async {
     String? accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
 
-    // Check if token exists and is valid
     if (accessToken == null) {
-      // Try to refresh
+      // No access token found, try to refresh
       final refreshed = await refreshToken();
-      if (!refreshed) {
-        throw Exception('No authentication token available');
+      if (refreshed) {
+        accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+      } else {
+        return null; // No valid tokens available
       }
-      accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
     }
 
-    return accessToken!;
+    return accessToken;
   }
 
   // Save user info after login
@@ -381,6 +331,31 @@ class AuthService {
     } catch (e) {
       print('Error getting Firebase token: $e');
       return null;
+    }
+  }
+
+  // Add this method to your AuthService class
+
+  Future<bool> initializeAuth() async {
+    try {
+      // Check if we have a stored access token
+      final accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+
+      if (accessToken != null) {
+        // We found a token, now try to load the user data
+        final userData = await getUserData();
+
+        if (userData != null) {
+          print("Found stored session for user: ${userData.username}");
+          _currentUser = userData;
+          return true; // User is logged in
+        }
+      }
+
+      return false; // No valid session found
+    } catch (e) {
+      print("Error initializing auth: $e");
+      return false;
     }
   }
 }

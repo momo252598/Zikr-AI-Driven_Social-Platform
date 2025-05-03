@@ -189,8 +189,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _handleLogout() async {
     try {
       await _authService.logout();
-      // Navigate to login page
-      Navigator.of(context).pushReplacementNamed('/');
+      // Navigate to login page - use /login instead of /
+      Navigator.of(context).pushReplacementNamed('/login');
     } catch (e) {
       print('Error during logout: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -401,14 +401,20 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                           ),
-                          // Show settings button only if it's the user's own profile
+                          // Show settings and logout buttons only if it's the user's own profile
                           actions: [
-                            if (_isOwnProfile)
+                            if (_isOwnProfile) ...[
+                              IconButton(
+                                icon: const Icon(Icons.logout),
+                                onPressed: _handleLogout,
+                                tooltip: 'تسجيل الخروج',
+                              ),
                               IconButton(
                                 icon: const Icon(Icons.settings),
                                 onPressed: _navigateToAccountSettings,
                                 tooltip: 'إعدادات الحساب',
                               ),
+                            ],
                           ],
                         ),
 
@@ -570,27 +576,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                 childCount: _userPosts!.length,
                               ),
                             ),
-
-                  // Logout button at the bottom (only for own profile)
-                  if (_isOwnProfile)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Center(
-                          child: ElevatedButton.icon(
-                            onPressed: _handleLogout,
-                            icon: const Icon(Icons.logout),
-                            label: const Text('تسجيل الخروج'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 20, vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
 
                   // Extra space at the bottom
                   SliverToBoxAdapter(

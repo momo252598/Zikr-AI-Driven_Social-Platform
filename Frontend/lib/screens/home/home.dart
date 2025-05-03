@@ -469,8 +469,8 @@ class _HomePageState extends State<HomePage> {
                     _buildQuranFeatureCard(context, standardCardWidth),
                     const SizedBox(width: 12),
                     // Add chat feature card
-                    _buildFeatureCard(context, Icons.chat_bubble_outline,
-                        "الدردشة", AppStyles.lightPurple, standardCardWidth,
+                    _buildFeatureCard(context, Icons.chat, "الدردشة",
+                        AppStyles.lightPurple, standardCardWidth,
                         onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
