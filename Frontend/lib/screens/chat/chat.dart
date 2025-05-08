@@ -9,6 +9,8 @@ import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
+import 'package:software_graduation_project/services/global_notification_manager.dart';
+import 'package:software_graduation_project/services/message_notification_service.dart'; // Import message notification service
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
 import 'package:software_graduation_project/screens/profile/profile.dart'; // Import ProfilePage
 
@@ -32,6 +34,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   final ChatApiService _chatApiService = ChatApiService();
   final FirebaseService _firebaseService = FirebaseService();
   final AuthService _authService = AuthService();
+  final MessageNotificationService _messageNotificationService =
+      MessageNotificationService(); // Add notification service
   final ScrollController _scrollController =
       ScrollController(); // Add scroll controller
 
@@ -48,6 +52,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   int? currentUserId;
   bool _isTyping = false;
   Timer? _typingTimer;
+  bool _isPageActive = true; // Track if page is active/focused
 
   // Add animation controllers for typing indicator
   List<AnimationController> _dotControllers = [];
@@ -65,6 +70,22 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
     // Initialize the dot animations
     _initializeAnimations();
+
+    // Initialize notification permission
+    _initNotifications();
+
+    // Set this page as active
+    _isPageActive = true;
+
+    // Register as active conversation with notification manager
+    GlobalNotificationManager().setActiveConversationId(widget.chatId);
+  }
+
+  // Initialize notification service
+  Future<void> _initNotifications() async {
+    await _messageNotificationService.initialize();
+    // Request permissions when the chat is first opened
+    await _messageNotificationService.ensurePermissions(context: context);
   }
 
   void _initializeAnimations() {
@@ -124,6 +145,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     if (conversationFirebaseId != null) {
       _subscribeToMessages(conversationFirebaseId);
       _subscribeToTypingIndicators(conversationFirebaseId);
+
+      // Manage notifications based on page focus
+      _manageNotifications(conversationFirebaseId);
     }
 
     // Set user as online
@@ -135,6 +159,20 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _scrollToBottom();
     });
+  }
+
+  // Handle notification subscription based on page focus
+  void _manageNotifications(String firebaseId) {
+    if (_isPageActive) {
+      // If page is active/focused, unsubscribe from notifications to avoid duplicates
+      _messageNotificationService.unsubscribeFromConversation(firebaseId);
+    } else {
+      // If page is not active, subscribe to notifications
+      _messageNotificationService.subscribeToConversation(
+        firebaseId,
+        contactName,
+      );
+    }
   }
 
   // Utility function to scroll to bottom
@@ -218,7 +256,36 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       controller.dispose();
     }
 
+    // If we have chat data, ensure we unsubscribe from notifications for this chat
+    if (chatData != null && chatData!['firebase_id'] != null) {
+      _messageNotificationService
+          .unsubscribeFromConversation(chatData!['firebase_id']);
+    }
+
+    // Clear active conversation when leaving chat screen
+    GlobalNotificationManager().clearActiveConversation();
+
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _handlePageFocus(true);
+  }
+
+  @override
+  void deactivate() {
+    _handlePageFocus(false);
+    super.deactivate();
+  }
+
+  // Update page focus state and manage notifications accordingly
+  void _handlePageFocus(bool isFocused) {
+    _isPageActive = isFocused;
+    if (chatData != null && chatData!['firebase_id'] != null) {
+      _manageNotifications(chatData!['firebase_id']);
+    }
   }
 
   Future<void> _loadConversationData() async {

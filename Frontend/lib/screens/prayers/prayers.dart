@@ -7,6 +7,8 @@ import 'package:adhan_dart/adhan_dart.dart';
 import 'package:fluentui_icons/fluentui_icons.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/components/prayers/geolocation_provider.dart'; // added new helper import
+import 'package:software_graduation_project/services/notification_service.dart'; // import for notifications
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Model for Prayer
 class Prayer {
@@ -31,7 +33,7 @@ Future<List<Prayer>> getPrayerTimes() async {
       if (!serviceEnabled) throw Exception("Location service disabled");
     }
     // Check permission
-    PermissionStatus permissionGranted = await location.hasPermission();
+    var permissionGranted = await location.hasPermission();
     if (permissionGranted == PermissionStatus.denied) {
       permissionGranted = await location.requestPermission();
       if (permissionGranted != PermissionStatus.granted)
@@ -193,55 +195,346 @@ class PrayersPage extends StatefulWidget {
   _PrayersPageState createState() => _PrayersPageState();
 }
 
-class _PrayersPageState extends State<PrayersPage> {
+class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
   late Future<List<Prayer>> futurePrayers;
+  final NotificationService _notificationService = NotificationService();
+  bool _notificationsEnabled = false;
+  Timer? _refreshTimer;
+  static const String PREFS_NOTIFICATIONS_KEY = 'prayer_notifications_enabled';
 
   @override
   void initState() {
     super.initState();
+
+    // Add observer to detect app lifecycle changes
+    WidgetsBinding.instance.addObserver(this);
+
     futurePrayers = getPrayerTimes();
+    _loadNotificationPreference().then((_) {
+      _initNotifications();
+    });
+
+    // Set up a periodic timer to refresh prayer times and notifications
+    _refreshTimer = Timer.periodic(const Duration(minutes: 15), (_) {
+      _refreshPrayerTimes();
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // When app resumes from background, refresh prayer times and notifications
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('App resumed from background, refreshing prayer times');
+      _refreshPrayerTimes();
+    } else if (state == AppLifecycleState.paused) {
+      // When app goes to background, make sure notifications are scheduled
+      if (_notificationsEnabled) {
+        _scheduleNotifications();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    // Remove lifecycle observer
+    WidgetsBinding.instance.removeObserver(this);
+
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  // Load saved notification preference
+  Future<void> _loadNotificationPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _notificationsEnabled = prefs.getBool(PREFS_NOTIFICATIONS_KEY) ?? false;
+    });
+    debugPrint('Loaded notification preference: $_notificationsEnabled');
+  }
+
+  // Save notification preference
+  Future<void> _saveNotificationPreference(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(PREFS_NOTIFICATIONS_KEY, value);
+    debugPrint('Saved notification preference: $value');
+  }
+
+  // Refresh prayer times and reschedule notifications
+  Future<void> _refreshPrayerTimes() async {
+    setState(() {
+      futurePrayers = getPrayerTimes();
+    });
+
+    // If notifications are enabled, reschedule them with the new prayer times
+    if (_notificationsEnabled) {
+      await _scheduleNotifications();
+    }
+  }
+
+  // Initialize notification service
+  Future<void> _initNotifications() async {
+    debugPrint('Initializing prayer notifications');
+    await _notificationService.initialize();
+    final hasPermissions = await _notificationService.checkPermissions();
+    setState(() {
+      // Only update if notifications were previously enabled or permissions are granted
+      if (_notificationsEnabled || hasPermissions) {
+        _notificationsEnabled = hasPermissions;
+        _saveNotificationPreference(hasPermissions);
+      }
+    });
+
+    // Schedule notifications if permissions were granted
+    if (hasPermissions && _notificationsEnabled) {
+      await _scheduleNotifications();
+    }
+  }
+
+  // Request notification permissions
+  Future<void> _requestNotificationPermissions() async {
+    debugPrint('Requesting notification permissions for prayer times');
+    final granted =
+        await _notificationService.requestPermissions(context: context);
+    setState(() {
+      _notificationsEnabled = granted;
+    });
+
+    // Save the preference
+    await _saveNotificationPreference(granted);
+
+    if (granted) {
+      // Schedule notifications immediately if permission was granted
+      await _scheduleNotifications();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("تم تفعيل الإشعارات بنجاح")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("لم يتم منح إذن الإشعارات")),
+      );
+    }
+  }
+
+  // Schedule notifications for all prayers
+  Future<void> _scheduleNotifications() async {
+    final prayers = await futurePrayers;
+    // Cancel any existing notifications before scheduling new ones
+    await _notificationService.cancelAllNotifications();
+
+    // Schedule notifications for each prayer
+    for (int i = 0; i < prayers.length; i++) {
+      final prayer = prayers[i];
+      if (prayer.time.isAfter(DateTime.now())) {
+        await _notificationService.schedulePrayerNotification(
+          id: i + 1, // Use index+1 as ID
+          title: "حان وقت ${prayer.name}",
+          body: "لا تنسى الصلاة في وقتها",
+          scheduledTime: prayer.time,
+          minutesBefore: 1, // Notify 1 minute before prayer time
+        );
+        // Add debug message to verify scheduling
+        debugPrint(
+            'Scheduled notification for ${prayer.name} at ${prayer.time} (1 minute before)');
+      }
+    }
+    debugPrint('All prayer notifications scheduled successfully');
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
-      // appBar removed or uncomment if needed.
-      body: FutureBuilder<List<Prayer>>(
-        future: futurePrayers,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError || !snapshot.hasData) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-          final prayers = snapshot.data!;
-          final now = DateTime.now();
-          Prayer? nextPrayer;
-          Duration? closestDiff;
-          for (var prayer in prayers) {
-            final diff = prayer.time.difference(now);
-            if (diff.isNegative) continue;
-            if (closestDiff == null || diff < closestDiff) {
-              closestDiff = diff;
-              nextPrayer = prayer;
-            }
-          }
-          return Center(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: prayers
-                    .map((prayer) => PrayerCard(
-                          prayer: prayer,
-                          isClosest: nextPrayer != null &&
-                              prayer.name == nextPrayer.name,
-                        ))
-                    .toList(),
-              ),
+      // Add notification toggle button in app bar
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _notificationsEnabled
+                  ? Icons.notifications_active
+                  : Icons.notifications_off,
+              color: AppStyles.purple,
             ),
-          );
-        },
+            onPressed: () {
+              if (_notificationsEnabled) {
+                _notificationService.cancelAllNotifications();
+                setState(() {
+                  _notificationsEnabled = false;
+                  _saveNotificationPreference(false);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("تم إلغاء تفعيل الإشعارات")),
+                );
+              } else {
+                _requestNotificationPermissions();
+              }
+            },
+            tooltip:
+                _notificationsEnabled ? 'إلغاء التنبيهات' : 'تفعيل التنبيهات',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: FutureBuilder<List<Prayer>>(
+              future: futurePrayers,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError || !snapshot.hasData) {
+                  return Center(child: Text("Error: ${snapshot.error}"));
+                }
+                final prayers = snapshot.data!;
+                final now = DateTime.now();
+                Prayer? nextPrayer;
+                Duration? closestDiff;
+                for (var prayer in prayers) {
+                  final diff = prayer.time.difference(now);
+                  if (diff.isNegative) continue;
+                  if (closestDiff == null || diff < closestDiff) {
+                    closestDiff = diff;
+                    nextPrayer = prayer;
+                  }
+                }
+                return Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: prayers
+                          .map((prayer) => PrayerCard(
+                                prayer: prayer,
+                                isClosest: nextPrayer != null &&
+                                    prayer.name == nextPrayer.name,
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Test buttons for notifications
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppStyles.whitePurple,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "إختبار الإشعارات",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppStyles.purple,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        // Request notification permissions if not already granted
+                        final hasPermissions = await _notificationService
+                            .requestPermissions(context: context);
+                        if (!hasPermissions) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text("يرجى منح الإذن للإشعارات أولاً")),
+                          );
+                          return;
+                        }
+
+                        // Show immediate test notification
+                        await _notificationService.showNotification(
+                          id: 100,
+                          title: "إشعار إختباري",
+                          body: "هذا إشعار لإختبار نظام الإشعارات. الآن!",
+                        );
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  "تم إرسال إشعار اختباري. ستظهر خلال ثوانٍ")),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppStyles.purple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text("إشعار فوري"),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        // Request notification permissions if not already granted
+                        final hasPermissions = await _notificationService
+                            .requestPermissions(context: context);
+                        if (!hasPermissions) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content:
+                                    Text("يرجى منح الإذن للإشعارات أولاً")),
+                          );
+                          return;
+                        }
+
+                        // Schedule a delayed notification (testing background notification handling)
+                        await _notificationService.schedulePrayerNotification(
+                          id: 101,
+                          title: "إشعار تجريبي مجدول",
+                          body:
+                              "هذا إشعار مجدول لإختبار نظام الإشعارات في الخلفية",
+                          scheduledTime:
+                              DateTime.now().add(const Duration(seconds: 10)),
+                          minutesBefore: 0,
+                        );
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  "تم جدولة إشعار اختباري. سيظهر بعد ١٠ ثوانٍ")),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppStyles.lightPurple,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text("إشعار بعد ١٠ ثوانٍ"),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: () async {
+                    await _notificationService.cancelAllNotifications();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("تم إلغاء جميع الإشعارات")),
+                    );
+                  },
+                  child: Text(
+                    "إلغاء كل الإشعارات",
+                    style: TextStyle(
+                      color: AppStyles.purple,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

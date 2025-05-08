@@ -1,5 +1,5 @@
 import firebase_admin
-from firebase_admin import credentials, auth
+from firebase_admin import credentials, auth, messaging
 import os
 
 def initialize_firebase():
@@ -17,25 +17,94 @@ def initialize_firebase():
     if not firebase_admin._apps:
         firebase_admin.initialize_app(cred)
 
-# filepath: d:\College\Flutter_Projects\software_graduation_project\backend\chat\firebase_utils.py
 def create_firebase_custom_token(user_id):
     """Generate a custom Firebase token for a Django user"""
-    if not firebase_admin._apps:
-        initialize_firebase()
+    initialize_firebase()
+    try:
+        # Convert user_id to string as Firebase requires
+        uid = str(user_id)
+        token = auth.create_custom_token(uid)
+        return token.decode('utf-8')
+    except Exception as e:
+        print(f"Error creating firebase token: {e}")
+        return None
+
+def send_message_notification(recipient_id, sender_name, message_content, conversation_id):
+    """
+    Send a push notification to a user when they receive a new message
     
-    user_id_str = str(user_id)
-    print(f"Creating Firebase token for user ID: {user_id_str}")
+    Args:
+        recipient_id (int): The ID of the user receiving the message
+        sender_name (str): The name of the message sender
+        message_content (str): The content of the message
+        conversation_id (str): The Firebase ID of the conversation
+    """
+    initialize_firebase()
     
     try:
-        # Add explicit claims object
-        claims = {
-            "uid": user_id_str,  # Explicitly set UID
-            "django_user_id": user_id  # Add additional info if needed
-        }
+        # Import User model here to avoid circular import
+        from accounts.models import User
         
-        token = auth.create_custom_token(user_id_str, claims)
-        print(f"Token created successfully: {token[:20]}...")
-        return token
+        # Get recipient's FCM token
+        try:
+            recipient = User.objects.get(id=recipient_id)
+            if not recipient.fcm_token:
+                print(f"No FCM token available for user {recipient_id}")
+                return
+                
+            token = recipient.fcm_token
+            
+            # Create message notification
+            message = messaging.Message(
+                data={
+                    'type': 'chat_message',
+                    'senderName': sender_name,
+                    'messageContent': message_content,
+                    'conversationId': conversation_id
+                },
+                notification=messaging.Notification(
+                    title=sender_name,
+                    body=message_content
+                ),
+                token=token,
+            )
+            
+            # Send message
+            response = messaging.send(message)
+            print(f"Successfully sent notification to {recipient_id}: {response}")
+            
+        except User.DoesNotExist:
+            print(f"User {recipient_id} not found")
+            
     except Exception as e:
-        print(f"Error creating Firebase token: {e}")
-        raise e
+        print(f"Error sending push notification: {e}")
+
+def send_notification_to_topic(topic, title, body, data=None):
+    """
+    Send a notification to a topic subscription
+    
+    Args:
+        topic (str): The topic to send to (e.g. 'chat_123')
+        title (str): The notification title
+        body (str): The notification body
+        data (dict, optional): Additional data to send
+    """
+    initialize_firebase()
+    
+    try:
+        # Create a message for a topic
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title=title,
+                body=body
+            ),
+            data=data or {},
+            topic=topic,
+        )
+        
+        # Send message
+        response = messaging.send(message)
+        print(f"Successfully sent notification to topic {topic}: {response}")
+        
+    except Exception as e:
+        print(f"Error sending topic notification: {e}")

@@ -9,18 +9,85 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
+import 'package:software_graduation_project/services/api_service.dart';
 // Import the safe animation controller
 import 'package:software_graduation_project/utils/safe_animation_controller.dart';
+// Import notification service
+import 'package:software_graduation_project/services/notification_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+
+// Initialize the notification plugin early for background handling
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+// This callback is called for background notification handling
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // Handle notification tap when app is in background or closed
+  debugPrint(
+      'Notification tapped in background: ${notificationResponse.payload}');
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize timezone data early
+  tz_data.initializeTimeZones();
+
+  // Initialize Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Initialize notification plugin early for background notifications
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const DarwinInitializationSettings initializationSettingsIOS =
+      DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+    iOS: initializationSettingsIOS,
+  );
+
+  await flutterLocalNotificationsPlugin.initialize(
+    initializationSettings,
+    onDidReceiveNotificationResponse: (NotificationResponse details) {
+      debugPrint('Notification clicked: ${details.payload}');
+    },
+    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+  );
+
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.initialize();
+
+  // DEBUG: Print notification initialization status
+  debugPrint('Notification service initialized in main.dart');
+
   // Initialize auth service and check for existing session
   final authService = AuthService();
-  final isLoggedIn = await authService.initializeAuth();
+  bool isLoggedIn = await authService.initializeAuth();
+
+  // Validate the authentication by making a test API call
+  if (isLoggedIn) {
+    debugPrint('Found stored session, validating token...');
+    final apiService = ApiService();
+    try {
+      // Try to validate the token using the check-auth endpoint
+      await apiService.get('/accounts/check-auth/');
+      debugPrint('Token validation successful');
+    } catch (e) {
+      debugPrint('Token validation failed: $e');
+      // If validation fails, clear the session and start fresh
+      await authService.logout();
+      isLoggedIn = false;
+    }
+  }
 
   runApp(MyApp(isLoggedIn: isLoggedIn));
 }
@@ -36,8 +103,11 @@ class MyApp extends StatelessWidget {
       designSize: const Size(360, 690),
       minTextAdapt: true, // this sets _minTextAdapt
       builder: (context, child) {
-        return Provider(
-          create: (_) => AuthService(),
+        return MultiProvider(
+          providers: [
+            Provider<AuthService>(create: (_) => AuthService()),
+            Provider<ApiService>(create: (_) => ApiService()),
+          ],
           child: MaterialApp(
             title: 'Zikr',
             debugShowCheckedModeBanner: false,

@@ -540,3 +540,18 @@ def get_user_public_profile(request, user_id):
             {"error": "User not found"},
             status=status.HTTP_404_NOT_FOUND
         )
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def check_auth(request):
+    """
+    Simple endpoint to validate if the user's token is still valid.
+    If the token is valid, returns user info. If not, will return 401 Unauthorized.
+    """
+    user = request.user
+    return Response({
+        "status": "authenticated",
+        "user_id": user.id,
+        "username": user.username,
+        "is_verified": user.is_verified
+    }, status=status.HTTP_200_OK)

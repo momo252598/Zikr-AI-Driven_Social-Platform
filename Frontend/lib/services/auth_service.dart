@@ -2,15 +2,22 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import '../models/user.dart'; // We'll create this next
+import '../models/user.dart';
+import 'dart:async'; // Added for timers
 
 class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
   late final String _baseUrl;
 
+  // Added for token expiration tracking
+  static const String TOKEN_EXPIRY_KEY = 'token_expiry_time';
+  // Buffer time before token expiration to refresh (5 minutes)
+  static const int TOKEN_REFRESH_BUFFER_MINUTES = 5;
+  Timer? _tokenRefreshTimer;
+
   AuthService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.7 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.7';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.14 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
     _baseUrl = 'http://$host:8000/api/accounts';
   }
 
@@ -24,11 +31,50 @@ class AuthService {
   static const String USER_ID_KEY = 'user_id';
   static const String USERNAME_KEY = 'username';
 
-  // Store tokens securely
-  Future<void> storeTokens(
-      {required String accessToken, required String refreshToken}) async {
+  // Store tokens securely with expiration time
+  Future<void> storeTokens({
+    required String accessToken,
+    required String refreshToken,
+    int accessTokenLifetimeMinutes = 24 * 60, // Default: 1 day in minutes
+  }) async {
     await _storage.write(key: ACCESS_TOKEN_KEY, value: accessToken);
     await _storage.write(key: REFRESH_TOKEN_KEY, value: refreshToken);
+
+    // Calculate and store expiration time
+    final expiryTime =
+        DateTime.now().add(Duration(minutes: accessTokenLifetimeMinutes));
+    await _storage.write(
+        key: TOKEN_EXPIRY_KEY, value: expiryTime.toIso8601String());
+    print("Token will expire at: $expiryTime");
+
+    // Set up auto-refresh timer
+    _setupTokenRefreshTimer(expiryTime);
+  }
+
+  // Setup automatic token refresh before expiration
+  void _setupTokenRefreshTimer(DateTime expiryTime) {
+    // Cancel any existing timer
+    _tokenRefreshTimer?.cancel();
+
+    // Calculate when to refresh (5 minutes before expiry)
+    final refreshTime = expiryTime
+        .subtract(const Duration(minutes: TOKEN_REFRESH_BUFFER_MINUTES));
+    final now = DateTime.now();
+
+    if (refreshTime.isAfter(now)) {
+      final timeUntilRefresh = refreshTime.difference(now);
+      print(
+          "Scheduling token refresh in ${timeUntilRefresh.inMinutes} minutes");
+
+      _tokenRefreshTimer = Timer(timeUntilRefresh, () async {
+        print("Auto-refreshing token before expiration");
+        await refreshToken();
+      });
+    } else {
+      // Token is already close to expiry or expired, refresh immediately
+      print("Token close to expiry, refreshing now");
+      refreshToken();
+    }
   }
 
   // Store user data - updated to also store ID and username separately
@@ -71,6 +117,9 @@ class AuthService {
   // Clear all stored data (for logout)
   Future<Map<String, dynamic>> logout() async {
     try {
+      // Cancel any token refresh timer
+      _tokenRefreshTimer?.cancel();
+
       // Clear all stored tokens and user data
       await _storage.deleteAll();
       _currentUser = null;
@@ -174,15 +223,35 @@ class AuthService {
     return await getUserData();
   }
 
+  // Check if access token is expired or will expire soon
+  Future<bool> isAccessTokenExpired() async {
+    try {
+      final expiryStr = await _storage.read(key: TOKEN_EXPIRY_KEY);
+      if (expiryStr == null) return true;
+
+      final expiry = DateTime.parse(expiryStr);
+      final now = DateTime.now();
+
+      // Consider token expired if it's within buffer time
+      return now.isAfter(
+          expiry.subtract(Duration(minutes: TOKEN_REFRESH_BUFFER_MINUTES)));
+    } catch (e) {
+      print('Error checking token expiration: $e');
+      return true; // Assume expired on error
+    }
+  }
+
   // Refresh token when access token expires
   Future<bool> refreshToken() async {
     final refreshToken = await getRefreshToken();
 
     if (refreshToken == null) {
+      print('No refresh token found');
       return false;
     }
 
     try {
+      print('Attempting to refresh access token');
       final response = await http.post(
         Uri.parse('$_baseUrl/token/refresh/'),
         headers: {'Content-Type': 'application/json'},
@@ -191,14 +260,28 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
+        // Store new access token
         await _storage.write(key: ACCESS_TOKEN_KEY, value: data['access']);
+
+        // Update expiration time (assuming 24 hours)
+        final expiryTime = DateTime.now().add(const Duration(hours: 24));
+        await _storage.write(
+            key: TOKEN_EXPIRY_KEY, value: expiryTime.toIso8601String());
+
+        // Set up new refresh timer
+        _setupTokenRefreshTimer(expiryTime);
+
+        print('Successfully refreshed access token');
         return true;
       } else {
+        print(
+            'Token refresh failed: ${response.statusCode} - ${response.body}');
         // If refresh token is invalid, log the user out
         await logout();
         return false;
       }
     } catch (e) {
+      print('Error during token refresh: $e');
       return false;
     }
   }
@@ -256,12 +339,25 @@ class AuthService {
     String? accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
 
     if (accessToken == null) {
+      print('No access token found, attempting to refresh');
       // No access token found, try to refresh
       final refreshed = await refreshToken();
       if (refreshed) {
         accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
       } else {
         return null; // No valid tokens available
+      }
+    } else {
+      // Check if token is expired or will expire soon
+      final isExpired = await isAccessTokenExpired();
+      if (isExpired) {
+        print('Access token expired or expiring soon, refreshing');
+        final refreshed = await refreshToken();
+        if (refreshed) {
+          accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+        } else {
+          return null;
+        }
       }
     }
 
@@ -285,11 +381,12 @@ class AuthService {
     values[USER_DATA_KEY] = await _storage.read(key: USER_DATA_KEY);
     values[USER_ID_KEY] = await _storage.read(key: USER_ID_KEY);
     values[USERNAME_KEY] = await _storage.read(key: USERNAME_KEY);
+    values[TOKEN_EXPIRY_KEY] = await _storage.read(key: TOKEN_EXPIRY_KEY);
 
     print("DEBUG - Stored values:");
     values.forEach((key, value) {
       print(
-          "$key: ${value != null ? (key.contains('TOKEN') ? '${value.substring(0, 10)}...' : value) : 'null'}");
+          "$key: ${value != null ? (key.contains('TOKEN') && !key.contains('EXPIRY') ? '${value.substring(0, 10)}...' : value) : 'null'}");
     });
 
     return values;
@@ -308,7 +405,7 @@ class AuthService {
       final accessToken = await getAccessToken();
 
       // Use the chat API base URL instead of accounts
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.7';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
       final chatApiUrl = 'http://$host:8000/api/chat';
 
       // Call Django endpoint to get a Firebase custom token
@@ -334,14 +431,32 @@ class AuthService {
     }
   }
 
-  // Add this method to your AuthService class
-
+  // Initialize authentication and validate token
   Future<bool> initializeAuth() async {
     try {
       // Check if we have a stored access token
       final accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+      final expiryStr = await _storage.read(key: TOKEN_EXPIRY_KEY);
 
       if (accessToken != null) {
+        if (expiryStr != null) {
+          final expiry = DateTime.parse(expiryStr);
+          final now = DateTime.now();
+
+          // If token is expired, try refresh
+          if (now.isAfter(expiry)) {
+            print("Stored token expired, attempting refresh");
+            final refreshed = await refreshToken();
+            if (!refreshed) {
+              print("Token refresh failed during initialization");
+              return false;
+            }
+          } else {
+            // Setup refresh timer for existing token
+            _setupTokenRefreshTimer(expiry);
+          }
+        }
+
         // We found a token, now try to load the user data
         final userData = await getUserData();
 
@@ -355,6 +470,41 @@ class AuthService {
       return false; // No valid session found
     } catch (e) {
       print("Error initializing auth: $e");
+      return false;
+    }
+  }
+
+  // Register FCM token with the server
+  Future<bool> registerFcmToken(String token) async {
+    try {
+      final accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+      if (accessToken == null) {
+        print('No access token found, cannot register FCM token');
+        return false;
+      }
+
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+      final baseUrl = 'http://$host:8000';
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/accounts/register-fcm-token/'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode({
+          'token': token,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('FCM token registered successfully');
+        return true;
+      } else {
+        print('Failed to register FCM token: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('Error registering FCM token: $e');
       return false;
     }
   }
