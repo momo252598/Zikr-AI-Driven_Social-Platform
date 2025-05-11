@@ -11,9 +11,60 @@ class ChatApiService {
   final FirebaseService _firebaseService = FirebaseService();
 
   ChatApiService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.14 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.11 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.11';
     baseUrl = 'http://$host:8000/api/chat';
+  }
+
+  // Search for users to start a conversation with
+  Future<List<Map<String, dynamic>>> searchUsers(String query) async {
+    // Track the original raw query for debugging
+    final originalQuery = query;
+
+    // Don't trim the query - we want to preserve spaces
+    if (query.length < 2) {
+      return [];
+    }
+
+    try {
+      final token = await _authService.getAccessToken();
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.11';
+
+      // Properly encode the Arabic query with spaces preserved
+      final encodedQuery = Uri.encodeComponent(query);
+
+      print(
+          'Searching with raw query: "$originalQuery" (${originalQuery.length} chars)');
+      print('Encoded query: "$encodedQuery"');
+
+      // Use the accounts API endpoint for user search
+      final searchUrl =
+          'http://$host:8000/api/accounts/search/?query=$encodedQuery';
+
+      final response = await http.get(
+        Uri.parse(searchUrl),
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+          'Accept-Charset': 'utf-8',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        // Use utf8.decode to properly decode Arabic responses
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final data = json.decode(decodedBody);
+        print('Search results count: ${data['results'].length}');
+        return List<Map<String, dynamic>>.from(data['results']);
+      } else {
+        final error = 'Failed to search users: ${response.statusCode}';
+        print(error);
+        throw Exception(error);
+      }
+    } catch (e) {
+      print('Error searching users: $e');
+      return [];
+    }
   }
 
   // Get user's conversations

@@ -17,6 +17,7 @@ from django.conf import settings
 import random
 import string
 from .models import AccountActivationToken
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -555,3 +556,72 @@ def check_auth(request):
         "username": user.username,
         "is_verified": user.is_verified
     }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def search_users(request):
+    """
+    Search for users by username, first name, or last name.
+    Returns a list of matching users (excluding the current user).
+    """
+    original_query = request.query_params.get('query', '')
+    
+    if len(original_query) < 2:
+        return Response({"results": []}, status=status.HTTP_200_OK)
+    
+    print(f"Original search query: '{original_query}'")
+    
+    # Clean up the query but keep the exact input intact
+    query = original_query
+    
+    # Split the query into words for processing
+    words = query.split()
+    
+    # For debugging
+    print(f"Query after splitting: {words}")
+    
+    # Base query that will search exact matches first
+    user_query = Q(username__icontains=query) | Q(first_name__icontains=query) | Q(last_name__icontains=query)
+    
+    # If we're dealing with a multi-word query (name with space)
+    if len(words) > 1:
+        # Create a more focused query for the complete string after the space
+        # This helps when typing "محمد ح" to find "محمد حمدالله"
+        current_word = words[-1]  # Get the last word (after the most recent space)
+        
+        if len(current_word) >= 1:
+            print(f"Focusing search on last word: '{current_word}'")
+            
+            # If we have multiple words, prioritize matches where the last name starts with the current word
+            # This is important for Arabic full name searches
+            user_query |= Q(last_name__istartswith=current_word)
+            
+            # But also look for this substring anywhere
+            if len(current_word) >= 2:
+                user_query |= Q(first_name__icontains=current_word) | Q(last_name__icontains=current_word)
+            
+        # Also search for full name match with first word as first name and last word as last name
+        if len(words) == 2:
+            user_query |= (Q(first_name__istartswith=words[0]) & Q(last_name__istartswith=words[1]))
+    
+    # Get matching users, excluding the current user
+    users = User.objects.filter(user_query).exclude(id=request.user.id).distinct()[:20]
+    
+    # Debug output
+    print(f"Search found {users.count()} results for query '{query}'")
+    
+    results = []
+    for user in users:
+        # Format full name
+        full_name = f"{user.first_name} {user.last_name}".strip()
+        
+        results.append({
+            'id': user.id,
+            'username': user.username,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'full_name': full_name,
+            'profile_picture': user.profile_picture if hasattr(user, 'profile_picture') else '',
+        })
+    
+    return Response({"results": results}, status=status.HTTP_200_OK)

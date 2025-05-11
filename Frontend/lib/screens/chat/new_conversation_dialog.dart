@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For text direction controls
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
+import 'package:software_graduation_project/utils/text_utils.dart'; // Import text utilities
 
 class NewConversationDialog extends StatefulWidget {
   final Function(int) onConversationCreated;
@@ -15,28 +18,107 @@ class NewConversationDialog extends StatefulWidget {
 }
 
 class _NewConversationDialogState extends State<NewConversationDialog> {
-  final TextEditingController _recipientController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final ChatApiService _chatApiService = ChatApiService();
   final AuthService _authService = AuthService();
   bool _isLoading = false;
+  bool _isSearching = false;
   String _errorMessage = '';
+  List<Map<String, dynamic>> _searchResults = [];
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
-    _recipientController.dispose();
+    _debounceTimer?.cancel();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _startConversation() async {
-    final recipient = _recipientController.text.trim();
+  // Handle search input with debounce
+  void _onSearchChanged() {
+    // Cancel any previous timer
+    if (_debounceTimer?.isActive ?? false) {
+      _debounceTimer!.cancel();
+    }
 
-    if (recipient.isEmpty) {
+    // Get the current search text
+    final searchText = _searchController.text;
+
+    // Log the search text for debugging
+    print('Search text changed: "$searchText" (${searchText.length} chars)');
+
+    // Set a new debounce timer
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      // Always search with the latest text from the controller
+      final currentText = _searchController.text;
+      print('Debounce timer triggered. Current text: "$currentText"');
+      _performSearch(currentText);
+    });
+  }
+
+  // Search for users
+  Future<void> _performSearch(String query) async {
+    // Allow searching with spaces - don't trim the query here
+    if (query.length < 2) {
       setState(() {
-        _errorMessage =
-            'الرجاء إدخال اسم المستخدم أو البريد الإلكتروني للمستلم';
+        _searchResults = [];
+        _isSearching = false;
       });
       return;
     }
+
+    setState(() {
+      _isSearching = true;
+      _errorMessage = '';
+    });
+
+    try {
+      final results = await _chatApiService.searchUsers(query);
+
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'حدث خطأ أثناء البحث';
+          _isSearching = false;
+        });
+      }
+      print('Error searching users: $e');
+    }
+  }
+
+  // Format and display name correctly with Arabic support
+  String _formatName(Map<String, dynamic> user) {
+    final String firstName = user['first_name'] ?? '';
+    final String lastName = user['last_name'] ?? '';
+    final String username = user['username'] ?? '';
+
+    String displayName = '';
+
+    if (firstName.isNotEmpty || lastName.isNotEmpty) {
+      displayName = '$firstName $lastName'.trim();
+    } else {
+      displayName = username;
+    }
+
+    // Ensure proper encoding of Arabic text
+    return TextUtils.fixArabicEncoding(displayName);
+  }
+
+  Future<void> _startConversation(Map<String, dynamic> user) async {
+    final String username = user['username'];
 
     setState(() {
       _isLoading = true;
@@ -44,99 +126,45 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
     });
 
     try {
-      // Start conversation in Django with empty message
-      final result = await _chatApiService.startConversation(recipient, '');
+      // Start conversation with this user
+      final result = await _chatApiService.startConversation(username, '');
 
-      // Debug log the actual response
-      print('Server response: $result');
-
-      // Validate the server response properly
-      if (result == null) {
-        throw Exception('لم يتم استلام رد من الخادم');
-      }
-
-      // Extract the conversation ID, handling nested structure
+      // Extract the conversation ID
       int? conversationId;
-
-      // Check if the response has a nested 'conversation' object
       if (result.containsKey('conversation') && result['conversation'] is Map) {
         final conversation = result['conversation'] as Map;
-
-        // Extract ID from the conversation object
-        if (conversation.containsKey('id')) {
-          conversationId = conversation['id'] is int
-              ? conversation['id']
-              : int.tryParse(conversation['id'].toString());
-        }
-      } else {
-        // Fall back to looking for ID at top level
-        if (result.containsKey('id') && result['id'] != null) {
-          conversationId = result['id'] is int
-              ? result['id']
-              : int.tryParse(result['id'].toString());
-        } else if (result.containsKey('conversation_id') &&
-            result['conversation_id'] != null) {
-          conversationId = result['conversation_id'] is int
-              ? result['conversation_id']
-              : int.tryParse(result['conversation_id'].toString());
-        }
+        conversationId = conversation['id'] is int
+            ? conversation['id']
+            : int.tryParse(conversation['id'].toString());
+      } else if (result.containsKey('id')) {
+        conversationId = result['id'] is int
+            ? result['id']
+            : int.tryParse(result['id'].toString());
       }
 
-      // If we still couldn't find a valid conversation ID
       if (conversationId == null) {
-        throw Exception(
-            'رد غير صالح من الخادم: لا يوجد معرف للمحادثة.\nمحتوى الرد: ${result.toString()}');
+        throw Exception('لم يتم العثور على معرف المحادثة في الرد');
       }
 
-      // First close the dialog to prevent context issues
+      // First close the dialog
       Navigator.of(context).pop();
 
-      // Then notify the parent widget to handle navigation
-      // This is done after pop() to avoid context issues
+      // Then notify parent to handle navigation
       widget.onConversationCreated(conversationId);
     } catch (e) {
-      print('Error in startConversation: $e');
+      print('Error starting conversation: $e');
       if (mounted) {
         setState(() {
+          _isLoading = false;
           String errorString = e.toString().toLowerCase();
 
-          // Check for self-messaging error specifically
           if (errorString
                   .contains('cannot start a conversation with yourself') ||
               errorString.contains('conversation with yourself')) {
             _errorMessage = 'لا يمكنك بدء محادثة مع نفسك';
-          }
-          // Handle 400 status code with missing user error message
-          else if (errorString.contains('400') &&
-              errorString.contains('user not found')) {
-            _errorMessage = 'المستخدم غير موجود';
-          }
-          // Handle generic 400 self-message error (could be just the status code)
-          else if (errorString.contains('400')) {
-            _errorMessage = 'لا يمكنك بدء محادثة مع نفسك';
           } else {
-            // Clean up the error message
-            String errorMsg = errorString;
-            errorMsg = errorMsg.replaceAll('exception:', '').trim();
-            // Remove HTTP status codes
-            errorMsg = errorMsg.replaceAll(RegExp(r'[0-9]{3}'), '').trim();
-            // Remove common JSON formatting
-            errorMsg = errorMsg.replaceAll(RegExp(r'[\{\}"\\]'), '').trim();
-            errorMsg = errorMsg.replaceAll('error:', '').trim();
-
-            if (errorMsg.isEmpty) {
-              _errorMessage = 'فشل في بدء المحادثة';
-            } else {
-              _errorMessage = 'فشل في بدء المحادثة: $errorMsg';
-            }
+            _errorMessage = 'فشل في بدء المحادثة';
           }
-        });
-      }
-    } finally {
-      // Always reset loading state even if there was an error
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
         });
       }
     }
@@ -144,21 +172,55 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('محادثة جديدة', textAlign: TextAlign.center),
-      content: SingleChildScrollView(
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        width: MediaQuery.of(context).size.width * 0.9,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Text(
+              'بحث عن مستخدم',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+
+            // Search field with improved RTL support
             TextField(
-              controller: _recipientController,
-              decoration: const InputDecoration(
-                labelText: 'اسم المستخدم أو البريد الإلكتروني',
-                border: OutlineInputBorder(),
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'اكتب اسم أو اسم مستخدم',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _searchResults = [];
+                          });
+                        },
+                      )
+                    : null,
+                // Better RTL handling
+                hintTextDirection: TextDirection.rtl,
               ),
               textAlign: TextAlign.right,
               textDirection: TextDirection.rtl,
             ),
+
+            // Error message
             if (_errorMessage.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -166,33 +228,87 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
                   _errorMessage,
                   style: const TextStyle(color: Colors.red),
                   textAlign: TextAlign.center,
+                  textDirection: TextDirection.rtl,
                 ),
               ),
+
+            // Search results
+            Flexible(
+              child: _isSearching
+                  ? const Center(child: CircularProgressIndicator())
+                  : _searchResults.isEmpty && _searchController.text.length >= 2
+                      ? Center(
+                          child: Text(
+                            'لا توجد نتائج',
+                            textDirection: TextDirection.rtl,
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final user = _searchResults[index];
+                            final String username = user['username'] ?? '';
+                            final String displayName = _formatName(user);
+                            final String? profilePicture =
+                                user['profile_picture'];
+                            final bool hasFullName =
+                                (user['first_name'] != null &&
+                                        user['first_name'].isNotEmpty) ||
+                                    (user['last_name'] != null &&
+                                        user['last_name'].isNotEmpty);
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              leading: CircleAvatar(
+                                backgroundColor: AppStyles.lightPurple,
+                                backgroundImage: profilePicture != null &&
+                                        profilePicture.isNotEmpty
+                                    ? NetworkImage(profilePicture)
+                                    : null,
+                                child: profilePicture == null ||
+                                        profilePicture.isEmpty
+                                    ? Text(
+                                        displayName.isNotEmpty
+                                            ? displayName[0]
+                                            : '?',
+                                        style:
+                                            TextStyle(color: AppStyles.white),
+                                      )
+                                    : null,
+                              ),
+                              title: Text(
+                                displayName,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
+                                textDirection: TextDirection.rtl,
+                              ),
+                              subtitle: Text(
+                                '@$username',
+                                textDirection:
+                                    TextDirection.ltr, // Username is LTR
+                              ),
+                              onTap: () => _startConversation(user),
+                            );
+                          },
+                        ),
+            ),
+
+            // Cancel button
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey[300],
+                ),
+                child: const Text('إلغاء'),
+              ),
+            ),
           ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('إلغاء'),
-        ),
-        ElevatedButton(
-          onPressed: _isLoading ? null : _startConversation,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppStyles.buttonColor,
-          ),
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(
-                  'بدء المحادثة',
-                  style: TextStyle(color: AppStyles.white),
-                ),
-        ),
-      ],
     );
   }
 }

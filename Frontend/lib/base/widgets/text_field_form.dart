@@ -34,6 +34,7 @@ class CustomTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       style: TextStyle(color: AppStyles.white),
+      textAlign: TextAlign.center, // Set text alignment to center
       validator: validator,
       onChanged: onChanged,
       decoration: InputDecoration(
@@ -41,8 +42,12 @@ class CustomTextField extends StatelessWidget {
         fillColor: AppStyles.txtFieldColor,
         hintText: hintText,
         labelText: labelText,
-        hintStyle: TextStyle(color: AppStyles.white.withOpacity(0.7)),
-        labelStyle: TextStyle(color: AppStyles.white),
+        hintStyle: TextStyle(
+          color: AppStyles.white.withOpacity(0.7),
+        ),
+        labelStyle: TextStyle(
+          color: AppStyles.white,
+        ),
         suffixIcon: suffixIcon,
         prefixIcon: prefixIcon,
         border: OutlineInputBorder(
@@ -64,6 +69,8 @@ class CustomTextField extends StatelessWidget {
         ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        // Ensure alignment is consistent when prefix/suffix icons are present
+        alignLabelWithHint: true,
       ),
     );
   }

@@ -368,10 +368,12 @@ class _AllChatsPageState extends State<AllChatsPage> {
                     },
                   ),
                 ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: _showNewConversationDialog,
         backgroundColor: AppStyles.buttonColor,
-        child: const Icon(Icons.message),
+        label: const Text('محادثة جديدة'),
+        icon: const Icon(Icons.message),
+        tooltip: 'بدء محادثة جديدة',
       ),
     );
   }
