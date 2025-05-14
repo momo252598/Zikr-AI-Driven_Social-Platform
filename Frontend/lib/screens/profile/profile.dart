@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/models/user.dart';
@@ -486,41 +487,52 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   // User's posts section with improved styling
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: double.infinity,
-                            padding: EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(
-                                  color: AppStyles.purple.withOpacity(0.3),
-                                  width: 2,
+                    child: Center(
+                      // Center the content
+                      child: ConstrainedBox(
+                        // Add constraint box
+                        constraints: BoxConstraints(
+                          maxWidth: kIsWeb
+                              ? 700
+                              : double.infinity, // Limit width on web
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: AppStyles.purple.withOpacity(0.3),
+                                      width: 2,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  _isOwnProfile
+                                      ? 'منشوراتي'
+                                      : 'منشورات ${_user!.name}',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppStyles.purple,
+                                  ),
+                                  textDirection: ui.TextDirection.rtl,
+                                  textAlign: TextAlign.right,
                                 ),
                               ),
-                            ),
-                            child: Text(
-                              _isOwnProfile
-                                  ? 'منشوراتي'
-                                  : 'منشورات ${_user!.name}',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppStyles.purple,
-                              ),
-                              textDirection: ui.TextDirection.rtl,
-                              textAlign: TextAlign.right,
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
 
-                  // Posts content with RTL direction
+                  // Posts content with RTL direction and width constraint
                   _isLoadingPosts
                       ? SliverToBoxAdapter(
                           child: Center(
@@ -557,23 +569,35 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ),
                             )
-                          : SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final post = _userPosts![index];
-                                  return Directionality(
-                                    textDirection: ui.TextDirection.rtl,
-                                    child: PostCard(
-                                      post: post,
-                                      onLike: _likePost,
-                                      onComment: _showCommentsSheet,
-                                      onUserTap:
-                                          _navigateToUserProfile, // Add this line
-                                      useRtlText: true,
-                                    ),
-                                  );
-                                },
-                                childCount: _userPosts!.length,
+                          : SliverToBoxAdapter(
+                              child: Center(
+                                // Center the ListView
+                                child: ConstrainedBox(
+                                  // Add constraint box
+                                  constraints: BoxConstraints(
+                                    maxWidth: kIsWeb
+                                        ? 700
+                                        : double.infinity, // Limit width on web
+                                  ),
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: NeverScrollableScrollPhysics(),
+                                    itemCount: _userPosts!.length,
+                                    itemBuilder: (context, index) {
+                                      final post = _userPosts![index];
+                                      return Directionality(
+                                        textDirection: ui.TextDirection.rtl,
+                                        child: PostCard(
+                                          post: post,
+                                          onLike: _likePost,
+                                          onComment: _showCommentsSheet,
+                                          onUserTap: _navigateToUserProfile,
+                                          useRtlText: true,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
                               ),
                             ),
 

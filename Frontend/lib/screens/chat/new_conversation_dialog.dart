@@ -172,12 +172,19 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if we're on web-sized screen
+    final isWeb = MediaQuery.of(context).size.width > 600;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
+        width: isWeb
+            ? MediaQuery.of(context).size.width *
+                0.4 // Smaller percentage on web
+            : MediaQuery.of(context).size.width * 0.9,
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.7,
+          maxWidth: 500, // Maximum width for web
+          maxHeight: MediaQuery.of(context).size.height * (isWeb ? 0.6 : 0.7),
         ),
         padding: const EdgeInsets.all(16),
         child: Column(

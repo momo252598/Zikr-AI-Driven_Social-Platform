@@ -7,9 +7,12 @@ import 'package:software_graduation_project/services/quran_service.dart'; // Imp
 import 'package:software_graduation_project/skeleton.dart'; // Import Quran screen
 import 'package:software_graduation_project/screens/quran/quran_page.dart'; // Import Quran page
 import 'package:software_graduation_project/screens/chat/all_chats.dart'; // Import All Chats screen
+import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart'; // Import Browser Chat Layout
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // Import kIsWeb for platform detection
 import 'package:quran/quran.dart'; // Add this import for getPageData function
 
 class HomePage extends StatefulWidget {
@@ -371,22 +374,26 @@ class _HomePageState extends State<HomePage> {
       }
     } catch (e) {
       print('Error getting surah name for navigation: $e');
-    }
-
-    // Navigate to the last read page with the QuranViewPage
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => QuranViewPage(
-          pageNumber: pageNumber,
-          jsonData: jsonData,
-          shouldHighlightText: false,
-          highlightVerse: "",
-          isWeb: false,
-          initialSurahName: surahName, // Pass the surah name
+    } // Check if we're in web mode
+    if (kIsWeb) {
+      // For web, use Skeleton to navigate to Quran tab with the specified page
+      Skeleton.navigateToQuran(context, initialPage: pageNumber);
+    } else {
+      // For mobile, navigate to the last read page with the QuranViewPage
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => QuranViewPage(
+            pageNumber: pageNumber,
+            jsonData: jsonData,
+            shouldHighlightText: false,
+            highlightVerse: "",
+            isWeb: false,
+            initialSurahName: surahName, // Pass the surah name
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -468,7 +475,7 @@ class _HomePageState extends State<HomePage> {
                     // Updates for Quran card
                     _buildQuranFeatureCard(context, standardCardWidth),
                     const SizedBox(width: 12),
-                    // Add chat feature card
+                    // Mobile navigation remains the same - goes to AllChatsPage
                     _buildFeatureCard(context, Icons.chat, "الدردشة",
                         AppStyles.lightPurple, standardCardWidth,
                         onTap: () => Navigator.push(
@@ -506,8 +513,10 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildWebLayout(
       BuildContext context, double screenWidth, ScreenSize screenSize) {
-    // Calculate a standard card width for web
-    final standardCardWidth = 150.0;
+    // Calculate a standard card width based on screen size
+    final double featureCardWidth = screenSize == ScreenSize.desktop
+        ? 150.0
+        : 130.0; // Reduced sizes for web
 
     return Column(
       children: [
@@ -515,18 +524,18 @@ class _HomePageState extends State<HomePage> {
         _buildWelcomeWidget(context),
         const SizedBox(height: 20),
 
-        // Two-column layout for wider screens
+        // Two-column layout with different organization
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left column - Prayer section
+            // Left column - Prayer and Zikr sections stacked vertically
             Expanded(
               flex: 5,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Prayer section
                   Padding(
-                    // Update padding to include right side
                     padding:
                         const EdgeInsets.only(left: 20, right: 20, bottom: 10),
                     child: Text(
@@ -540,14 +549,14 @@ class _HomePageState extends State<HomePage> {
                   ),
                   _buildPrayerWidget(),
 
-                  // Shortcuts section
+                  // Zikr section - Moved here from right column
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "اختصارات سريعة",
+                          _isMorningTime() ? "ذكر الصباح" : "ذكر المساء",
                           style: TextStyle(
                             color: AppStyles.purple,
                             fontSize:
@@ -556,47 +565,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         const SizedBox(height: 15),
-                        // Replace Wrap widget with horizontally scrollable view
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              // Update Quran card for web layout
-                              _buildQuranFeatureCard(context, standardCardWidth,
-                                  isWeb: true),
-                              const SizedBox(width: 15),
-                              _buildFeatureCard(
-                                  context,
-                                  Icons.volunteer_activism,
-                                  "الأذكار",
-                                  AppStyles.purple,
-                                  standardCardWidth,
-                                  isWeb: true),
-                              const SizedBox(width: 15),
-                              _buildFeatureCard(
-                                  context,
-                                  Icons.compass_calibration,
-                                  "القبلة",
-                                  AppStyles.darkPurple,
-                                  standardCardWidth,
-                                  isWeb: true),
-                              const SizedBox(width: 15),
-                              // Add chat feature card for web layout
-                              _buildFeatureCard(
-                                  context,
-                                  Icons.chat_bubble_outline,
-                                  "الدردشة",
-                                  AppStyles.lightPurple,
-                                  standardCardWidth,
-                                  isWeb: true,
-                                  onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const AllChatsPage()))),
-                            ],
-                          ),
-                        ),
+                        _buildZikrFutureWidget(),
                       ],
                     ),
                   ),
@@ -604,7 +573,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // Right column - Zikr section
+            // Right column - Shortcuts displayed in a grid
             Expanded(
               flex: 4,
               child: Padding(
@@ -613,7 +582,7 @@ class _HomePageState extends State<HomePage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _isMorningTime() ? "ذكر الصباح" : "ذكر المساء",
+                      "اختصارات سريعة",
                       style: TextStyle(
                         color: AppStyles.purple,
                         fontSize: screenSize == ScreenSize.desktop ? 22 : 20,
@@ -621,7 +590,33 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     const SizedBox(height: 15),
-                    _buildZikrFutureWidget(),
+                    // Grid layout for shortcuts instead of horizontal scroll
+                    Wrap(
+                      spacing: 15,
+                      runSpacing: 15,
+                      children: [
+                        // Update Quran card for web layout
+                        _buildQuranFeatureCard(context, featureCardWidth,
+                            isWeb: true),
+                        // Chat feature card - navigate to BrowserChatLayout on web
+                        _buildFeatureCard(context, Icons.chat_bubble_outline,
+                            "الدردشة", AppStyles.lightPurple, featureCardWidth,
+                            isWeb: true,
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const BrowserChatLayout()))), // Changed to BrowserChatLayout
+                        // Azkar feature card
+                        _buildFeatureCard(context, Icons.volunteer_activism,
+                            "الأذكار", AppStyles.purple, featureCardWidth,
+                            isWeb: true),
+                        // Qibla feature card
+                        _buildFeatureCard(context, Icons.compass_calibration,
+                            "القبلة", AppStyles.darkPurple, featureCardWidth,
+                            isWeb: true),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -636,7 +631,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildQuranFeatureCard(BuildContext context, double cardWidth,
       {bool isWeb = false}) {
     // Define a fixed height for the card to match other feature cards
-    final cardHeight = isWeb ? 140.0 : 120.0;
+    // Reduced heights for better proportions on web
+    final cardHeight = isWeb ? 130.0 : 130.0;
 
     return FutureBuilder<List<dynamic>>(
       // Use Future.wait to load both the last read page and Quran data
@@ -686,9 +682,9 @@ class _HomePageState extends State<HomePage> {
               : () => _navigateToLastReadPage(context, lastPage, quranData),
           child: Container(
             width: cardWidth,
-            height: cardHeight, // Set fixed height
+            height: cardHeight, // Use increased height
             padding: EdgeInsets.symmetric(
-              vertical: isWeb ? 20 : 15,
+              vertical: isWeb ? 15 : 12, // Slightly reduced padding
               horizontal: isWeb ? 15 : 5,
             ),
             decoration: BoxDecoration(
@@ -712,7 +708,7 @@ class _HomePageState extends State<HomePage> {
                       )
                     : Icon(Icons.menu_book_rounded,
                         color: AppStyles.lightPurple, size: isWeb ? 36 : 32),
-                SizedBox(height: isWeb ? 12 : 10),
+                SizedBox(height: isWeb ? 8 : 6), // Reduced spacing
                 Text(
                   isLoading ? "جاري التحميل..." : "القرآن الكريم",
                   textAlign: TextAlign.center,
@@ -723,32 +719,34 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 if (!isLoading) ...[
-                  SizedBox(height: isWeb ? 8 : 6),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isWeb ? 10 : 5,
-                      vertical: isWeb ? 5 : 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppStyles.lightPurple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: AppStyles.lightPurple.withOpacity(0.3),
-                        width: 1,
+                  SizedBox(height: isWeb ? 6 : 4), // Reduced spacing
+                  Flexible(
+                    // Wrap in Flexible to prevent overflow
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isWeb ? 10 : 5,
+                        vertical: isWeb ? 4 : 2,
                       ),
-                    ),
-                    child: Text(
-                      surahName.isNotEmpty
-                          ? "متابعة القراءة (${lastPage} - $surahName)"
-                          : "متابعة القراءة (${lastPage})",
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: isWeb ? 2 : 1,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: isWeb
-                            ? 12
-                            : 8.5, // Slightly smaller for mobile to fit text
-                        color: AppStyles.lightPurple,
+                      decoration: BoxDecoration(
+                        color: AppStyles.lightPurple.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppStyles.lightPurple.withOpacity(0.3),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        surahName.isNotEmpty
+                            ? "متابعة القراءة (${lastPage} - $surahName)"
+                            : "متابعة القراءة (${lastPage})",
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: isWeb ? 2 : 1,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize:
+                              isWeb ? 11 : 8, // Slightly smaller font size
+                          color: AppStyles.lightPurple,
+                        ),
                       ),
                     ),
                   ),
@@ -875,7 +873,7 @@ class _HomePageState extends State<HomePage> {
         }
 
         if (nextPrayer == null || closestDiff == null) {
-          return const Center(child: Text("لا توجد صلوات قادمة اليوم"));
+          return const Center(child: Text("حدث خطأ ما"));
         }
 
         return _nextPrayerWidget(nextPrayer, closestDiff);
@@ -912,7 +910,8 @@ class _HomePageState extends State<HomePage> {
       Color color, double cardWidth,
       {bool isWeb = false, VoidCallback? onTap}) {
     // Define a fixed height for the card to match the Quran card
-    final cardHeight = isWeb ? 140.0 : 120.0;
+    // Reduced height for better proportions on web
+    final cardHeight = isWeb ? 120.0 : 120.0;
 
     return GestureDetector(
       onTap: onTap,

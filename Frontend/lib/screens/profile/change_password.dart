@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/services/api_service.dart';
@@ -80,128 +81,145 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 20),
+          : Center(
+              // Center the content
+              child: ConstrainedBox(
+                // Add constraint box
+                constraints: BoxConstraints(
+                  maxWidth: kIsWeb
+                      ? 600
+                      : double.infinity, // Slightly narrower for forms
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
 
-                    // Current Password Field
-                    TextFormField(
-                      controller: _oldPasswordController,
-                      obscureText: _obscureOldPassword,
-                      decoration: InputDecoration(
-                        labelText: 'كلمة المرور الحالية',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureOldPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                        // Current Password Field
+                        TextFormField(
+                          controller: _oldPasswordController,
+                          obscureText: _obscureOldPassword,
+                          textAlign: TextAlign.center, // Center align text
+                          decoration: InputDecoration(
+                            labelText: 'كلمة المرور الحالية',
+                            border: const OutlineInputBorder(),
+                            alignLabelWithHint: true, // Center the hint/label
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureOldPassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureOldPassword = !_obscureOldPassword;
+                                });
+                              },
+                            ),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureOldPassword = !_obscureOldPassword;
-                            });
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء إدخال كلمة المرور الحالية';
+                            }
+                            return null;
                           },
                         ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء إدخال كلمة المرور الحالية';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
-                    // New Password Field
-                    TextFormField(
-                      controller: _newPasswordController,
-                      obscureText: _obscureNewPassword,
-                      decoration: InputDecoration(
-                        labelText: 'كلمة المرور الجديدة',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureNewPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                        // New Password Field
+                        TextFormField(
+                          controller: _newPasswordController,
+                          obscureText: _obscureNewPassword,
+                          textAlign: TextAlign.center, // Center align text
+                          decoration: InputDecoration(
+                            labelText: 'كلمة المرور الجديدة',
+                            border: const OutlineInputBorder(),
+                            alignLabelWithHint: true, // Center the hint/label
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureNewPassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureNewPassword = !_obscureNewPassword;
+                                });
+                              },
+                            ),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureNewPassword = !_obscureNewPassword;
-                            });
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء إدخال كلمة المرور الجديدة';
+                            }
+                            if (value.length < 8) {
+                              return 'كلمة المرور يجب أن تكون على الأقل 8 أحرف';
+                            }
+                            return null;
                           },
                         ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء إدخال كلمة المرور الجديدة';
-                        }
-                        if (value.length < 8) {
-                          return 'كلمة المرور يجب أن تكون على الأقل 8 أحرف';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 20),
+                        const SizedBox(height: 20),
 
-                    // Confirm Password Field
-                    TextFormField(
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirmPassword,
-                      decoration: InputDecoration(
-                        labelText: 'تأكيد كلمة المرور الجديدة',
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
+                        // Confirm Password Field
+                        TextFormField(
+                          controller: _confirmPasswordController,
+                          obscureText: _obscureConfirmPassword,
+                          textAlign: TextAlign.center, // Center align text
+                          decoration: InputDecoration(
+                            labelText: 'تأكيد كلمة المرور الجديدة',
+                            border: const OutlineInputBorder(),
+                            alignLabelWithHint: true, // Center the hint/label
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureConfirmPassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscureConfirmPassword =
+                                      !_obscureConfirmPassword;
+                                });
+                              },
+                            ),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword =
-                                  !_obscureConfirmPassword;
-                            });
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء تأكيد كلمة المرور الجديدة';
+                            }
+                            if (value != _newPasswordController.text) {
+                              return 'كلمات المرور غير متطابقة';
+                            }
+                            return null;
                           },
                         ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء تأكيد كلمة المرور الجديدة';
-                        }
-                        if (value != _newPasswordController.text) {
-                          return 'كلمات المرور غير متطابقة';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 30),
+                        const SizedBox(height: 30),
 
-                    // Submit Button
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: _submitForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppStyles.txtFieldColor,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 15,
+                        // Submit Button
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: _submitForm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppStyles.txtFieldColor,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40,
+                                vertical: 15,
+                              ),
+                            ),
+                            child: Text(
+                              'تغيير كلمة المرور',
+                              style: TextStyle(
+                                  fontSize: 16, color: AppStyles.white),
+                            ),
                           ),
                         ),
-                        child: Text(
-                          'تغيير كلمة المرور',
-                          style:
-                              TextStyle(fontSize: 16, color: AppStyles.white),
-                        ),
-                      ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

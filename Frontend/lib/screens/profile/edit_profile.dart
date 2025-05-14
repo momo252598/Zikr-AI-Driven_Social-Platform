@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:intl/intl.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
@@ -148,117 +149,140 @@ class _EditProfilePageState extends State<EditProfilePage> {
           showBackButton: true),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Username field
-                    TextFormField(
-                      controller: _usernameController,
-                      decoration: const InputDecoration(
-                        labelText: 'اسم المستخدم',
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'الرجاء إدخال اسم المستخدم';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // First name field
-                    TextFormField(
-                      controller: _firstNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'الاسم الأول',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Last name field
-                    TextFormField(
-                      controller: _lastNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'الاسم الأخير',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Phone number field
-                    TextFormField(
-                      controller: _phoneNumberController,
-                      decoration: const InputDecoration(
-                        labelText: 'رقم الهاتف',
-                        border: OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Bio field removed
-
-                    // Birth date picker
-                    ListTile(
-                      title: const Text('تاريخ الميلاد'),
-                      subtitle: Text(_birthDate != null
-                          ? DateFormat('yyyy-MM-dd').format(_birthDate!)
-                          : 'غير محدد'),
-                      trailing: const Icon(Icons.calendar_today),
-                      onTap: () => _selectDate(context),
-                    ),
-                    const Divider(),
-
-                    // Gender selection
-                    const Text(
-                      'الجنس',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('ذكر'),
-                      value: 'ذكر',
-                      groupValue: _gender,
-                      onChanged: (value) {
-                        setState(() {
-                          _gender = value;
-                        });
-                      },
-                    ),
-                    RadioListTile<String>(
-                      title: const Text('أنثى'),
-                      value: 'أنثى',
-                      groupValue: _gender,
-                      onChanged: (value) {
-                        setState(() {
-                          _gender = value;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Submit button
-                    Center(
-                      child: ElevatedButton(
-                        onPressed: _submitForm,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppStyles.txtFieldColor,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 40, vertical: 15),
+          : Center(
+              // Center the content
+              child: ConstrainedBox(
+                // Add constraint box
+                constraints: BoxConstraints(
+                  maxWidth: kIsWeb
+                      ? 600
+                      : double.infinity, // Slightly narrower for forms
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Username field
+                        TextFormField(
+                          controller: _usernameController,
+                          textAlign: TextAlign.center, // Center align text
+                          decoration: const InputDecoration(
+                            labelText: 'اسم المستخدم',
+                            border: OutlineInputBorder(),
+                            // Center the hint/label
+                            alignLabelWithHint: true,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'الرجاء إدخال اسم المستخدم';
+                            }
+                            return null;
+                          },
                         ),
-                        child: Text(
-                          'حفظ التغييرات',
-                          style:
-                              TextStyle(fontSize: 16, color: AppStyles.white),
+                        const SizedBox(height: 16),
+
+                        // First name field
+                        TextFormField(
+                          controller: _firstNameController,
+                          textAlign: TextAlign.center, // Center align text
+                          decoration: const InputDecoration(
+                            labelText: 'الاسم الأول',
+                            border: OutlineInputBorder(),
+                            // Center the hint/label
+                            alignLabelWithHint: true,
+                          ),
                         ),
-                      ),
+                        const SizedBox(height: 16),
+
+                        // Last name field
+                        TextFormField(
+                          controller: _lastNameController,
+                          textAlign: TextAlign.center, // Center align text
+                          decoration: const InputDecoration(
+                            labelText: 'الاسم الأخير',
+                            border: OutlineInputBorder(),
+                            // Center the hint/label
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Phone number field
+                        TextFormField(
+                          controller: _phoneNumberController,
+                          textAlign: TextAlign.center, // Center align text
+                          keyboardType: TextInputType.phone,
+                          decoration: const InputDecoration(
+                            labelText: 'رقم الهاتف',
+                            border: OutlineInputBorder(),
+                            // Center the hint/label
+                            alignLabelWithHint: true,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Bio field removed
+
+                        // Birth date picker
+                        ListTile(
+                          title: const Text('تاريخ الميلاد'),
+                          subtitle: Text(_birthDate != null
+                              ? DateFormat('yyyy-MM-dd').format(_birthDate!)
+                              : 'غير محدد'),
+                          trailing: const Icon(Icons.calendar_today),
+                          onTap: () => _selectDate(context),
+                        ),
+                        const Divider(),
+
+                        // Gender selection
+                        const Text(
+                          'الجنس',
+                          style: TextStyle(fontSize: 16),
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('ذكر'),
+                          value: 'ذكر',
+                          groupValue: _gender,
+                          onChanged: (value) {
+                            setState(() {
+                              _gender = value;
+                            });
+                          },
+                        ),
+                        RadioListTile<String>(
+                          title: const Text('أنثى'),
+                          value: 'أنثى',
+                          groupValue: _gender,
+                          onChanged: (value) {
+                            setState(() {
+                              _gender = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Submit button
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: _submitForm,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppStyles.txtFieldColor,
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 40, vertical: 15),
+                            ),
+                            child: Text(
+                              'حفظ التغييرات',
+                              style: TextStyle(
+                                  fontSize: 16, color: AppStyles.white),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

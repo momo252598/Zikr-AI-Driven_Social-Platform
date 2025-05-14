@@ -5,6 +5,7 @@ import 'package:easy_container/easy_container.dart';
 import 'package:software_graduation_project/screens/quran/quran_page.dart';
 import 'package:software_graduation_project/screens/quran/bookmarks_screen.dart'; // Import bookmarks screen
 import 'package:string_validator/string_validator.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb
 import '../../base/res/styles/app_styles.dart';
 
 class QuranPage2 extends StatefulWidget {
@@ -58,6 +59,7 @@ class _QuranPageState extends State<QuranPage2> {
       MaterialPageRoute(
         builder: (context) => BookmarksScreen(
           jsonData: widget.suraJsonData,
+          isWeb: kIsWeb, // Pass the kIsWeb flag to indicate web platform
         ),
       ),
     );

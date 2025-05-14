@@ -96,7 +96,6 @@ class _QuranViewPageState extends State<QuranViewPage> {
     });
 
     if (widget.shouldHighlightText && widget.highlightVerse.isNotEmpty) {
-      // Parse the verse information immediately
       List<String> verseParts = widget.highlightVerse.split(':');
       if (verseParts.length == 2) {
         setState(() {
@@ -105,26 +104,72 @@ class _QuranViewPageState extends State<QuranViewPage> {
           highlightedVerseNumber = int.tryParse(verseParts[1]);
         });
 
-        // IMMEDIATE: Show the verse bottom sheet right away
-        // Use a minimal delay to ensure the UI has updated with the highlight first
-        Future.delayed(const Duration(milliseconds: 100), () {
-          if (mounted &&
-              highlightedSurahNumber != null &&
-              highlightedVerseNumber != null) {
-            showVerseBottomSheet(
-              context,
-              index,
-              highlightedSurahNumber!,
-              highlightedVerseNumber!,
-              onClose: () {
-                // Keep the verse highlighted after closing
-              },
-            );
-          }
-        });
+        // Only show the web verse popup if not already handled externally
+        if (widget.isWeb &&
+            highlightedSurahNumber != null &&
+            highlightedVerseNumber != null) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              // Calculate the position for the popup
+              final renderBox = richTextKeys[index - 1]
+                  .currentContext
+                  ?.findRenderObject() as RenderBox?;
+              if (renderBox != null) {
+                final position = renderBox.localToGlobal(Offset.zero);
+                final centerPosition = Offset(
+                  position.dx + renderBox.size.width / 2,
+                  position.dy + renderBox.size.height / 4,
+                );
+
+                // Show the web verse popup with verse change callback
+                showWebVersePopup(
+                  context,
+                  index,
+                  highlightedSurahNumber!,
+                  highlightedVerseNumber!,
+                  centerPosition,
+                  onClose: () {
+                    // Clear highlight after popup closes
+                    if (mounted) {
+                      setState(() {
+                        highlightedSurahNumber = null;
+                        highlightedVerseNumber = null;
+                      });
+                    }
+                  },
+                  onVerseChange: (newSurah, newVerse) {
+                    // When verse changes in popup, update highlight on page
+                    if (mounted) {
+                      setState(() {
+                        highlightedSurahNumber = newSurah;
+                        highlightedVerseNumber = newVerse;
+                      });
+                    }
+                  },
+                );
+              }
+            }
+          });
+        } else if (!widget.isWeb) {
+          // For mobile, show the bottom sheet
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted &&
+                highlightedSurahNumber != null &&
+                highlightedVerseNumber != null) {
+              showVerseBottomSheet(
+                context,
+                index,
+                highlightedSurahNumber!,
+                highlightedVerseNumber!,
+                onClose: () {
+                  // Keep the verse highlighted after closing
+                },
+              );
+            }
+          });
+        }
 
         // Continue with the blinking effect for better visibility
-        // Reduce cycles from 4 to 3 for faster completion
         timer = Timer.periodic(const Duration(milliseconds: 350), (timer) {
           if (mounted) {
             setState(() {
@@ -132,13 +177,12 @@ class _QuranViewPageState extends State<QuranViewPage> {
             });
           }
 
-          // After 3 cycles (instead of 4), stop the blinking but keep verse highlighted
+          // After 3 cycles, stop the blinking but keep verse highlighted
           if (timer.tick == 3) {
             if (mounted) {
               setState(() {
                 highlightVerse = "";
                 shouldHighlightText = false;
-                // Keep highlight colors on the verse
               });
             }
             timer.cancel();
@@ -227,6 +271,94 @@ class _QuranViewPageState extends State<QuranViewPage> {
     });
   }
 
+  // Method to highlight a verse and show the web verse popup
+  void highlightAndShowWebVersePopup(int surahNumber, int verseNumber) {
+    if (!widget.isWeb || !mounted) return;
+
+    print("Highlighting verse $surahNumber:$verseNumber in web view");
+
+    // Set the highlight state
+    setState(() {
+      highlightedSurahNumber = surahNumber;
+      highlightedVerseNumber = verseNumber;
+      shouldHighlightText = true;
+      highlightVerse = "$surahNumber:$verseNumber";
+    });
+
+    // Use a delayed future to find the verse element
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+
+      // Find the RenderBox element containing our verse
+      RenderBox? findVerseRenderBox() {
+        // Find matching verse elements
+        for (int i = 0; i < richTextKeys.length; i++) {
+          if (richTextKeys[i].currentContext == null) continue;
+
+          try {
+            // Get the RenderBox for this key
+            final renderBox = richTextKeys[i].currentContext!.findRenderObject()
+                as RenderBox?;
+            if (renderBox != null) {
+              return renderBox;
+            }
+          } catch (e) {
+            print("Error finding render box: $e");
+          }
+        }
+        return null;
+      }
+
+      final renderBox = findVerseRenderBox();
+
+      if (renderBox != null) {
+        final position = renderBox.localToGlobal(Offset.zero);
+
+        // Calculate center position
+        final centerPosition = Offset(position.dx + renderBox.size.width / 2,
+            position.dy + renderBox.size.height / 2);
+
+        // Show web popup with verse change callback
+        showWebVersePopup(
+          context,
+          index,
+          surahNumber,
+          verseNumber,
+          centerPosition,
+          onClose: () {
+            // Clear highlight after popup closes
+            if (mounted) {
+              setState(() {
+                highlightedSurahNumber = null;
+                highlightedVerseNumber = null;
+              });
+            }
+          },
+          onVerseChange: (newSurah, newVerse) {
+            // When verse changes in popup, update highlight on page
+            if (mounted) {
+              setState(() {
+                highlightedSurahNumber = newSurah;
+                highlightedVerseNumber = newVerse;
+              });
+            }
+          },
+        );
+
+        // After a delay, ensure highlighting is stable
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            setState(() {
+              shouldHighlightText = false;
+            });
+          }
+        });
+      } else {
+        print("Could not find verse render box");
+      }
+    });
+  }
+
   // Method to update the user's reading progress
   void _updateReadingProgress() async {
     if (index > 0) {
@@ -288,24 +420,15 @@ class _QuranViewPageState extends State<QuranViewPage> {
   void didUpdateWidget(QuranViewPage oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // If the page number changes, update the controller
     if (oldWidget.pageNumber != widget.pageNumber) {
       setState(() {
         index = widget.pageNumber;
       });
-      // Jump to the new page
       _pageController.jumpToPage(index);
+    }
 
-      // If we're navigating with a highlighted verse
-      if (widget.shouldHighlightText && widget.highlightVerse.isNotEmpty) {
-        // Cancel any existing timers to prevent multiple bottom sheets
-        if (timer != null && timer!.isActive) {
-          timer!.cancel();
-        }
-
-        // Apply the highlight and show bottom sheet
-        highlightVerseFunction();
-      }
+    if (widget.shouldHighlightText && widget.highlightVerse.isNotEmpty) {
+      highlightVerseFunction(); // Highlight and show verse sheet
     }
   }
 
@@ -367,6 +490,8 @@ class _QuranViewPageState extends State<QuranViewPage> {
       MaterialPageRoute(
         builder: (context) => BookmarksScreen(
           jsonData: widget.jsonData,
+          isWeb: widget
+              .isWeb, // Pass the widget.isWeb flag to indicate web platform
         ),
       ),
     );

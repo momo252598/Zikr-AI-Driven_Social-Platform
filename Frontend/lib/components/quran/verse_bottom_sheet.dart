@@ -92,6 +92,10 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
   late String _selectedTafseer; // Changed from initialization to late
   bool _isBookmarked = false; // New state to track bookmark status
   bool _isBookmarkLoading = false; // New state to track bookmark loading state
+  
+  // New state variables to track current verse
+  late int _currentSurahNumber;
+  late int _currentVerseNumber;
 
   // Map of reciter IDs to their Arabic names - added three new reciters
   final Map<String, String> _reciters = {
@@ -113,6 +117,10 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
 
     // Initialize with the last selected tafseer from our static manager
     _selectedTafseer = TafseerManager.lastSelectedTafseer;
+    
+    // Initialize current verse tracking
+    _currentSurahNumber = widget.surahNumber;
+    _currentVerseNumber = widget.verseNumber;
 
     // Set up audio player listeners
     widget.audioPlayer.playerStateStream.listen((state) {
@@ -156,8 +164,8 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
 
       // Check if this verse is in the bookmarks
       final isBookmarked = bookmarks.any((bookmark) =>
-          bookmark.surah == widget.surahNumber &&
-          bookmark.verse == widget.verseNumber);
+          bookmark.surah == _currentSurahNumber &&
+          bookmark.verse == _currentVerseNumber);
 
       if (mounted) {
         setState(() {
@@ -194,11 +202,11 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
       if (_isBookmarked) {
         // Remove from bookmarks
         await quranService.removeBookmark(
-            widget.surahNumber, widget.verseNumber);
+            _currentSurahNumber, _currentVerseNumber);
       } else {
         // Add to bookmarks
         await quranService.addBookmark(
-            widget.surahNumber, widget.verseNumber, widget.pageNumber);
+            _currentSurahNumber, _currentVerseNumber, widget.pageNumber);
       }
 
       if (mounted) {
@@ -275,7 +283,7 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
 
     // Get audio URL
     final audioUrl = getAudioURLByVerse(
-        widget.surahNumber, widget.verseNumber, _selectedReciter);
+        _currentSurahNumber, _currentVerseNumber, _selectedReciter);
 
     // Use a Future to avoid blocking the UI
     Future.microtask(() async {
@@ -504,263 +512,393 @@ class _VerseBottomSheetContentState extends State<VerseBottomSheetContent> {
   void _showTafseerDirectly() {
     showTafseerBottomSheet(
       context,
-      surahNumber: widget.surahNumber,
-      verseNumber: widget.verseNumber,
+      surahNumber: _currentSurahNumber,
+      verseNumber: _currentVerseNumber,
       tafseerEdition: _selectedTafseer,
     );
   }
 
+  // Method to navigate to previous verse
+  void _goToPreviousVerse() {
+    int newVerseNumber = _currentVerseNumber;
+    int newSurahNumber = _currentSurahNumber;
+
+    // If we're at first verse of the surah, go to previous surah's last verse
+    if (newVerseNumber <= 1) {
+      if (newSurahNumber > 1) {
+        newSurahNumber--;
+        newVerseNumber = getVerseCount(newSurahNumber);
+      } else {
+        // Already at first verse of first surah, do nothing
+        return;
+      }
+    } else {
+      // Simply go to previous verse in current surah
+      newVerseNumber--;
+    }
+
+    // Update verse in state
+    setState(() {
+      _currentSurahNumber = newSurahNumber;
+      _currentVerseNumber = newVerseNumber;
+    });
+
+    // Stop any playing audio
+    widget.audioPlayer.stop();
+
+    // Reset playback state
+    setState(() {
+      _isPlaying = false;
+      _isLoading = false;
+    });
+
+    // Refresh bookmark status
+    _checkBookmarkStatus();
+  }
+
+  // Method to navigate to next verse
+  void _goToNextVerse() {
+    int newVerseNumber = _currentVerseNumber;
+    int newSurahNumber = _currentSurahNumber;
+
+    // If we're at last verse of the surah, go to next surah's first verse
+    if (newVerseNumber >= getVerseCount(newSurahNumber)) {
+      if (newSurahNumber < 114) {
+        newSurahNumber++;
+        newVerseNumber = 1;
+      } else {
+        // Already at last verse of last surah, do nothing
+        return;
+      }
+    } else {
+      // Simply go to next verse in current surah
+      newVerseNumber++;
+    }
+
+    // Update verse in state
+    setState(() {
+      _currentSurahNumber = newSurahNumber;
+      _currentVerseNumber = newVerseNumber;
+    });
+
+    // Stop any playing audio
+    widget.audioPlayer.stop();
+
+    // Reset playback state
+    setState(() {
+      _isPlaying = false;
+      _isLoading = false;
+    });
+
+    // Refresh bookmark status
+    _checkBookmarkStatus();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      // Remove fixed height to avoid overflow issues
-      decoration: BoxDecoration(
-        color: AppStyles.bgColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: AppStyles.boxShadow.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      // Use Padding and SafeArea to ensure proper spacing
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min, // Use minimum size to fit content
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.only(top: 10, bottom: 15),
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: AppStyles.greyShaded300,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-
-              // Header with decorative element
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: AppStyles.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppStyles.boxShadow.withOpacity(0.1),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Surah Name
-                    Text(
-                      "سورة ${getSurahNameArabic(widget.surahNumber)}",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: "Taha",
-                        color: AppStyles.darkPurple,
-                      ),
-                    ),
-
-                    // Decorative divider
-                    Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 8, horizontal: 50),
-                      height: 2,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppStyles.trans,
-                            AppStyles.lightPurple,
-                            AppStyles.trans,
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Verse Number
-                    Text(
-                      "الآية ${widget.verseNumber}",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontFamily: "Taha",
-                        color: AppStyles.txtFieldColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Currently selected reciter display
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _reciters[_selectedReciter] ?? '',
-                      style: TextStyle(
-                        fontFamily: "Taha",
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppStyles.darkPurple,
-                      ),
-                    ),
-                    Text(
-                      " :القارئ",
-                      style: TextStyle(
-                        fontFamily: "Taha",
-                        fontSize: 14.sp,
-                        color: AppStyles.greyShaded600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Button to change reciter
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TextButton.icon(
-                  icon: Icon(
-                    Icons.person,
-                    color: AppStyles.txtFieldColor,
-                    size: 18,
-                  ),
-                  label: Text(
-                    "تغيير القارئ",
-                    style: TextStyle(
-                      fontFamily: "Taha",
-                      fontSize: 14.sp,
-                      color: AppStyles.txtFieldColor,
-                    ),
-                  ),
-                  onPressed: _showReciterSelectionDialog,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                  ),
-                ),
-              ),
-
-              // Currently selected tafseer display
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      TafseerService.tafseerEditions[_selectedTafseer] ?? '',
-                      style: TextStyle(
-                        fontFamily: "Taha",
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold,
-                        color: AppStyles.darkPurple,
-                      ),
-                    ),
-                    Text(
-                      " :التفسير",
-                      style: TextStyle(
-                        fontFamily: "Taha",
-                        fontSize: 14.sp,
-                        color: AppStyles.greyShaded600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Button to change tafseer
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: TextButton.icon(
-                  icon: Icon(
-                    Icons.book,
-                    color: AppStyles.txtFieldColor,
-                    size: 18,
-                  ),
-                  label: Text(
-                    "تغيير التفسير",
-                    style: TextStyle(
-                      fontFamily: "Taha",
-                      fontSize: 14.sp,
-                      color: AppStyles.txtFieldColor,
-                    ),
-                  ),
-                  onPressed: _showTafseerSelectionDialog,
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                  ),
-                ),
-              ),
-
-              // Action Buttons Row with proper padding
-              Container(
-                margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Bookmark Button - Updated with dynamic state
-                    _buildIconButton(
-                      icon: _isBookmarkLoading
-                          ? null // No icon during loading
-                          : _isBookmarked
-                              ? Icons.bookmark
-                              : Icons.bookmark_border,
-                      backgroundColor: _isBookmarked
-                          ? AppStyles.green // Green when bookmarked
-                          : AppStyles.lightPurple,
-                      onPressed: _toggleBookmark,
-                      showLoader: _isBookmarkLoading,
-                    ),
-
-                    // Play/Stop Button - Updated with dynamic content
-                    _buildTextButton(
-                      icon: _isLoading
-                          ? null // No icon during loading
-                          : _isPlaying
-                              ? Icons.stop
-                              : Icons.play_arrow,
-                      text: _isLoading
-                          ? "تحميل..." // Shorter text to prevent overflow
-                          : _isPlaying
-                              ? "إيقاف"
-                              : "تشغيل",
-                      backgroundColor: AppStyles.darkPurple,
-                      onPressed: (_isLoading || _isOperationInProgress)
-                          ? null
-                          : _togglePlayPause,
-                      showLoader: _isLoading,
-                    ),
-
-                    // Tafsir Button - Now directly shows the selected tafseer
-                    _buildTextButton(
-                      icon: Icons.menu_book,
-                      text: "التفسير",
-                      backgroundColor: AppStyles.txtFieldColor,
-                      onPressed: _showTafseerDirectly,
-                    ),
-                  ],
-                ),
+    // Get the screen size to calculate better positioning
+    final screenSize = MediaQuery.of(context).size;
+    final contentHeight = screenSize.height * 0.6; // Approximate content height
+    
+    return Stack(
+      children: [
+        Container(
+          width: double.infinity,
+          // Remove fixed height to avoid overflow issues
+          decoration: BoxDecoration(
+            color: AppStyles.bgColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: AppStyles.boxShadow.withOpacity(0.3),
+                spreadRadius: 2,
+                blurRadius: 10,
+                offset: const Offset(0, -2),
               ),
             ],
           ),
+          // Use Padding and SafeArea to ensure proper spacing
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min, // Use minimum size to fit content
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 10, bottom: 15),
+                      width: 40,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppStyles.greyShaded300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+
+                  // Header with decorative element
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: AppStyles.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppStyles.boxShadow.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Surah Name
+                        Text(
+                          "سورة ${getSurahNameArabic(_currentSurahNumber)}",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: "Taha",
+                            color: AppStyles.darkPurple,
+                          ),
+                        ),
+
+                        // Decorative divider
+                        Container(
+                          margin: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 50),
+                          height: 2,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppStyles.trans,
+                                AppStyles.lightPurple,
+                                AppStyles.trans,
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Verse Number
+                        Text(
+                          "الآية ${_currentVerseNumber}",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontFamily: "Taha",
+                            color: AppStyles.txtFieldColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Currently selected reciter display
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _reciters[_selectedReciter] ?? '',
+                          style: TextStyle(
+                            fontFamily: "Taha",
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppStyles.darkPurple,
+                          ),
+                        ),
+                        Text(
+                          " :القارئ",
+                          style: TextStyle(
+                            fontFamily: "Taha",
+                            fontSize: 14.sp,
+                            color: AppStyles.greyShaded600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Button to change reciter
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: TextButton.icon(
+                      icon: Icon(
+                        Icons.person,
+                        color: AppStyles.txtFieldColor,
+                        size: 18,
+                      ),
+                      label: Text(
+                        "تغيير القارئ",
+                        style: TextStyle(
+                          fontFamily: "Taha",
+                          fontSize: 14.sp,
+                          color: AppStyles.txtFieldColor,
+                        ),
+                      ),
+                      onPressed: _showReciterSelectionDialog,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                      ),
+                    ),
+                  ),
+
+                  // Currently selected tafseer display
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          TafseerService.tafseerEditions[_selectedTafseer] ?? '',
+                          style: TextStyle(
+                            fontFamily: "Taha",
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                            color: AppStyles.darkPurple,
+                          ),
+                        ),
+                        Text(
+                          " :التفسير",
+                          style: TextStyle(
+                            fontFamily: "Taha",
+                            fontSize: 14.sp,
+                            color: AppStyles.greyShaded600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Button to change tafseer
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    child: TextButton.icon(
+                      icon: Icon(
+                        Icons.book,
+                        color: AppStyles.txtFieldColor,
+                        size: 18,
+                      ),
+                      label: Text(
+                        "تغيير التفسير",
+                        style: TextStyle(
+                          fontFamily: "Taha",
+                          fontSize: 14.sp,
+                          color: AppStyles.txtFieldColor,
+                        ),
+                      ),
+                      onPressed: _showTafseerSelectionDialog,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                      ),
+                    ),
+                  ),
+
+                  // Action Buttons Row with proper padding
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        // Bookmark Button - Updated with dynamic state
+                        _buildIconButton(
+                          icon: _isBookmarkLoading
+                              ? null // No icon during loading
+                              : _isBookmarked
+                                  ? Icons.bookmark
+                                  : Icons.bookmark_border,
+                          backgroundColor: _isBookmarked
+                              ? AppStyles.green // Green when bookmarked
+                              : AppStyles.lightPurple,
+                          onPressed: _toggleBookmark,
+                          showLoader: _isBookmarkLoading,
+                        ),
+
+                        // Play/Stop Button - Updated with dynamic content
+                        _buildTextButton(
+                          icon: _isLoading
+                              ? null // No icon during loading
+                              : _isPlaying
+                                  ? Icons.stop
+                                  : Icons.play_arrow,
+                          text: _isLoading
+                              ? "تحميل..." // Shorter text to prevent overflow
+                              : _isPlaying
+                                  ? "إيقاف"
+                                  : "تشغيل",
+                          backgroundColor: AppStyles.darkPurple,
+                          onPressed: (_isLoading || _isOperationInProgress)
+                              ? null
+                              : _togglePlayPause,
+                          showLoader: _isLoading,
+                        ),
+
+                        // Tafsir Button - Now directly shows the selected tafseer
+                        _buildTextButton(
+                          icon: Icons.menu_book,
+                          text: "التفسير",
+                          backgroundColor: AppStyles.txtFieldColor,
+                          onPressed: _showTafseerDirectly,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
+        
+        // Left navigation button (NEXT verse in RTL) - positioned vertically centered
+        Positioned(
+          left: 15,
+          top: contentHeight * 0.35, // Lower position for better vertical centering
+          child: _buildNavigationButton(
+            Icons.arrow_back_ios_rounded,
+            _goToNextVerse,
+          ),
+        ),
+
+        // Right navigation button (PREVIOUS verse in RTL) - positioned vertically centered
+        Positioned(
+          right: 15,
+          top: contentHeight * 0.35, // Lower position for better vertical centering
+          child: _buildNavigationButton(
+            Icons.arrow_forward_ios_rounded,
+            _goToPreviousVerse,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to build navigation buttons
+  Widget _buildNavigationButton(IconData icon, VoidCallback onPressed) {
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        color: AppStyles.txtFieldColor.withOpacity(0.9),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppStyles.boxShadow.withOpacity(0.3),
+            spreadRadius: 1,
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: AppStyles.white, size: 16),
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/models/user.dart';
@@ -58,160 +59,199 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Get the screen width to determine layout
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWideScreen = kIsWeb && screenWidth > 768;
+
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
       appBar: const CustomAppBar(
           title: 'إعدادات الحساب', showAddButton: false, showBackButton: true),
-      body: SingleChildScrollView(
+      body: Center(
+        // Center the content
+        child: ConstrainedBox(
+          // Add constraint box
+          constraints: BoxConstraints(
+            maxWidth: kIsWeb ? 1000 : double.infinity, // Wider for web layout
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Use Row for web layout or Column for mobile
+                if (isWideScreen)
+                  // Web layout - cards side by side
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Personal Information Card
+                      Expanded(
+                        flex: 1,
+                        child: _buildPersonalInfoCard(),
+                      ),
+                      const SizedBox(width: 16),
+                      // Account Information Card
+                      Expanded(
+                        flex: 1,
+                        child: _buildAccountInfoCard(),
+                      ),
+                    ],
+                  )
+                else
+                  // Mobile layout - cards stacked
+                  Column(
+                    children: [
+                      _buildPersonalInfoCard(),
+                      const SizedBox(height: 16),
+                      _buildAccountInfoCard(),
+                    ],
+                  ),
+
+                // Display Sheikh profile if exists
+                if (_user.userType == 'sheikh' &&
+                    _user.sheikhProfile != null) ...[
+                  const SizedBox(height: 16),
+                  _buildSheikhProfileCard(),
+                ],
+
+                const SizedBox(height: 24),
+
+                // Edit Profile Button
+                Center(
+                  child: Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    alignment: WrapAlignment.center,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: _navigateToEditProfile,
+                        icon: const Icon(Icons.edit),
+                        label: const Text('تعديل الملف الشخصي'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppStyles.txtFieldColor,
+                          foregroundColor: AppStyles.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: _navigateToChangePassword,
+                        icon: const Icon(Icons.lock),
+                        label: const Text('تغيير كلمة المرور'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppStyles.txtFieldColor,
+                          foregroundColor: AppStyles.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Extract card building to separate methods
+  Widget _buildPersonalInfoCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Personal Information Section
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.person, color: AppStyles.txtFieldColor),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'المعلومات الشخصية',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    _buildInfoRow('الاسم الكامل', _user.name),
-                    _buildInfoRow('اسم المستخدم', _user.username),
-                    _buildInfoRow(
-                        'رقم الهاتف',
-                        _user.phoneNumber.isNotEmpty
-                            ? _user.phoneNumber
-                            : 'غير متوفر'),
-                    _buildInfoRow(
-                        'الجنس', _translateGender(_user.gender ?? 'غير محدد')),
-                    _buildInfoRow(
-                        'تاريخ الميلاد', _formatDate(_user.birthDate)),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Account Information Section
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.account_circle,
-                            color: AppStyles.txtFieldColor),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'معلومات الحساب',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    _buildInfoRow('البريد الإلكتروني', _user.email),
-                    _buildInfoRow('نوع المستخدم', _user.userType),
-                    _buildInfoRow(
-                        'الحساب موثق', _user.isVerified ? 'نعم' : 'لا'),
-                    _buildInfoRow(
-                        'تاريخ الإنشاء', _formatDate(_user.createdAt)),
-                    _buildInfoRow(
-                        'آخر تسجيل دخول', _formatDate(_user.lastLogin)),
-                  ],
-                ),
-              ),
-            ),
-
-            // Display Sheikh profile if exists
-            if (_user.userType == 'sheikh' && _user.sheikhProfile != null) ...[
-              const SizedBox(height: 16),
-              Card(
-                elevation: 2,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.mosque, color: AppStyles.purple),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'معلومات الشيخ',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(),
-                      _buildInfoRow('المسجد', _user.sheikhProfile!.mosque),
-                      _buildInfoRow(
-                          'الشهادة', _user.sheikhProfile!.certification),
-                      _buildInfoRow(
-                          'التخصص', _user.sheikhProfile!.specialization),
-                      _buildInfoRow(
-                          'التقييم', '${_user.sheikhProfile!.rating}'),
-                    ],
+            Row(
+              children: [
+                Icon(Icons.person, color: AppStyles.txtFieldColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'المعلومات الشخصية',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-
-            const SizedBox(height: 24),
-
-            // Edit Profile Button
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _navigateToEditProfile,
-                icon: const Icon(Icons.edit),
-                label: const Text('تعديل الملف الشخصي'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppStyles.txtFieldColor,
-                  foregroundColor: AppStyles.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                ),
-              ),
+              ],
             ),
+            const Divider(),
+            _buildInfoRow('الاسم الكامل', _user.name),
+            _buildInfoRow('اسم المستخدم', _user.username),
+            _buildInfoRow('رقم الهاتف',
+                _user.phoneNumber.isNotEmpty ? _user.phoneNumber : 'غير متوفر'),
+            _buildInfoRow(
+                'الجنس', _translateGender(_user.gender ?? 'غير محدد')),
+            _buildInfoRow('تاريخ الميلاد', _formatDate(_user.birthDate)),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 16),
-
-            // Change Password button
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: _navigateToChangePassword,
-                icon: const Icon(Icons.lock),
-                label: const Text('تغيير كلمة المرور'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppStyles.txtFieldColor,
-                  foregroundColor: AppStyles.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+  Widget _buildAccountInfoCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.account_circle, color: AppStyles.txtFieldColor),
+                const SizedBox(width: 8),
+                const Text(
+                  'معلومات الحساب',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
+              ],
             ),
+            const Divider(),
+            _buildInfoRow('البريد الإلكتروني', _user.email),
+            _buildInfoRow('نوع المستخدم', _user.userType),
+            _buildInfoRow('الحساب موثق', _user.isVerified ? 'نعم' : 'لا'),
+            _buildInfoRow('تاريخ الإنشاء', _formatDate(_user.createdAt)),
+            _buildInfoRow('آخر تسجيل دخول', _formatDate(_user.lastLogin)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSheikhProfileCard() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.mosque, color: AppStyles.purple),
+                const SizedBox(width: 8),
+                const Text(
+                  'معلومات الشيخ',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(),
+            _buildInfoRow('المسجد', _user.sheikhProfile!.mosque),
+            _buildInfoRow('الشهادة', _user.sheikhProfile!.certification),
+            _buildInfoRow('التخصص', _user.sheikhProfile!.specialization),
+            _buildInfoRow('التقييم', '${_user.sheikhProfile!.rating}'),
           ],
         ),
       ),

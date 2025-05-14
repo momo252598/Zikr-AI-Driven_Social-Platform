@@ -873,9 +873,11 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     child: TextField(
                       controller: _commentController,
                       textDirection: ui.TextDirection.rtl,
+                      textAlign: TextAlign.center, // Center align text
                       decoration: InputDecoration(
                         hintText: 'أضف تعليقًا...',
                         hintTextDirection: ui.TextDirection.rtl,
+                        // TextField's textAlign property already centers the hint text
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,

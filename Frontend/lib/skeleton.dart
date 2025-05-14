@@ -2,23 +2,19 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:software_graduation_project/screens/chat/chat.dart';
 import 'screens/home/home.dart';
-import 'screens/quran/quran.dart';
 import 'package:software_graduation_project/screens/quran/quran_sura_page.dart';
 import 'screens/prayers/prayers.dart';
-import 'screens/chat/all_chats.dart';
-import 'screens/chat/chat.dart';
 import 'screens/profile/profile.dart';
 import 'screens/community/community.dart';
-import 'screens/community/create_post.dart';
 import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
-import 'package:software_graduation_project/base/res/media.dart';
 import '../../base/res/styles/app_styles.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
-import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart';
 import 'package:software_graduation_project/screens/quran/quran_web/responsive_quran_layout.dart';
+import 'package:software_graduation_project/screens/quran/quran_page.dart'; // Add QuranViewPage import
+import 'package:software_graduation_project/components/quran/web_verse.dart'; // For accessing showWebVersePopup
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
+import 'package:software_graduation_project/services/quran_service.dart';
 
 class Skeleton extends StatefulWidget {
   // We need to make sure the key is properly passed when creating the Skeleton widget
@@ -41,21 +37,251 @@ class Skeleton extends StatefulWidget {
     }
   }
 
+  // Method to navigate to quran tab with optional initial page
+  static void navigateToQuran(BuildContext context, {int initialPage = 1}) {
+    print("Attempting to navigate to quran tab with page: $initialPage");
+    final state = navigatorKey.currentState;
+    if (state != null) {
+      // First make sure we have the right page number before navigation
+      state.navigateToQuranWithPage(initialPage);
+
+      // Update the last read page in QuranService (move this after navigation)
+      if (initialPage > 1) {
+        final quranService = QuranService();
+        // Update in the background, navigation is already done
+        quranService.updateLastReadPage(initialPage).then((_) {
+          print("Last read page updated to: $initialPage");
+        }).catchError((error) {
+          print("Error updating last read page: $error");
+        });
+      }
+
+      print(
+          "Navigation state found, navigated to quran tab with page: $initialPage");
+    } else {
+      print("Navigation state is null - no navigation occurred");
+    }
+  }
+
   @override
   _SkeletonState createState() => _SkeletonState();
 }
 
 class _SkeletonState extends State<Skeleton> {
   var widgetjsonData;
-
+  // Store the last quran page number to pass to ResponsiveQuranLayout
+  int _quranPageNumber = 1;
+  // Create QuranService instance
+  final QuranService _quranService = QuranService();
   // Add a method to navigate to a specific page
   void navigateToTab(int index) {
+    if (_currentIndex != index) {
+      // Set current index first
+      setState(() {
+        _currentIndex = index;
+      });
+
+      // Then, only fetch the latest page if we're navigating to the Quran tab
+      // AND not coming from a direct page navigation (which would set _quranPageNumber directly)
+      if (index == 1 && kIsWeb) {
+        _loadLastReadPage();
+      }
+    }
+  }
+
+  // Track when the page was last manually set
+  DateTime? _lastManualPageUpdateTime;
+
+  // Load the last read page from the QuranService
+  Future<void> _loadLastReadPage() async {
+    try {
+      // Don't fetch new page if we just manually set it within the last second
+      // This prevents API calls from overriding a manually set page number
+      if (_lastManualPageUpdateTime != null &&
+          DateTime.now().difference(_lastManualPageUpdateTime!) <
+              Duration(seconds: 1)) {
+        print(
+            "Skipping page load, recently manually set to: $_quranPageNumber");
+        return;
+      }
+
+      final lastPage = await _quranService.getLastReadPage();
+      setState(() {
+        _quranPageNumber = lastPage;
+        print("Loaded last read page from API: $_quranPageNumber");
+      });
+    } catch (e) {
+      print("Error loading last read page: $e");
+    }
+  } // Method to navigate to quran tab with a specific page
+
+  void navigateToQuranWithPage(int pageNumber) {
+    print("Starting navigation to page: $pageNumber");
+
+    // First set the page number in a separate setState call
     setState(() {
-      _currentIndex = index;
+      _quranPageNumber = pageNumber;
+      _lastManualPageUpdateTime =
+          DateTime.now(); // Record when page was manually set
+    });
+
+    // Then in a separate setState, update the current index
+    // This ensures the page number is already set when the tab changes
+    setState(() {
+      _currentIndex = 1; // 1 is the index for quran
+    });
+
+    print(
+        "Navigated to Quran with specific page: $pageNumber (current value: $_quranPageNumber)");
+  }
+
+  // Variables to track verse to highlight after navigation
+  int? _pendingSurahNumber;
+  int? _pendingVerseNumber;
+  int? _pendingPageNumber;
+  bool _hasPendingHighlight = false;
+
+  // Method to show web verse popup after navigation
+  void showWebVerseAfterNavigation(
+      int surahNumber, int verseNumber, int pageNumber) {
+    if (!kIsWeb) return;
+
+    // Clear any existing highlight first to prevent stacking
+    setState(() {
+      // Reset previous highlights first
+      _hasPendingHighlight = false;
+      _pendingSurahNumber = null;
+      _pendingVerseNumber = null;
+      _pendingPageNumber = null;
+    });
+
+    // Wait a moment to ensure previous state is cleared
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (!mounted) return;
+
+      // Set new highlight parameters
+      setState(() {
+        _pendingSurahNumber = surahNumber;
+        _pendingVerseNumber = verseNumber;
+        _pendingPageNumber = pageNumber;
+        _hasPendingHighlight = true;
+
+        // Make sure we have the correct page number
+        _quranPageNumber = pageNumber;
+        _lastManualPageUpdateTime = DateTime.now();
+      });
+
+      // Clear the highlight flag after a delay to prevent persistent highlighting
+      Future.delayed(Duration(seconds: 1), () {
+        if (!mounted) return;
+        setState(() {
+          _hasPendingHighlight = false;
+        });
+      });
     });
   }
 
-  loadJsonAsset() async {
+  // Schedule a check to find and highlight verse
+  void _scheduleVerseHighlightCheck() {
+    // Use a delayed future to give time for the layout to be built
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (!_hasPendingHighlight) return;
+
+      print(
+          "Attempting to show verse popup for surah: $_pendingSurahNumber, verse: $_pendingVerseNumber");
+
+      // Use a simpler approach - find the first QuranViewPage in the widget tree
+      // and then rely on its built-in mechanisms to find and highlight the verse
+      final context = this.context;
+
+      // Look for a QuranViewPage in the widget tree
+      bool foundQuranPage = false;
+
+      void findQuranPage(Element element) {
+        if (element.widget.toString().contains('QuranViewPage')) {
+          print("Found QuranViewPage widget");
+          foundQuranPage = true;
+
+          // Simulate a tap on the verse
+          // This is a bit of a hack but it's the most reliable way to trigger the popup
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            try {
+              // Try to find a verse element with the right surah and verse
+              // and simulate tapping on it
+              void findAndTapVerseElement(Element element) {
+                // Look for RichText widgets which contain our verse text
+                if (element.widget.toString().contains('RichText')) {
+                  final widgetDesc = element.widget.toString();
+                  if (widgetDesc.contains('"surah":${_pendingSurahNumber}') ||
+                      widgetDesc.contains(
+                          '${_pendingSurahNumber}:${_pendingVerseNumber}')) {
+                    print("Found verse element, simulating tap");
+
+                    // Get the center position of this element
+                    final renderBox = element.renderObject as RenderBox?;
+                    if (renderBox != null) {
+                      final position = renderBox.localToGlobal(Offset.zero);
+                      final size = renderBox.size;
+
+                      // Calculate center position
+                      final centerPos = Offset(position.dx + size.width / 2,
+                          position.dy + size.height / 2);
+
+                      // Manually show the web verse popup
+                      // Import the showWebVersePopup function at the top of the file
+                      showWebVersePopup(
+                          context,
+                          _pendingPageNumber!,
+                          _pendingSurahNumber!,
+                          _pendingVerseNumber!,
+                          centerPos);
+
+                      // Clear pending highlight
+                      _hasPendingHighlight = false;
+                    }
+                  }
+                }
+
+                // Continue the search
+                element.visitChildren(findAndTapVerseElement);
+              }
+
+              // Start the search
+              (context as Element).visitChildren(findAndTapVerseElement);
+            } catch (e) {
+              print("Error while trying to show verse popup: $e");
+            }
+          });
+        }
+
+        // If we haven't found it yet, continue searching
+        if (!foundQuranPage) {
+          element.visitChildren(findQuranPage);
+        }
+      }
+
+      // Start the search from the context
+      (context as Element).visitChildren(findQuranPage);
+
+      // If we couldn't find it on the first try, try again after a delay (up to 5 times)
+      if (!foundQuranPage) {
+        _retryCount++;
+        if (_retryCount < 5) {
+          print("QuranViewPage not found, retrying... ($_retryCount/5)");
+          _scheduleVerseHighlightCheck();
+        } else {
+          // Give up after 5 retries
+          print("Failed to find QuranViewPage after 5 retries");
+          _hasPendingHighlight = false;
+          _retryCount = 0;
+        }
+      }
+    });
+  }
+
+  int _retryCount = 0;
+
+  Future<void> loadJsonAsset() async {
     final String jsonString =
         await rootBundle.loadString('assets/utils/surahs.json');
     var data = jsonDecode(jsonString);
@@ -66,18 +292,25 @@ class _SkeletonState extends State<Skeleton> {
 
   @override
   void initState() {
-    loadJsonAsset(); // initialize JSON on startup
     super.initState();
+    loadJsonAsset(); // initialize JSON on startup
+    if (kIsWeb) {
+      _loadLastReadPage(); // load the last read page on startup
+    }
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   int _currentIndex = 0;
-
   List<Widget> get _pages {
     return [
       const HomePage(),
       widgetjsonData != null
           ? kIsWeb
-              ? ResponsiveQuranLayout(suraJsonData: widgetjsonData)
+              ? _buildQuranLayoutWithLatestPageNumber()
               : QuranPage2(suraJsonData: widgetjsonData)
           : const Center(child: CircularProgressIndicator()),
       const PrayersPage(),
@@ -85,6 +318,19 @@ class _SkeletonState extends State<Skeleton> {
       const CommunityPage(),
       const ProfilePage(),
     ];
+  }
+
+  // Helper method to ensure we're using the most up-to-date page number
+  Widget _buildQuranLayoutWithLatestPageNumber() {
+    return ResponsiveQuranLayout(
+      key: ValueKey<int>(_quranPageNumber),
+      suraJsonData: widgetjsonData,
+      initialPage: _quranPageNumber,
+      shouldHighlightText: _hasPendingHighlight, // Pass highlight flag
+      highlightVerse: _hasPendingHighlight
+          ? "${_pendingSurahNumber}:${_pendingVerseNumber}"
+          : "", // Pass highlight verse
+    );
   }
 
   @override
@@ -120,38 +366,113 @@ class _SkeletonState extends State<Skeleton> {
       },
       child: Directionality(
         textDirection: TextDirection.rtl, // set app to RTL
-        child: Scaffold(
-          appBar: const CustomAppBar(
-              title: 'ذكر', showAddButton: false, showBackButton: false),
-          body: _pages[
-              _currentIndex], // Directly use the page without extra wrappers
-          bottomNavigationBar: BottomNavigationBar(
-            backgroundColor: AppStyles.bgColor,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: AppStyles.lightPurple,
-            unselectedItemColor:
-                AppStyles.grey, // Updated color for better visibility
-            currentIndex: _currentIndex,
-            onTap: (index) {
-              setState(() {
-                _currentIndex = index;
-              });
+        child: kIsWeb
+            ? _buildWebLayout(context) // Web layout with vertical navbar
+            : _buildMobileLayout(context), // Mobile layout with bottom navbar
+      ),
+    );
+  }
+
+  // Web layout with vertical navigation
+  Widget _buildWebLayout(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppBar(
+          title: 'ذكر', showAddButton: false, showBackButton: false),
+      body: Row(
+        children: [
+          // Left vertical navigation bar with improved styling
+          NavigationRail(
+            backgroundColor: AppStyles.bgColor, // Distinct background color
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (index) {
+              // Use our navigateToTab method to handle page changes properly
+              if (_currentIndex != index) {
+                navigateToTab(index);
+              }
             },
-            items: const [
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.home), label: 'الرئيسية'),
-              BottomNavigationBarItem(
-                  icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
-              BottomNavigationBarItem(
-                  icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
-              BottomNavigationBarItem(
-                  icon: Icon(FlutterIslamicIcons.solidCommunity),
-                  label: 'المجتمع'),
-              BottomNavigationBarItem(
-                  icon: Icon(Icons.person), label: 'الحساب'),
+            labelType: NavigationRailLabelType.all,
+            useIndicator: true,
+            indicatorColor: AppStyles.lightPurple.withOpacity(0.2),
+            elevation: 4, // Add some elevation for better visual separation
+            minWidth: 85, // Ensure enough width for the content
+            minExtendedWidth: 100, // Width when extended
+            destinations: const [
+              NavigationRailDestination(
+                padding: EdgeInsets.symmetric(
+                    vertical: 12), // Add spacing between items
+                icon: Icon(Icons.home),
+                label: Text('الرئيسية'),
+              ),
+              NavigationRailDestination(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                icon: Icon(FlutterIslamicIcons.solidQuran2),
+                label: Text('القرآن'),
+              ),
+              NavigationRailDestination(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                icon: Icon(FlutterIslamicIcons.solidPrayer),
+                label: Text('الصلاة'),
+              ),
+              NavigationRailDestination(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                icon: Icon(FlutterIslamicIcons.solidCommunity),
+                label: Text('المجتمع'),
+              ),
+              NavigationRailDestination(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                icon: Icon(Icons.person),
+                label: Text('الحساب'),
+              ),
             ],
+            selectedIconTheme:
+                IconThemeData(color: AppStyles.lightPurple, size: 28),
+            unselectedIconTheme: IconThemeData(color: AppStyles.grey, size: 24),
+            selectedLabelTextStyle: TextStyle(
+                color: AppStyles.lightPurple, fontWeight: FontWeight.bold),
+            unselectedLabelTextStyle: TextStyle(color: AppStyles.grey),
           ),
-        ),
+          // Divider for visual separation
+          VerticalDivider(
+            thickness: 1,
+            width: 1,
+            color: AppStyles.greyShaded300,
+          ),
+          // Content area
+          Expanded(
+            child: _pages[_currentIndex],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Mobile layout with bottom navigation
+  Widget _buildMobileLayout(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppBar(
+          title: 'ذكر', showAddButton: false, showBackButton: false),
+      body:
+          _pages[_currentIndex], // Directly use the page without extra wrappers
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: AppStyles.bgColor,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: AppStyles.lightPurple,
+        unselectedItemColor: AppStyles.grey,
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          // Use our navigateToTab method to handle page changes properly
+          navigateToTab(index);
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
+          BottomNavigationBarItem(
+              icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
+          BottomNavigationBarItem(
+              icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
+          BottomNavigationBarItem(
+              icon: Icon(FlutterIslamicIcons.solidCommunity), label: 'المجتمع'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
+        ],
       ),
     );
   }

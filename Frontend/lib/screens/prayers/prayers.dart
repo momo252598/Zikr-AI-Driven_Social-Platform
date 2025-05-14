@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:core'; // Explicitly import core library for DateTime
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter/material.dart';
 import 'package:location/location.dart';
@@ -13,7 +14,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Model for Prayer
 class Prayer {
   final String name;
-  final DateTime time;
+  // Ensure we're using the correct DateTime type
+  DateTime time;
   Prayer({required this.name, required this.time});
 }
 
@@ -265,14 +267,23 @@ class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
       futurePrayers = getPrayerTimes();
     });
 
-    // If notifications are enabled, reschedule them with the new prayer times
-    if (_notificationsEnabled) {
+    // If notifications are enabled and NOT on web, reschedule them with the new prayer times
+    if (_notificationsEnabled && !kIsWeb) {
       await _scheduleNotifications();
     }
   }
 
   // Initialize notification service
   Future<void> _initNotifications() async {
+    // Skip notification initialization on web
+    if (kIsWeb) {
+      setState(() {
+        _notificationsEnabled = false;
+      });
+      debugPrint('Notifications disabled on web platform');
+      return;
+    }
+
     debugPrint('Initializing prayer notifications');
     await _notificationService.initialize();
     final hasPermissions = await _notificationService.checkPermissions();
@@ -292,6 +303,14 @@ class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
 
   // Request notification permissions
   Future<void> _requestNotificationPermissions() async {
+    // Prevent requesting notifications on web
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("الإشعارات غير متاحة في الموقع")),
+      );
+      return;
+    }
+
     debugPrint('Requesting notification permissions for prayer times');
     final granted =
         await _notificationService.requestPermissions(context: context);
@@ -317,62 +336,75 @@ class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
 
   // Schedule notifications for all prayers
   Future<void> _scheduleNotifications() async {
-    final prayers = await futurePrayers;
-    // Cancel any existing notifications before scheduling new ones
-    await _notificationService.cancelAllNotifications();
-
-    // Schedule notifications for each prayer
-    for (int i = 0; i < prayers.length; i++) {
-      final prayer = prayers[i];
-      if (prayer.time.isAfter(DateTime.now())) {
-        await _notificationService.schedulePrayerNotification(
-          id: i + 1, // Use index+1 as ID
-          title: "حان وقت ${prayer.name}",
-          body: "لا تنسى الصلاة في وقتها",
-          scheduledTime: prayer.time,
-          minutesBefore: 1, // Notify 1 minute before prayer time
-        );
-        // Add debug message to verify scheduling
-        debugPrint(
-            'Scheduled notification for ${prayer.name} at ${prayer.time} (1 minute before)');
-      }
+    // Don't schedule notifications on web platform
+    if (kIsWeb) {
+      debugPrint('Skipping notification scheduling on web platform');
+      return;
     }
-    debugPrint('All prayer notifications scheduled successfully');
+
+    try {
+      final prayers = await futurePrayers;
+      // Cancel any existing notifications before scheduling new ones
+      await _notificationService.cancelAllNotifications();
+
+      // Schedule notifications for each prayer
+      for (int i = 0; i < prayers.length; i++) {
+        final prayer = prayers[i];
+        if (prayer.time.isAfter(DateTime.now())) {
+          await _notificationService.schedulePrayerNotification(
+            id: i + 1, // Use index+1 as ID
+            title: "حان وقت ${prayer.name}",
+            body: "لا تنسى الصلاة في وقتها",
+            scheduledTime: prayer.time,
+            minutesBefore: 1, // Notify 1 minute before prayer time
+          );
+          // Add debug message to verify scheduling
+          debugPrint(
+              'Scheduled notification for ${prayer.name} at ${prayer.time} (1 minute before)');
+        }
+      }
+      debugPrint('All prayer notifications scheduled successfully');
+    } catch (e) {
+      debugPrint('Error scheduling notifications: $e');
+      // Silently fail if there's an error
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
-      // Add notification toggle button in app bar
+      // Add notification toggle button in app bar only for mobile
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(
-              _notificationsEnabled
-                  ? Icons.notifications_active
-                  : Icons.notifications_off,
-              color: AppStyles.purple,
+          // Only show notification button on mobile
+          if (!kIsWeb)
+            IconButton(
+              icon: Icon(
+                _notificationsEnabled
+                    ? Icons.notifications_active
+                    : Icons.notifications_off,
+                color: AppStyles.purple,
+              ),
+              onPressed: () {
+                if (_notificationsEnabled) {
+                  _notificationService.cancelAllNotifications();
+                  setState(() {
+                    _notificationsEnabled = false;
+                    _saveNotificationPreference(false);
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("تم إلغاء تفعيل الإشعارات")),
+                  );
+                } else {
+                  _requestNotificationPermissions();
+                }
+              },
+              tooltip:
+                  _notificationsEnabled ? 'إلغاء التنبيهات' : 'تفعيل التنبيهات',
             ),
-            onPressed: () {
-              if (_notificationsEnabled) {
-                _notificationService.cancelAllNotifications();
-                setState(() {
-                  _notificationsEnabled = false;
-                  _saveNotificationPreference(false);
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("تم إلغاء تفعيل الإشعارات")),
-                );
-              } else {
-                _requestNotificationPermissions();
-              }
-            },
-            tooltip:
-                _notificationsEnabled ? 'إلغاء التنبيهات' : 'تفعيل التنبيهات',
-          ),
         ],
       ),
       body: Column(
@@ -415,125 +447,125 @@ class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
               },
             ),
           ),
-          // Test buttons for notifications
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-            decoration: BoxDecoration(
-              color: AppStyles.whitePurple,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "إختبار الإشعارات",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppStyles.purple,
+          // Test buttons for notifications - only show on mobile
+          if (!kIsWeb)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppStyles.whitePurple,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, -2),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () async {
-                        // Request notification permissions if not already granted
-                        final hasPermissions = await _notificationService
-                            .requestPermissions(context: context);
-                        if (!hasPermissions) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text("يرجى منح الإذن للإشعارات أولاً")),
-                          );
-                          return;
-                        }
-
-                        // Show immediate test notification
-                        await _notificationService.showNotification(
-                          id: 100,
-                          title: "إشعار إختباري",
-                          body: "هذا إشعار لإختبار نظام الإشعارات. الآن!",
-                        );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  "تم إرسال إشعار اختباري. ستظهر خلال ثوانٍ")),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppStyles.purple,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("إشعار فوري"),
-                    ),
-                    ElevatedButton(
-                      onPressed: () async {
-                        // Request notification permissions if not already granted
-                        final hasPermissions = await _notificationService
-                            .requestPermissions(context: context);
-                        if (!hasPermissions) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content:
-                                    Text("يرجى منح الإذن للإشعارات أولاً")),
-                          );
-                          return;
-                        }
-
-                        // Schedule a delayed notification (testing background notification handling)
-                        await _notificationService.schedulePrayerNotification(
-                          id: 101,
-                          title: "إشعار تجريبي مجدول",
-                          body:
-                              "هذا إشعار مجدول لإختبار نظام الإشعارات في الخلفية",
-                          scheduledTime:
-                              DateTime.now().add(const Duration(seconds: 10)),
-                          minutesBefore: 0,
-                        );
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text(
-                                  "تم جدولة إشعار اختباري. سيظهر بعد ١٠ ثوانٍ")),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppStyles.lightPurple,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text("إشعار بعد ١٠ ثوانٍ"),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () async {
-                    await _notificationService.cancelAllNotifications();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("تم إلغاء جميع الإشعارات")),
-                    );
-                  },
-                  child: Text(
-                    "إلغاء كل الإشعارات",
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    "إختبار الإشعارات",
                     style: TextStyle(
-                      color: AppStyles.purple,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
+                      color: AppStyles.purple,
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () async {
+                          // Request notification permissions if not already granted
+                          final hasPermissions = await _notificationService
+                              .requestPermissions(context: context);
+                          if (!hasPermissions) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text("يرجى منح الإذن للإشعارات أولاً")),
+                            );
+                            return;
+                          }
+
+                          // Show immediate test notification
+                          await _notificationService.showNotification(
+                            id: 100,
+                            title: "إشعار إختباري",
+                            body: "هذا إشعار لإختبار نظام الإشعارات. الآن!",
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    "تم إرسال إشعار اختباري. ستظهر خلال ثوانٍ")),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppStyles.purple,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("إشعار فوري"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () async {
+                          // Request notification permissions if not already granted
+                          final hasPermissions = await _notificationService
+                              .requestPermissions(context: context);
+                          if (!hasPermissions) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content:
+                                      Text("يرجى منح الإذن للإشعارات أولاً")),
+                            );
+                            return;
+                          }
+
+                          // Schedule a delayed notification (testing background notification handling)
+                          await _notificationService.schedulePrayerNotification(
+                            id: 101,
+                            title: "إشعار تجريبي مجدول",
+                            body:
+                                "هذا إشعار مجدول لإختبار نظام الإشعارات في الخلفية",
+                            scheduledTime:
+                                DateTime.now().add(const Duration(seconds: 10)),
+                            minutesBefore: 0,
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text(
+                                    "تم جدولة إشعار اختباري. سيظهر بعد ١٠ ثوانٍ")),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppStyles.lightPurple,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("إشعار بعد ١٠ ثوانٍ"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () async {
+                      await _notificationService.cancelAllNotifications();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("تم إلغاء جميع الإشعارات")),
+                      );
+                    },
+                    child: Text(
+                      "إلغاء كل الإشعارات",
+                      style: TextStyle(
+                        color: AppStyles.purple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );
