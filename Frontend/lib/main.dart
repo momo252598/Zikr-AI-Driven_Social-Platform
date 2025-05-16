@@ -16,6 +16,8 @@ import 'package:software_graduation_project/utils/safe_animation_controller.dart
 import 'package:software_graduation_project/services/notification_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
+// Import forgot password screen
+import 'package:software_graduation_project/screens/forgot_password/forgot_password.dart';
 
 // Initialize the notification plugin early for background handling
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
@@ -133,6 +135,7 @@ class MyApp extends StatelessWidget {
               '/skeleton': (context) =>
                   Skeleton(key: Skeleton.navigatorKey), // Move key here
               '/signup': (context) => const SignUpScreen(),
+              '/forgot-password': (context) => const ForgotPasswordScreen(),
               // Other routes...
             },
           ),

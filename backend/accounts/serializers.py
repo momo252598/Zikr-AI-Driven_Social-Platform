@@ -179,3 +179,24 @@ class PublicUserProfileSerializer(serializers.ModelSerializer):
         if obj.first_name or obj.last_name:
             return f"{obj.first_name} {obj.last_name}".strip()
         return obj.username
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    """Serializer for requesting a password reset"""
+    email = serializers.EmailField(required=True)
+
+class VerifyResetCodeSerializer(serializers.Serializer):
+    """Serializer for verifying a password reset code"""
+    email = serializers.EmailField(required=True)
+    token = serializers.CharField(required=True)
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """Serializer for resetting a password"""
+    email = serializers.EmailField(required=True)
+    token = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True, validators=[validate_password])
+    confirm_password = serializers.CharField(required=True)
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "كلمة المرور وتأكيدها غير متطابقان."})
+        return attrs

@@ -149,18 +149,18 @@ class RegisterView(generics.CreateAPIView):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
     
     def send_activation_email(self, user, code):
-        subject = 'Verify Your Account'
+        subject = 'تأكيد حسابك'
         
         # Plain text version as fallback
         text_message = f"""
-Hi {user.username},
+مرحبًا {user.username}،
 
-Your account verification code is: {code}
+رمز تأكيد حسابك هو: {code}
 
-This code will expire in 24 hours.
+ستنتهي صلاحية هذا الرمز بعد 24 ساعة.
 
-Thanks,
-Your App Team
+شكرًا،
+فريق ذكر
 """
         
         # HTML version with CSS styling
@@ -221,22 +221,22 @@ Your App Team
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">Your App</div>
+            <div class="logo">ذكر</div>
         </div>
         <div class="content">
-            <h2>Hi {user.username},</h2>
-            <p>Thank you for registering! Please use the following code to verify your account:</p>
+            <h2>مرحبًا {user.username}،</h2>
+            <p>شكرًا للتسجيل! الرجاء استخدام الرمز التالي لتأكيد حسابك:</p>
             
             <div class="verification-code">{code}</div>
             
-            <p>This code will expire in 24 hours.</p>
+            <p>ستنتهي صلاحية هذا الرمز بعد 24 ساعة.</p>
             
-            <p>If you didn't create an account, you can safely ignore this email.</p>
+            <p>إذا لم تقم بإنشاء حساب، يمكنك تجاهل هذا البريد الإلكتروني.</p>
             
-            <p>Best regards,<br>Your App Team</p>
+            <p>مع أطيب التحيات،<br>فريق ذكر</p>
         </div>
         <div class="footer">
-            <p>&copy; {timezone.now().year} Your App. All rights reserved.</p>
+            <p>&copy; {timezone.now().year} ذكر. جميع الحقوق محفوظة.</p>
         </div>
     </div>
 </body>
@@ -349,18 +349,18 @@ def resend_verification_code(request):
         AccountActivationToken.objects.create(user=user, token=code)
         
         # Send the email
-        subject = 'Verify Your Account'
+        subject = 'تأكيد حسابك'
         
         # Plain text version
         text_message = f"""
-Hi {user.username},
+مرحبًا {user.username}،
 
-Your account verification code is: {code}
+رمز تأكيد حسابك هو: {code}
 
-This code will expire in 24 hours.
+ستنتهي صلاحية هذا الرمز بعد 24 ساعة.
 
-Thanks,
-Your App Team
+شكرًا،
+فريق ذكر
 """
         
         # HTML version with CSS styling
@@ -421,22 +421,22 @@ Your App Team
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">Your App</div>
+            <div class="logo">ذكر</div>
         </div>
         <div class="content">
-            <h2>Hi {user.username},</h2>
-            <p>You requested a new verification code. Please use the following code to verify your account:</p>
+            <h2>مرحبًا {user.username}،</h2>
+            <p>لقد طلبت رمز تأكيد جديد. الرجاء استخدام الرمز التالي لتأكيد حسابك:</p>
             
             <div class="verification-code">{code}</div>
             
-            <p>This code will expire in 24 hours.</p>
+            <p>ستنتهي صلاحية هذا الرمز بعد 24 ساعة.</p>
             
-            <p>If you didn't request this code, you can safely ignore this email.</p>
+            <p>إذا لم تطلب هذا الرمز، يمكنك تجاهل هذا البريد الإلكتروني.</p>
             
-            <p>Best regards,<br>Your App Team</p>
+            <p>مع أطيب التحيات،<br>فريق ذكر</p>
         </div>
         <div class="footer">
-            <p>&copy; {timezone.now().year} Your App. All rights reserved.</p>
+            <p>&copy; {timezone.now().year} ذكر. جميع الحقوق محفوظة.</p>
         </div>
     </div>
 </body>

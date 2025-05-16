@@ -226,6 +226,22 @@ class _SignInFormState extends State<SignInForm> {
                       ),
                     ),
               const SizedBox(height: 20),
+              // Add Forgot Password link
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, '/forgot-password');
+                },
+                child: Text(
+                  'نسيت كلمة المرور؟',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppStyles.txtFieldColor,
+                    fontSize: 13,
+                    fontFamily: 'Poppins',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
             ],
           ),
         ),
