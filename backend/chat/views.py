@@ -92,8 +92,7 @@ def start_conversation(request):
                 firebase_id=message_firebase_id,
                 content_preview=initial_message[:97] + '...' if len(initial_message) > 100 else initial_message
             )
-        
-        # Update the conversation's timestamp
+          # Update the conversation's timestamp
         conversation.updated_at = timezone.now()
         conversation.save()
         
@@ -108,6 +107,15 @@ def start_conversation(request):
         if message_firebase_id:
             response_data["message_firebase_id"] = message_firebase_id
             response_data["message_sent_to_firebase"] = False
+            
+            # Send notification to the recipient for the initial message
+            from .firebase_utils import send_message_notification
+            send_message_notification(
+                recipient_id=recipient.id,
+                sender_name=request.user.username,
+                message_content=initial_message,
+                conversation_id=conversation.firebase_id
+            )
         
         return Response(response_data, status=status.HTTP_201_CREATED)
     
@@ -159,6 +167,17 @@ def add_message(request, conversation_id):
     # Update conversation timestamp
     conversation.updated_at = timezone.now()
     conversation.save()
+    
+    # Send notification to other participants
+    other_participants = conversation.participants.exclude(id=request.user.id)
+    for recipient in other_participants:
+        from .firebase_utils import send_message_notification
+        send_message_notification(
+            recipient_id=recipient.id,
+            sender_name=request.user.username,
+            message_content=content,
+            conversation_id=conversation.firebase_id
+        )
     
     serializer = MessageSerializer(message)
     return Response(serializer.data, status=status.HTTP_201_CREATED)

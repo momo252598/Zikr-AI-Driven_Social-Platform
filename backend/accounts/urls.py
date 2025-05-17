@@ -1,6 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from accounts.views import verify_account, resend_verification_code, logout_view, update_profile, change_password, get_user_public_profile, check_auth, search_users
+from accounts.views import verify_account, resend_verification_code, logout_view, update_profile, change_password, get_user_public_profile, check_auth, search_users, register_fcm_token
 from .views import RegisterView, LoginView
 from .password_reset_views import request_password_reset, verify_reset_code, reset_password
 
@@ -16,6 +16,7 @@ urlpatterns = [
     path('user-profile/<int:user_id>/', get_user_public_profile, name='user-public-profile'),
     path('check-auth/', check_auth, name='check-auth'),
     path('search/', search_users, name='search-users'),
+    path('register-fcm-token/', register_fcm_token, name='register-fcm-token'),
     
     # Password reset endpoints
     path('request-password-reset/', request_password_reset, name='request-password-reset'),

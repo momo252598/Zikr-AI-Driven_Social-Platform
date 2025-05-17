@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/models/user.dart';
+import 'package:software_graduation_project/utils/verification_badge.dart'; // Import for sheikh badges
 import 'package:intl/intl.dart';
 import 'package:software_graduation_project/screens/profile/edit_profile.dart';
 import 'package:software_graduation_project/screens/profile/change_password.dart';
@@ -389,13 +390,24 @@ class _ProfilePageState extends State<ProfilePage> {
                                           : null,
                                     ),
                                     SizedBox(height: 10),
-                                    Text(
-                                      _user!.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 18,
-                                        color: AppStyles.purple,
-                                      ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          _user!.name,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 18,
+                                            color: AppStyles.purple,
+                                          ),
+                                        ),
+                                        // Show verification badge for sheikh users
+                                        if (_user!.userType == 'sheikh')
+                                          const VerificationBadge(
+                                            isVerifiedSheikh: true,
+                                            size: 16.0,
+                                          ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -447,13 +459,24 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             SizedBox(height: 10),
-                            Text(
-                              _user!.name,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: AppStyles.purple,
-                              ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _user!.name,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18,
+                                    color: AppStyles.purple,
+                                  ),
+                                ),
+                                // Show verification badge for sheikh users
+                                if (_user!.userType == 'sheikh')
+                                  const VerificationBadge(
+                                    isVerifiedSheikh: true,
+                                    size: 16.0,
+                                  ),
+                              ],
                             ),
                             // Add chat button only when viewing other profiles in overlay mode
                             if (!_isOwnProfile && widget.isOverlay)

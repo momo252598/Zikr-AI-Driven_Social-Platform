@@ -13,6 +13,7 @@ import 'package:software_graduation_project/services/global_notification_manager
 import 'package:software_graduation_project/services/message_notification_service.dart'; // Import message notification service
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
 import 'package:software_graduation_project/screens/profile/profile.dart'; // Import ProfilePage
+import 'package:software_graduation_project/services/chat_notification_helper.dart'; // Import chat notification helper
 
 class ChatPage extends StatefulWidget {
   final int chatId;
@@ -59,7 +60,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   List<Animation<double>> _dotAnimations = [];
 
   int? contactUserId; // Add variable to store contact's user ID
-
   @override
   void initState() {
     super.initState();
@@ -75,10 +75,20 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     _initNotifications();
 
     // Set this page as active
-    _isPageActive = true;
-
-    // Register as active conversation with notification manager
+    _isPageActive =
+        true; // Register as active conversation with notification manager
     GlobalNotificationManager().setActiveConversationId(widget.chatId);
+
+    // Mark as active conversation for chat notifications right away with Django ID
+    ChatNotificationHelper()
+        .setActiveConversation(null, djangoId: widget.chatId);
+
+    // Once chat data is loaded, update with Firebase ID
+    if (chatData != null && chatData!['firebase_id'] != null) {
+      ChatNotificationHelper().setActiveConversation(
+          chatData!['firebase_id'].toString(),
+          djangoId: widget.chatId);
+    }
   }
 
   // Initialize notification service
@@ -260,10 +270,11 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     if (chatData != null && chatData!['firebase_id'] != null) {
       _messageNotificationService
           .unsubscribeFromConversation(chatData!['firebase_id']);
-    }
-
-    // Clear active conversation when leaving chat screen
+    } // Clear active conversation when leaving chat screen
     GlobalNotificationManager().clearActiveConversation();
+
+    // Clear chat notification helper state
+    ChatNotificationHelper().clearActiveConversation();
 
     super.dispose();
   }
@@ -346,6 +357,15 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         isLoading = false;
       });
 
+      // Register with ChatNotificationHelper once we have the firebase_id
+      if (conversation['firebase_id'] != null) {
+        ChatNotificationHelper().setActiveConversation(
+            conversation['firebase_id'].toString(),
+            djangoId: widget.chatId);
+        debugPrint(
+            'Registered active conversation ID: ${conversation['firebase_id']}');
+      }
+
       // After loading data and updating state, scroll to bottom
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollToBottom();
@@ -403,6 +423,15 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
           contactName = name;
           isLoading = false;
         });
+
+        // Register with ChatNotificationHelper once we have the firebase_id
+        if (foundChat['firebase_id'] != null) {
+          ChatNotificationHelper().setActiveConversation(
+              foundChat['firebase_id'].toString(),
+              djangoId: widget.chatId);
+          debugPrint(
+              'Registered active conversation ID (local): ${foundChat['firebase_id']}');
+        }
 
         // After loading data and updating state, scroll to bottom
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -466,10 +495,6 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
         .getTypingIndicatorsStream(firebaseId)
         .listen((typingData) {
       if (mounted) {
-        // Store previous typing status to detect changes
-        final hadTypingUsers = typingUsers.isNotEmpty &&
-            typingUsers.keys.any((userId) => userId != currentUserId);
-
         setState(() {
           typingUsers = typingData;
         });

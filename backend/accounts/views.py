@@ -592,7 +592,7 @@ def search_users(request):
         if len(current_word) >= 1:
             print(f"Focusing search on last word: '{current_word}'")
             
-            # If we have multiple words, prioritize matches where the last name starts with the current word
+            # If we have multiple words, prioritize matches where the last name starts with the current_word
             # This is important for Arabic full name searches
             user_query |= Q(last_name__istartswith=current_word)
             
@@ -625,3 +625,21 @@ def search_users(request):
         })
     
     return Response({"results": results}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def register_fcm_token(request):
+    """
+    Register FCM token for the authenticated user
+    """
+    token = request.data.get('token')
+    
+    if not token:
+        return Response({'error': 'FCM token is required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Update the user's FCM token
+    user = request.user
+    user.fcm_token = token
+    user.save()
+    
+    return Response({'success': 'FCM token registered successfully'}, status=status.HTTP_200_OK)

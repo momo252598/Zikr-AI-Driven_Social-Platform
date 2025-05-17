@@ -47,7 +47,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       );
     }
-
     return AppBar(
       automaticallyImplyLeading: showBackButton,
       title: Text(

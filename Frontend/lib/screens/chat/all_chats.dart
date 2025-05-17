@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/res/media.dart';
 import 'package:software_graduation_project/skeleton.dart';
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
+import 'package:software_graduation_project/utils/verification_badge.dart'; // Import for sheikh badges
 import 'chat.dart';
 import 'package:software_graduation_project/components/chat/skeleton_with_chat.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
@@ -23,7 +25,8 @@ class AllChatsPage extends StatefulWidget {
   _AllChatsPageState createState() => _AllChatsPageState();
 }
 
-class _AllChatsPageState extends State<AllChatsPage> {
+class _AllChatsPageState extends State<AllChatsPage>
+    with SingleTickerProviderStateMixin {
   List<Map<String, dynamic>>? _chats;
   bool _isLoading = true;
   String _errorMessage = '';
@@ -31,11 +34,23 @@ class _AllChatsPageState extends State<AllChatsPage> {
   final ChatApiService _chatApiService = ChatApiService();
   final FirebaseService _firebaseService = FirebaseService();
   final AuthService _authService = AuthService();
+  int? _currentUserId; // Store current user ID for badge checks
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
     _loadChats();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -53,11 +68,16 @@ class _AllChatsPageState extends State<AllChatsPage> {
 
   // Replace the existing _ensureProperEncoding function with this improved version
   String _ensureProperEncoding(String text) {
-    return TextUtils.fixArabicEncoding(text);
+    final fixed = TextUtils.fixArabicEncoding(text);
+    // Log for debugging
+    print('Original text: "$text"');
+    print('Fixed text: "$fixed"');
+    return fixed;
   }
 
   Future<void> _loadChats() async {
     try {
+      print('======= LOADING CHATS - ARABIC TEXT DEBUGGING =======');
       setState(() {
         _isLoading = true;
         _errorMessage = '';
@@ -70,10 +90,13 @@ class _AllChatsPageState extends State<AllChatsPage> {
         print("First conversation sample: ${json.encode(conversations[0])}");
       }
 
-      final currentUserId = await _authService.getCurrentUserId();
+      // Get current user ID to identify which participants are not the current user
+      _currentUserId = await _authService.getCurrentUserId();
 
       final processedChats = conversations.map((chat) {
-        String name = chat['name'] ?? '';
+        String name = TextUtils.fixArabicEncoding(chat['name'] ?? '');
+        bool isSheikh =
+            false; // Add flag to track if the other participant is a sheikh
 
         if (chat['participants'] != null && chat['participants'] is List) {
           final participants = chat['participants'] as List;
@@ -81,7 +104,12 @@ class _AllChatsPageState extends State<AllChatsPage> {
             for (var participant in participants) {
               if (participant is Map &&
                   participant.containsKey('id') &&
-                  participant['id'].toString() != currentUserId.toString()) {
+                  participant['id'].toString() != _currentUserId.toString()) {
+                // Check if other participant is a sheikh
+                if (participant.containsKey('user_type')) {
+                  isSheikh = participant['user_type'] == 'sheikh';
+                }
+
                 // Extract name from the participant data
                 if (participant.containsKey('first_name') &&
                     participant.containsKey('last_name')) {
@@ -89,12 +117,15 @@ class _AllChatsPageState extends State<AllChatsPage> {
                   String lastName = participant['last_name'] ?? '';
 
                   if (firstName.isNotEmpty || lastName.isNotEmpty) {
-                    name = '$firstName $lastName'.trim();
+                    name = TextUtils.fixArabicEncoding(
+                        '$firstName $lastName'.trim());
                   } else {
-                    name = participant['username'] ?? 'محادثة';
+                    name = TextUtils.fixArabicEncoding(
+                        participant['username'] ?? 'محادثة');
                   }
                 } else {
-                  name = participant['username'] ?? 'محادثة';
+                  name = TextUtils.fixArabicEncoding(
+                      participant['username'] ?? 'محادثة');
                 }
                 break;
               }
@@ -146,13 +177,13 @@ class _AllChatsPageState extends State<AllChatsPage> {
           }
         }
 
+        // Add the isSheikh flag to the chat object
         return {
-          'id': chat['id'],
-          'name':
-              name.isNotEmpty ? TextUtils.fixArabicEncoding(name) : 'محادثة',
-          'firebase_id': chat['firebase_id'] ?? '',
+          ...chat,
+          'name': name,
           'last_message_text': lastMessageText,
           'timestamp': timestamp,
+          'is_sheikh': isSheikh, // Store if other participant is a sheikh
         };
       }).toList();
 
@@ -241,139 +272,347 @@ class _AllChatsPageState extends State<AllChatsPage> {
     return Scaffold(
       backgroundColor: AppStyles.bgColor,
       appBar: CustomAppBar(
-        title: "جميع الرسائل",
-        showAddButton:
-            false, // Changed from true to false to remove the + button
+        title: TextUtils.fixArabicEncoding("جميع الرسائل"),
+        showAddButton: false,
         showBackButton: true,
         onAddPressed: _showNewConversationDialog,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(AppStyles.lightPurple),
+              ),
+            )
           : (_chats == null || _chats!.isEmpty)
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.message_outlined,
-                        size: 80,
-                        color: AppStyles.lightPurple,
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'لا توجد محادثات بعد',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'ابدأ محادثة جديدة للتواصل مع الآخرين',
-                        textAlign: TextAlign.center,
-                      ),
-                      if (_errorMessage.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            _errorMessage,
-                            style: const TextStyle(color: Colors.red),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      // Removed the ElevatedButton that was here
-                    ],
+              ? _buildEmptyState()
+              : _buildChatsList(),
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                color: AppStyles.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppStyles.lightPurple.withOpacity(0.2),
+                    blurRadius: 15,
+                    spreadRadius: 5,
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadChats,
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    itemCount: _chats!.length,
-                    itemBuilder: (context, index) {
-                      final chat = _chats![index];
-
-                      String messagePreview =
-                          chat['last_message_text'] ?? 'لا توجد رسائل';
-
-                      print(
-                          'Chat ${chat['id']} - Displaying message preview: $messagePreview');
-
-                      DateTime timestamp;
-                      try {
-                        final rawTimestamp = chat['timestamp'];
-                        if (rawTimestamp is int) {
-                          timestamp =
-                              DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
-                        } else {
-                          timestamp = DateTime.parse(rawTimestamp.toString());
-                        }
-                      } catch (e) {
-                        timestamp = DateTime.now();
-                      }
-
-                      final formattedTime =
-                          '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-
-                      final isSelected = widget.selectedChatId == chat['id'];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
-                        child: Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppStyles.darkPurple
-                                  : AppStyles.lightPurple,
-                              width: isSelected ? 2 : 1,
-                            ),
-                          ),
-                          color: isSelected ? AppStyles.whitePurple : null,
-                          elevation: isSelected ? 5 : 3,
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            title: Text(
-                              chat['name'] ?? 'محادثة',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                  ),
-                            ),
-                            subtitle: Text(
-                              messagePreview,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Text(
-                              formattedTime,
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            onTap: () {
-                              if (widget.onChatSelected != null) {
-                                widget.onChatSelected!(chat['id']);
-                              } else {
-                                _navigateToChat(chat['id']);
-                              }
-                            },
-                          ),
-                        ),
-                      );
-                    },
+                ],
+              ),
+              child: Icon(
+                Icons.chat_rounded,
+                size: 60,
+                color: AppStyles.lightPurple,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              TextUtils.fixArabicEncoding('لا توجد محادثات بعد'),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppStyles.darkPurple,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              TextUtils.fixArabicEncoding(
+                  'ابدأ محادثة جديدة للتواصل مع الآخرين'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppStyles.greyShaded600,
+              ),
+            ),
+            if (_errorMessage.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppStyles.red.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _errorMessage,
+                    style: TextStyle(color: AppStyles.red),
+                    textAlign: TextAlign.center,
                   ),
                 ),
-      floatingActionButton: FloatingActionButton.extended(
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatsList() {
+    // Start animation when chats are loaded
+    if (!_animationController.isCompleted) {
+      _animationController.forward();
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadChats,
+      color: AppStyles.lightPurple,
+      child: ListView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        physics: const BouncingScrollPhysics(),
+        itemCount: _chats!.length,
+        itemBuilder: (context, index) {
+          final chat = _chats![index];
+          return _buildChatCard(chat, index);
+        },
+      ),
+    );
+  }
+
+  Widget _buildChatCard(Map<String, dynamic> chat, int index) {
+    // Staggered animation for list items
+    final animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Interval(
+        (index / (_chats?.length ?? 1)) * 0.4,
+        min(1.0, (index / (_chats?.length ?? 1)) * 0.4 + 0.6),
+        curve: Curves.easeOutQuart,
+      ),
+    );
+
+    String messagePreview = chat['last_message_text'] ?? 'لا توجد رسائل';
+
+    DateTime timestamp;
+    try {
+      final rawTimestamp = chat['timestamp'];
+      if (rawTimestamp is int) {
+        timestamp = DateTime.fromMillisecondsSinceEpoch(rawTimestamp);
+      } else {
+        timestamp = DateTime.parse(rawTimestamp.toString());
+      }
+    } catch (e) {
+      timestamp = DateTime.now();
+    }
+
+    final formattedTime =
+        '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+    final isSelected = widget.selectedChatId == chat['id'];
+    final isSheikh = chat['is_sheikh'] == true;
+
+    // Generate only first letter of name for avatar - EDIT #1
+    final String name = (chat['name'] ?? 'محادثة').toString();
+    String initial = '?';
+
+    if (name.isNotEmpty) {
+      initial = name[0].toUpperCase();
+    }
+
+    // Use AppStyles.purple for all avatars - EDIT #2
+    final avatarColor = AppStyles.lightPurple;
+
+    return FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.05, 0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: InkWell(
+              onTap: () {
+                if (widget.onChatSelected != null) {
+                  widget.onChatSelected!(chat['id']);
+                } else {
+                  _navigateToChat(chat['id']);
+                }
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isSelected ? AppStyles.whitePurple : AppStyles.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: isSelected
+                          ? AppStyles.lightPurple.withOpacity(0.3)
+                          : AppStyles.boxShadow.withOpacity(0.1),
+                      blurRadius: isSelected ? 8 : 4,
+                      spreadRadius: isSelected ? 1 : 0,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                  border: Border.all(
+                    color: isSelected
+                        ? AppStyles.lightPurple
+                        : AppStyles.greyShaded300.withOpacity(0.5),
+                    width: isSelected ? 1.5 : 0.5,
+                  ),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Directionality(
+                  textDirection: TextDirection.rtl,
+                  child: Row(
+                    children: [
+                      // Avatar - MODIFIED for single letter and purple color
+                      Hero(
+                        tag: 'avatar_${chat['id']}',
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: avatarColor,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: avatarColor.withOpacity(0.3),
+                                blurRadius: 4,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                            border: Border.all(
+                              color: AppStyles.white,
+                              width: 2,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              initial,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        TextUtils.fixArabicEncoding(name),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: isSelected
+                                              ? FontWeight.bold
+                                              : FontWeight.w600,
+                                          color: isSelected
+                                              ? AppStyles.darkPurple
+                                              : AppStyles.black,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      if (isSheikh)
+                                        Padding(
+                                          padding:
+                                              const EdgeInsets.only(right: 6),
+                                          child: VerificationBadge(
+                                            isVerifiedSheikh: true,
+                                            size: 16.0,
+                                            color: isSelected
+                                                ? AppStyles.darkPurple
+                                                : AppStyles.purple,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppStyles.lightPurple
+                                            .withOpacity(0.15)
+                                        : AppStyles.greyShaded100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    formattedTime,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: isSelected
+                                          ? AppStyles.darkPurple
+                                          : AppStyles.greyShaded600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _ensureProperEncoding(messagePreview),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isSelected
+                                    ? AppStyles.purple
+                                    : AppStyles.greyShaded600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ));
+  }
+
+  Widget _buildFloatingActionButton() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        boxShadow: [
+          BoxShadow(
+            color: AppStyles.buttonColor.withOpacity(0.4),
+            blurRadius: 8,
+            spreadRadius: 2,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: FloatingActionButton.extended(
         onPressed: _showNewConversationDialog,
         backgroundColor: AppStyles.buttonColor,
-        label: const Text('محادثة جديدة'),
-        icon: const Icon(Icons.message),
-        tooltip: 'بدء محادثة جديدة',
+        icon: const Icon(Icons.chat_bubble_outline, size: 20),
+        label: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Text(
+            TextUtils.fixArabicEncoding('محادثة جديدة'),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        elevation: 0,
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/services/firebase_service.dart';
 import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import text utilities
+import 'package:software_graduation_project/utils/verification_badge.dart'; // Import for sheikh badges
 
 class NewConversationDialog extends StatefulWidget {
   final Function(int) onConversationCreated;
@@ -285,11 +286,22 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
                                       )
                                     : null,
                               ),
-                              title: Text(
-                                displayName,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold),
-                                textDirection: TextDirection.rtl,
+                              title: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    displayName,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold),
+                                    textDirection: TextDirection.rtl,
+                                  ),
+                                  // Show verification badge for sheikh users
+                                  if (user['user_type'] == 'sheikh')
+                                    const VerificationBadge(
+                                      isVerifiedSheikh: true,
+                                      size: 14.0,
+                                    ),
+                                ],
                               ),
                               subtitle: Text(
                                 '@$username',

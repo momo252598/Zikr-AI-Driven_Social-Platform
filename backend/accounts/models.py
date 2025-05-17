@@ -23,6 +23,8 @@ class User(AbstractUser):
     is_verified = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     gender = models.CharField(max_length=10, choices=GENDER_CHOICES, blank=True, null=True)
+    fcm_token = models.CharField(max_length=255, blank=True, null=True, 
+                               help_text='Firebase Cloud Messaging token for push notifications')
     
     # Social fields
     followers = models.ManyToManyField('self', symmetrical=False, related_name='following', blank=True)

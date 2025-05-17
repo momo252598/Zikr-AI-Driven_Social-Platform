@@ -1,18 +1,28 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:permission_handler/permission_handler.dart'
     as permission_handler;
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Reference the global instance from main.dart
 import 'package:software_graduation_project/main.dart' as main_app;
+import 'package:software_graduation_project/services/chat_notification_helper.dart';
 
 class NotificationService {
   // Singleton pattern
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
+
+  // Platform channel for native Android notification settings
+  static const platform = MethodChannel(
+      'com.example.software_graduation_project/notification_util');
 
   // Use the globally initialized plugin from main.dart
   FlutterLocalNotificationsPlugin get _notificationsPlugin =>
@@ -23,6 +33,21 @@ class NotificationService {
   // Channel IDs
   static const String prayerChannelId = 'prayer_channel_id';
   static const String messageChannelId = 'message_channel_id';
+  // Setup notification channel through native platform code
+  Future<void> setupNativeNotificationChannel() async {
+    // Skip for web platform
+    if (kIsWeb) {
+      debugPrint('Skipping native notification channel setup on web platform');
+      return;
+    }
+
+    try {
+      await platform.invokeMethod('setupNotificationChannel');
+      debugPrint('Native notification channel setup completed');
+    } catch (e) {
+      debugPrint('Failed to setup native notification channel: $e');
+    }
+  }
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -30,6 +55,9 @@ class NotificationService {
     tz_data.initializeTimeZones();
 
     debugPrint('Initializing notification service');
+
+    // Set up the native notification channel for heads-up display
+    await setupNativeNotificationChannel();
 
     // Create the notification channels for Android
     final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
@@ -47,15 +75,17 @@ class NotificationService {
           // Using default sound instead of custom sound
           playSound: true,
         ),
-      );
-
-      // Message notifications channel
+      ); // Message notifications channel with highest importance for heads-up display
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
           messageChannelId,
           'Messages',
           description: 'Notifications for new messages',
-          importance: Importance.high,
+          importance: Importance.max,
+          playSound: true,
+          showBadge: true,
+          enableVibration: true,
+          enableLights: true,
         ),
       );
 
@@ -132,52 +162,45 @@ class NotificationService {
     required String body,
     String? payload,
   }) async {
+    debugPrint(
+        'showNotification called with ID: $id, Title: $title, Body: $body');
     if (!_isInitialized) {
-      debugPrint(
-          'Initializing notification service for immediate notification');
+      debugPrint('NotificationService not initialized, initializing now.');
       await initialize();
     }
-
-    debugPrint('Showing immediate notification: $title');
-
-    // Create Android notification details
-    const androidDetails = AndroidNotificationDetails(
-      prayerChannelId,
-      'Prayer Times',
-      channelDescription: 'Notifications for prayer times',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'Prayer time notification',
-      // Additional settings for visibility
-      visibility: NotificationVisibility.public,
-      fullScreenIntent: true,
-      category: AndroidNotificationCategory.alarm,
-      // Using default system sound
-      playSound: true,
-    );
-
-    // Create iOS notification details
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    // Combine platform-specific notification details
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
 
     try {
       await _notificationsPlugin.show(
         id,
         title,
         body,
-        notificationDetails,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            prayerChannelId,
+            'General Notifications',
+            channelDescription: 'General notifications for the app',
+            importance: Importance.max,
+            priority: Priority.max,
+            // Additional settings for heads-up notifications
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.message,
+            visibility: NotificationVisibility.public,
+            ticker: 'New Notification',
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 200, 200, 200]),
+            color: const Color(0xFF2196F3), // Material blue color
+            showWhen: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
         payload: payload,
       );
-      debugPrint('Immediate notification sent successfully');
+      debugPrint('Notification shown successfully with ID: $id');
     } catch (e) {
       debugPrint('Error showing notification: $e');
     }
@@ -291,6 +314,46 @@ class NotificationService {
     await _notificationsPlugin.cancel(id);
   }
 
+  // Cleanup old notification metadata to prevent memory leaks
+  Future<void> cleanupOldNotificationData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final now = DateTime.now().millisecondsSinceEpoch;
+
+      // Get all keys that start with "last_notification_"
+      final keys = prefs
+          .getKeys()
+          .where((key) => key.startsWith('last_notification_'))
+          .toList();
+
+      debugPrint('Cleaning up ${keys.length} notification metadata entries');
+
+      // Clean up entries older than 30 minutes
+      for (final key in keys) {
+        try {
+          final data = prefs.getString(key);
+          if (data != null) {
+            final jsonData = json.decode(data);
+            final timestamp = jsonData['timestamp'] as int?;
+
+            if (timestamp != null) {
+              // If older than 30 minutes, remove it
+              if (now - timestamp > 30 * 60 * 1000) {
+                await prefs.remove(key);
+                debugPrint('Removed stale notification data: $key');
+              }
+            }
+          }
+        } catch (e) {
+          // If we can't parse the data, just remove it
+          await prefs.remove(key);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error cleaning up notification data: $e');
+    }
+  }
+
   // Show message notification with message-specific channel
   Future<void> showMessageNotification({
     required int id,
@@ -298,48 +361,98 @@ class NotificationService {
     required String messageContent,
     String? conversationId,
   }) async {
+    debugPrint(
+        'showMessageNotification called with ID: $id, Sender: $senderName, Message: $messageContent, Conv: $conversationId');
     if (!_isInitialized) {
+      debugPrint('NotificationService not initialized, initializing now.');
       await initialize();
     }
 
-    // Create notification title and body from sender and message content
-    final title = senderName;
-    final body = messageContent;
+    // Check if user is currently in this conversation
+    final chatNotificationHelper = ChatNotificationHelper();
+    if (conversationId != null &&
+        chatNotificationHelper.isInConversation(conversationId)) {
+      debugPrint(
+          'User is in conversation $conversationId, skipping notification.');
+      return;
+    } // Check for duplicate notifications with similar content in the foreground
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastNotificationKey =
+          'last_notification_${conversationId ?? "unknown"}';
+      final lastNotificationData = prefs.getString(lastNotificationKey);
 
-    debugPrint('Showing message notification: $title - $messageContent');
+      // Import main app from the global import to check app state
+      final appState = main_app.appState;
+      // Use different time thresholds based on app state
+      final timeThreshold = appState == AppLifecycleState.resumed
+          ? 500
+          : 5000; // 0.5 sec for foreground, 5 sec for background
 
-    // Create Android notification details with message channel
-    final androidDetails = AndroidNotificationDetails(
-      messageChannelId, // Use the message-specific channel
-      'Messages',
-      channelDescription: 'Notifications for new messages',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'New message notification',
-    );
+      if (lastNotificationData != null) {
+        final lastData = json.decode(lastNotificationData);
+        final lastTimestamp = lastData['timestamp'] as int;
+        final lastMessage = lastData['message'] as String;
+        final now = DateTime.now().millisecondsSinceEpoch;
 
-    // Create iOS-specific notification details
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
+        // If we showed a notification for this conversation with same content recently, skip
+        if (now - lastTimestamp < timeThreshold &&
+            lastMessage == messageContent) {
+          debugPrint(
+              'Duplicate notification detected within ${timeThreshold}ms: $conversationId - $messageContent');
+          return;
+        }
+      }
 
-    // Combine platform-specific notification details
-    final notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
+      // Store this notification data to prevent duplicates
+      await prefs.setString(
+          lastNotificationKey,
+          json.encode({
+            'timestamp': DateTime.now().millisecondsSinceEpoch,
+            'message': messageContent,
+          }));
+    } catch (e) {
+      // If there's an error checking for duplicates, continue showing the notification
+      debugPrint('Error checking for duplicate notifications: $e');
+    }
     try {
       await _notificationsPlugin.show(
         id,
-        title,
-        body,
-        notificationDetails,
-        payload: conversationId, // Store conversation ID in the payload
+        senderName,
+        messageContent,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            messageChannelId,
+            'Messages',
+            channelDescription: 'Notifications for new messages',
+            importance: Importance.max,
+            priority: Priority.max,
+            // Enhanced settings specifically for heads-up notifications
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.message,
+            visibility: NotificationVisibility.public,
+            ticker: 'New Message',
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 200, 200, 200]),
+            color: const Color(0xFF2196F3), // Material blue color
+            showWhen: true,
+            // These flags are crucial for heads-up display
+            channelShowBadge: true,
+            autoCancel: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: json.encode({
+          'type': 'chat_message',
+          'conversationId': conversationId,
+        }),
       );
-      debugPrint('Message notification sent successfully');
+      debugPrint('Message notification shown successfully with ID: $id');
     } catch (e) {
       debugPrint('Error showing message notification: $e');
     }

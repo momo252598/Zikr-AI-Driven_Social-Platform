@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/models/user.dart';
+import 'package:software_graduation_project/utils/verification_badge.dart'; // Import for sheikh badges
 import 'package:intl/intl.dart';
 import 'package:software_graduation_project/screens/profile/edit_profile.dart';
 import 'package:software_graduation_project/screens/profile/change_password.dart';
@@ -180,7 +181,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               ],
             ),
             const Divider(),
-            _buildInfoRow('الاسم الكامل', _user.name),
+            _buildInfoRow('الاسم الكامل', _user.name,
+                showBadge: _user.userType == 'sheikh'),
             _buildInfoRow('اسم المستخدم', _user.username),
             _buildInfoRow('رقم الهاتف',
                 _user.phoneNumber.isNotEmpty ? _user.phoneNumber : 'غير متوفر'),
@@ -259,7 +261,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   }
 
   // Helper method to build info rows
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, {bool showBadge = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -277,11 +279,23 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
           ),
           Expanded(
             flex: 3,
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontWeight: FontWeight.w500,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.black87,
+                  ),
+                ),
+                // Show verification badge if needed
+                if (showBadge)
+                  const VerificationBadge(
+                    isVerifiedSheikh: true,
+                    size: 14.0,
+                  ),
+              ],
             ),
           ),
         ],

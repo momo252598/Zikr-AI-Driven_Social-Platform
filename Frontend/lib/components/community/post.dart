@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/screens/profile/profile.dart';
 import 'package:software_graduation_project/services/social_api_service.dart';
+import 'package:software_graduation_project/utils/verification_badge.dart';
 import 'dart:ui' as ui;
 
 /// A reusable widget for displaying social posts
@@ -83,14 +84,26 @@ class PostCard extends StatelessWidget {
                             onTap: onUserTap != null
                                 ? () => onUserTap!(authorDetails)
                                 : null,
-                            child: Text(
-                              (authorDetails != null)
-                                  ? _getDisplayName(authorDetails)
-                                  : "مستخدم غير معروف",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  (authorDetails != null)
+                                      ? _getDisplayName(authorDetails)
+                                      : "مستخدم غير معروف",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                // Display verification badge if user is a sheikh
+                                if (authorDetails != null &&
+                                    authorDetails['user_type'] == 'sheikh')
+                                  const VerificationBadge(
+                                    isVerifiedSheikh: true,
+                                    size: 14.0,
+                                  ),
+                              ],
                             ),
                           ),
                           Text(
@@ -599,12 +612,24 @@ class _CommentsSheetState extends State<CommentsSheet> {
                       children: [
                         GestureDetector(
                           onTap: () => _navigateToUserProfile(authorDetails),
-                          child: Text(
-                            displayName,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                displayName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              // Show verification badge for sheikh users in comments
+                              if (authorDetails != null &&
+                                  authorDetails['user_type'] == 'sheikh')
+                                const VerificationBadge(
+                                  isVerifiedSheikh: true,
+                                  size: 14.0,
+                                ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -667,12 +692,24 @@ class _CommentsSheetState extends State<CommentsSheet> {
                     children: [
                       GestureDetector(
                         onTap: () => _navigateToUserProfile(authorDetails),
-                        child: Text(
-                          displayName,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              displayName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            // Show verification badge for sheikh users in comments
+                            if (authorDetails != null &&
+                                authorDetails['user_type'] == 'sheikh')
+                              const VerificationBadge(
+                                isVerifiedSheikh: true,
+                                size: 14.0,
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
