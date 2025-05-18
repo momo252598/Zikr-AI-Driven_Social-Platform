@@ -11,10 +11,13 @@ import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 import '../../base/res/styles/app_styles.dart';
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:software_graduation_project/screens/quran/quran_web/responsive_quran_layout.dart';
-import 'package:software_graduation_project/screens/quran/quran_page.dart'; // Add QuranViewPage import
+
 import 'package:software_graduation_project/components/quran/web_verse.dart'; // For accessing showWebVersePopup
 import 'package:software_graduation_project/base/widgets/app_bar.dart';
 import 'package:software_graduation_project/services/quran_service.dart';
+import 'package:software_graduation_project/services/unread_messages_service.dart';
+import 'package:software_graduation_project/services/auth_service.dart'; // Add this import
+import 'package:software_graduation_project/screens/admin/sheikh_approve.dart'; // Add this import
 
 class Skeleton extends StatefulWidget {
   // We need to make sure the key is properly passed when creating the Skeleton widget
@@ -73,6 +76,8 @@ class _SkeletonState extends State<Skeleton> {
   int _quranPageNumber = 1;
   // Create QuranService instance
   final QuranService _quranService = QuranService();
+  // Add a flag for admin user
+  bool _isAdminUser = false;
   // Add a method to navigate to a specific page
   void navigateToTab(int index) {
     if (_currentIndex != index) {
@@ -297,15 +302,33 @@ class _SkeletonState extends State<Skeleton> {
     if (kIsWeb) {
       _loadLastReadPage(); // load the last read page on startup
     }
+    _checkIfAdmin(); // Check if current user is admin
   }
 
-  @override
-  void dispose() {
-    super.dispose();
+  // Method to check if current user is admin
+  Future<void> _checkIfAdmin() async {
+    final AuthService authService = AuthService();
+    final username = await authService.getCurrentUsername();
+
+    if (username == 'admin') {
+      setState(() {
+        _isAdminUser = true;
+      });
+      print('Admin user detected, showing admin layout');
+    }
   }
 
   int _currentIndex = 0;
   List<Widget> get _pages {
+    // For admin users, return only the needed pages
+    if (_isAdminUser) {
+      return [
+        const SheikhApprovePage(), // First tab for admin is sheikh approval
+        const ProfilePage(), // Second tab is profile
+      ];
+    }
+
+    // For regular users, return all normal pages
     return [
       const HomePage(),
       widgetjsonData != null
@@ -314,7 +337,6 @@ class _SkeletonState extends State<Skeleton> {
               : QuranPage2(suraJsonData: widgetjsonData)
           : const Center(child: CircularProgressIndicator()),
       const PrayersPage(),
-      // kIsWeb ? const BrowserChatLayout() : const AllChatsPage(),
       const CommunityPage(),
       const ProfilePage(),
     ];
@@ -382,10 +404,9 @@ class _SkeletonState extends State<Skeleton> {
         children: [
           // Left vertical navigation bar with improved styling
           NavigationRail(
-            backgroundColor: AppStyles.bgColor, // Distinct background color
+            backgroundColor: AppStyles.bgColor,
             selectedIndex: _currentIndex,
             onDestinationSelected: (index) {
-              // Use our navigateToTab method to handle page changes properly
               if (_currentIndex != index) {
                 navigateToTab(index);
               }
@@ -393,37 +414,12 @@ class _SkeletonState extends State<Skeleton> {
             labelType: NavigationRailLabelType.all,
             useIndicator: true,
             indicatorColor: AppStyles.lightPurple.withOpacity(0.2),
-            elevation: 4, // Add some elevation for better visual separation
-            minWidth: 85, // Ensure enough width for the content
-            minExtendedWidth: 100, // Width when extended
-            destinations: const [
-              NavigationRailDestination(
-                padding: EdgeInsets.symmetric(
-                    vertical: 12), // Add spacing between items
-                icon: Icon(Icons.home),
-                label: Text('الرئيسية'),
-              ),
-              NavigationRailDestination(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                icon: Icon(FlutterIslamicIcons.solidQuran2),
-                label: Text('القرآن'),
-              ),
-              NavigationRailDestination(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                icon: Icon(FlutterIslamicIcons.solidPrayer),
-                label: Text('الصلاة'),
-              ),
-              NavigationRailDestination(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                icon: Icon(FlutterIslamicIcons.solidCommunity),
-                label: Text('المجتمع'),
-              ),
-              NavigationRailDestination(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                icon: Icon(Icons.person),
-                label: Text('الحساب'),
-              ),
-            ],
+            elevation: 4,
+            minWidth: 85,
+            minExtendedWidth: 100,
+            destinations: _isAdminUser
+                ? _buildAdminNavigationDestinations() // Admin navigation items
+                : _buildRegularNavigationDestinations(), // Regular navigation items
             selectedIconTheme:
                 IconThemeData(color: AppStyles.lightPurple, size: 28),
             unselectedIconTheme: IconThemeData(color: AppStyles.grey, size: 24),
@@ -451,8 +447,7 @@ class _SkeletonState extends State<Skeleton> {
     return Scaffold(
       appBar: const CustomAppBar(
           title: 'ذكر', showAddButton: false, showBackButton: false),
-      body:
-          _pages[_currentIndex], // Directly use the page without extra wrappers
+      body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: AppStyles.bgColor,
         type: BottomNavigationBarType.fixed,
@@ -460,20 +455,116 @@ class _SkeletonState extends State<Skeleton> {
         unselectedItemColor: AppStyles.grey,
         currentIndex: _currentIndex,
         onTap: (index) {
-          // Use our navigateToTab method to handle page changes properly
           navigateToTab(index);
         },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
-          BottomNavigationBarItem(
-              icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
-          BottomNavigationBarItem(
-              icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
-          BottomNavigationBarItem(
-              icon: Icon(FlutterIslamicIcons.solidCommunity), label: 'المجتمع'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
-        ],
+        items: _isAdminUser
+            ? _buildAdminNavigationItems() // Admin navigation items
+            : _buildRegularNavigationItems(), // Regular navigation items
       ),
     );
+  }
+
+  // Helper method for admin navigation items (for BottomNavigationBar)
+  List<BottomNavigationBarItem> _buildAdminNavigationItems() {
+    return const [
+      BottomNavigationBarItem(
+        icon: Icon(Icons.verified_user),
+        label: 'توثيق',
+      ),
+      BottomNavigationBarItem(
+        icon: Icon(Icons.person),
+        label: 'الحساب',
+      ),
+    ];
+  }
+
+  // Helper method for regular navigation items (for BottomNavigationBar)
+  List<BottomNavigationBarItem> _buildRegularNavigationItems() {
+    return [
+      const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'الرئيسية'),
+      const BottomNavigationBarItem(
+          icon: Icon(FlutterIslamicIcons.solidQuran2), label: 'القرآن'),
+      const BottomNavigationBarItem(
+          icon: Icon(FlutterIslamicIcons.solidPrayer), label: 'الصلاة'),
+      BottomNavigationBarItem(
+          icon: Builder(builder: (context) {
+            return StreamBuilder<int>(
+              stream: UnreadMessagesService().unreadCountStream,
+              initialData: UnreadMessagesService().unreadCount,
+              builder: (context, snapshot) {
+                final unreadCount = snapshot.data ?? 0;
+                return Badge(
+                  isLabelVisible: unreadCount > 0,
+                  label: Text(unreadCount.toString()),
+                  backgroundColor: Colors.redAccent,
+                  child: const Icon(FlutterIslamicIcons.solidCommunity),
+                );
+              },
+            );
+          }),
+          label: 'المجتمع'),
+      const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
+    ];
+  }
+
+  // Helper method for admin navigation destinations (for NavigationRail)
+  List<NavigationRailDestination> _buildAdminNavigationDestinations() {
+    return const [
+      NavigationRailDestination(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        icon: Icon(Icons.verified_user),
+        label: Text('توثيق'),
+      ),
+      NavigationRailDestination(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        icon: Icon(Icons.person),
+        label: Text('الحساب'),
+      ),
+    ];
+  }
+
+  // Helper method for regular navigation destinations (for NavigationRail)
+  List<NavigationRailDestination> _buildRegularNavigationDestinations() {
+    return [
+      const NavigationRailDestination(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        icon: Icon(Icons.home),
+        label: Text('الرئيسية'),
+      ),
+      const NavigationRailDestination(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        icon: Icon(FlutterIslamicIcons.solidQuran2),
+        label: Text('القرآن'),
+      ),
+      const NavigationRailDestination(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        icon: Icon(FlutterIslamicIcons.solidPrayer),
+        label: Text('الصلاة'),
+      ),
+      NavigationRailDestination(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        icon: Builder(builder: (context) {
+          return StreamBuilder<int>(
+            stream: UnreadMessagesService().unreadCountStream,
+            initialData: UnreadMessagesService().unreadCount,
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data ?? 0;
+              return Badge(
+                isLabelVisible: unreadCount > 0,
+                label: Text(unreadCount.toString()),
+                backgroundColor: Colors.redAccent,
+                child: Icon(FlutterIslamicIcons.solidCommunity),
+              );
+            },
+          );
+        }),
+        label: const Text('المجتمع'),
+      ),
+      const NavigationRailDestination(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        icon: Icon(Icons.person),
+        label: Text('الحساب'),
+      ),
+    ];
   }
 }

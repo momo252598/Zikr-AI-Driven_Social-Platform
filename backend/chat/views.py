@@ -32,7 +32,7 @@ def get_conversations(request):
     """
     user = request.user
     conversations = user.conversations.all()
-    serializer = ConversationSerializer(conversations, many=True)
+    serializer = ConversationSerializer(conversations, many=True, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['POST'])
@@ -136,7 +136,7 @@ def get_conversation_detail(request, conversation_id):
             status=status.HTTP_403_FORBIDDEN
         )
     
-    serializer = ConversationSerializer(conversation)
+    serializer = ConversationSerializer(conversation, context={'request': request})
     return Response(serializer.data)
 
 @api_view(['POST'])

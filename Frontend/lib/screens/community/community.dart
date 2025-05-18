@@ -8,6 +8,7 @@ import 'package:software_graduation_project/services/social_api_service.dart';
 import 'package:software_graduation_project/screens/community/create_post.dart';
 import 'package:software_graduation_project/screens/profile/profile.dart';
 import 'package:software_graduation_project/components/community/post.dart'; // Import the shared post components
+import 'package:software_graduation_project/services/unread_messages_service.dart'; // Import unread messages service
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({Key? key}) : super(key: key);
@@ -26,7 +27,6 @@ class _CommunityPageState extends State<CommunityPage> {
   int _currentPage = 1;
   bool _hasMorePages = true;
   final Set<dynamic> _loadedPostIds = <dynamic>{};
-
   @override
   void initState() {
     super.initState();
@@ -189,6 +189,24 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  // Building chat icon with badge indicator
+  Widget _buildChatIconWithBadge() {
+    return StreamBuilder<int>(
+      stream: UnreadMessagesService().unreadCountStream,
+      initialData: UnreadMessagesService().unreadCount,
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+
+        return Badge(
+          isLabelVisible: unreadCount > 0,
+          label: Text(unreadCount.toString()),
+          backgroundColor: Colors.redAccent,
+          child: const Icon(Icons.chat),
+        );
+      },
+    );
+  }
+
   // Navigate to user profile when username is clicked - updated to use overlay
   void _navigateToUserProfile(dynamic authorDetails) {
     if (authorDetails != null && authorDetails['id'] != null) {
@@ -236,7 +254,7 @@ class _CommunityPageState extends State<CommunityPage> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.chat),
+            icon: _buildChatIconWithBadge(),
             onPressed: () {
               // Navigate to different chat pages based on platform
               if (kIsWeb) {

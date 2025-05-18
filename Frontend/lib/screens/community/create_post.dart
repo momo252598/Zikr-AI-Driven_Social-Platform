@@ -27,25 +27,49 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
   Future<void> _pickImage() async {
     try {
-      // Request permissions first
-      if (await _requestPermissions()) {
-        final ImagePicker picker = ImagePicker();
-        final List<XFile> images = await picker.pickMultiImage();
-
-        if (images.isNotEmpty) {
-          setState(() {
-            _selectedImages.addAll(images);
-          });
-        }
+      if (kIsWeb) {
+        await _pickImageWeb();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('يرجى السماح بالوصول إلى الصور للمتابعة'),
-          ),
-        );
+        // Mobile implementation
+        if (await _requestPermissions()) {
+          final ImagePicker picker = ImagePicker();
+          final List<XFile> images = await picker.pickMultiImage();
+
+          if (images.isNotEmpty) {
+            setState(() {
+              _selectedImages.addAll(images);
+            });
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('يرجى السماح بالوصول إلى الصور للمتابعة'),
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Error picking images: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء اختيار الصور: ${e.toString()}'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickImageWeb() async {
+    final ImagePicker picker = ImagePicker();
+    // On web, we'll use pickMultiImage directly without permission checking
+    try {
+      final List<XFile> images = await picker.pickMultiImage();
+      if (images.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(images);
+        });
+      }
+    } catch (e) {
+      print('Error picking images on web: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('حدث خطأ أثناء اختيار الصور: ${e.toString()}'),

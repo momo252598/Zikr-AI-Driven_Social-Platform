@@ -22,6 +22,7 @@ import 'package:software_graduation_project/services/notification_service.dart'
     as notification_service;
 import 'package:software_graduation_project/services/message_notification_service.dart';
 import 'package:software_graduation_project/services/social_notification_service.dart';
+import 'package:software_graduation_project/services/unread_messages_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 // Import forgot password screen
@@ -246,9 +247,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       MessageNotificationService();
   final SocialNotificationService _socialNotificationService =
       SocialNotificationService();
+  final UnreadMessagesService _unreadMessagesService = UnreadMessagesService();
   Timer? _notificationCheckTimer;
   bool _notificationTapped = false;
-
   @override
   void initState() {
     super.initState();
@@ -257,6 +258,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Initialize Firebase Messaging Service
     _messagingService.initialize().then((_) async {
       await _checkForPendingNotificationNavigation();
+    });
+
+    // Initialize the UnreadMessagesService
+    _unreadMessagesService.initialize().then((_) {
+      // Load any persisted unread count
+      _unreadMessagesService.loadPersistedUnreadCount();
     });
 
     // Periodically check for notification navigation (in case it wasn't processed yet)
@@ -275,15 +282,19 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Forward app lifecycle state changes to notification services
-    debugPrint('App lifecycle state changed to: ${state.toString()}');
-
-    // Update global app state
+    debugPrint(
+        'App lifecycle state changed to: ${state.toString()}'); // Update global app state
     appState = state;
 
     // Notify services
     _messageNotificationService.setAppState(state);
     _messagingService.setAppState(state);
     _socialNotificationService.setAppState(state);
+
+    // When app comes to foreground, refresh unread count
+    if (state == AppLifecycleState.resumed) {
+      _unreadMessagesService.refreshUnreadCount();
+    }
 
     if (state == AppLifecycleState.resumed) {
       // Refresh messages when app comes to foreground

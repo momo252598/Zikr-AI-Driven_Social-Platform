@@ -8,6 +8,7 @@ import 'package:software_graduation_project/skeleton.dart'; // Import Quran scre
 import 'package:software_graduation_project/screens/quran/quran_page.dart'; // Import Quran page
 import 'package:software_graduation_project/screens/chat/all_chats.dart'; // Import All Chats screen
 import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart'; // Import Browser Chat Layout
+import 'package:software_graduation_project/services/unread_messages_service.dart'; // Import unread messages service
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/services.dart' show rootBundle;
@@ -478,6 +479,7 @@ class _HomePageState extends State<HomePage> {
                     // Mobile navigation remains the same - goes to AllChatsPage
                     _buildFeatureCard(context, Icons.chat, "الدردشة",
                         AppStyles.lightPurple, standardCardWidth,
+                        isChat: true,
                         onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -599,8 +601,9 @@ class _HomePageState extends State<HomePage> {
                         _buildQuranFeatureCard(context, featureCardWidth,
                             isWeb: true),
                         // Chat feature card - navigate to BrowserChatLayout on web
-                        _buildFeatureCard(context, Icons.chat_bubble_outline,
-                            "الدردشة", AppStyles.lightPurple, featureCardWidth,
+                        _buildFeatureCard(context, Icons.chat, "الدردشة",
+                            AppStyles.lightPurple, featureCardWidth,
+                            isChat: true,
                             isWeb: true,
                             onTap: () => Navigator.push(
                                 context,
@@ -908,7 +911,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildFeatureCard(BuildContext context, IconData icon, String title,
       Color color, double cardWidth,
-      {bool isWeb = false, VoidCallback? onTap}) {
+      {bool isWeb = false, VoidCallback? onTap, bool isChat = false}) {
     // Define a fixed height for the card to match the Quran card
     // Reduced height for better proportions on web
     final cardHeight = isWeb ? 120.0 : 120.0;
@@ -930,7 +933,9 @@ class _HomePageState extends State<HomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: isWeb ? 36 : 32),
+            isChat
+                ? _buildChatIconWithBadge(context, color, isWeb)
+                : Icon(icon, color: color, size: isWeb ? 36 : 32),
             SizedBox(height: isWeb ? 12 : 10),
             Text(
               title,
@@ -944,6 +949,25 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
+    );
+  }
+
+  // Helper method to build chat icon with unread count badge
+  Widget _buildChatIconWithBadge(
+      BuildContext context, Color color, bool isWeb) {
+    return StreamBuilder<int>(
+      stream: UnreadMessagesService().unreadCountStream,
+      initialData: UnreadMessagesService().unreadCount,
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+
+        return Badge(
+          isLabelVisible: unreadCount > 0,
+          label: Text(unreadCount.toString()),
+          backgroundColor: Colors.redAccent,
+          child: Icon(Icons.chat, color: color, size: isWeb ? 36 : 32),
+        );
+      },
     );
   }
 }

@@ -191,6 +191,39 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _handleLogout() async {
+    // Show confirmation dialog first
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'تسجيل الخروج',
+            textAlign: TextAlign.right,
+            textDirection: ui.TextDirection.rtl,
+          ),
+          content: Text(
+            'هل أنت متأكد أنك تريد تسجيل الخروج؟',
+            textAlign: TextAlign.right,
+            textDirection: ui.TextDirection.rtl,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('إلغاء'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text('تسجيل الخروج'),
+            ),
+          ],
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+        );
+      },
+    );
+
+    // If user didn't confirm or dialog was dismissed, don't proceed
+    if (confirm != true) return;
+
     try {
       await _authService.logout();
       // Navigate to login page - use /login instead of /

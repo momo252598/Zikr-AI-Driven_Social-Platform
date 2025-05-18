@@ -776,165 +776,164 @@ class _CommentsSheetState extends State<CommentsSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.75,
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
         ),
-      ),
-      child: Directionality(
-        textDirection: ui.TextDirection.rtl,
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              height: 5,
-              width: 40,
-              decoration: BoxDecoration(
-                color: AppStyles.greyShaded300,
-                borderRadius: BorderRadius.circular(8),
+        child: Directionality(
+          textDirection: ui.TextDirection.rtl,
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 8),
+                height: 5,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: AppStyles.greyShaded300,
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  Text(
-                    'التعليقات ($_commentCount)',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Text(
+                      'التعليقات ($_commentCount)',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Divider(),
-            // Comments list with RTL direction
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'فشل في تحميل التعليقات: $_error',
-                                style: TextStyle(color: AppStyles.red),
-                                textAlign: TextAlign.center,
-                              ),
-                              ElevatedButton(
-                                onPressed: _loadComments,
-                                child: const Text('إعادة المحاولة'),
-                              ),
-                            ],
-                          ),
-                        )
-                      : _comments == null || _comments!.isEmpty
-                          ? Center(
-                              child: Text(
-                                'لا توجد تعليقات بعد',
-                                style: TextStyle(
-                                  color: AppStyles.grey,
-                                  fontSize: 16,
+              const Divider(),
+              // Comments list with RTL direction
+              Expanded(
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'فشل في تحميل التعليقات: $_error',
+                                  style: TextStyle(color: AppStyles.red),
+                                  textAlign: TextAlign.center,
                                 ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(8.0),
-                              itemCount: _comments!.length,
-                              itemBuilder: (context, index) {
-                                final comment = _comments![index];
-                                return _buildCommentItem(
-                                  comment,
-                                  onLike: () => _likeComment(comment['id']),
-                                );
-                              },
+                                ElevatedButton(
+                                  onPressed: _loadComments,
+                                  child: const Text('إعادة المحاولة'),
+                                ),
+                              ],
                             ),
-            ),
-            // Add comment section - make sure it follows RTL
-            Container(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-                left: 16,
-                right: 16,
-                top: 8,
+                          )
+                        : _comments == null || _comments!.isEmpty
+                            ? Center(
+                                child: Text(
+                                  'لا توجد تعليقات بعد',
+                                  style: TextStyle(
+                                    color: AppStyles.grey,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.all(8.0),
+                                itemCount: _comments!.length,
+                                itemBuilder: (context, index) {
+                                  final comment = _comments![index];
+                                  return _buildCommentItem(
+                                    comment,
+                                    onLike: () => _likeComment(comment['id']),
+                                  );
+                                },
+                              ),
               ),
-              decoration: BoxDecoration(
-                color: AppStyles.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppStyles.grey.withOpacity(0.2),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Row(
-                textDirection: ui.TextDirection.rtl,
-                children: [
-                  // Send button first in RTL
-                  InkWell(
-                    onTap: () {
-                      final comment = _commentController.text.trim();
-                      if (comment.isNotEmpty) {
-                        _addComment(widget.post['id'], comment);
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(50),
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppStyles.darkPurple,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.send,
-                        color: AppStyles.white,
-                        size: 20,
+              // Add comment section - make sure it follows RTL
+              Container(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+                  left: 16,
+                  right: 16,
+                  top: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppStyles.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppStyles.grey.withOpacity(0.2),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  textDirection: ui.TextDirection.rtl,
+                  children: [
+                    // Send button first in RTL
+                    InkWell(
+                      onTap: () {
+                        final comment = _commentController.text.trim();
+                        if (comment.isNotEmpty) {
+                          _addComment(widget.post['id'], comment);
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(50),
+                      child: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppStyles.darkPurple,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.send,
+                          color: AppStyles.white,
+                          size: 20,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      textDirection: ui.TextDirection.rtl,
-                      textAlign: TextAlign.center, // Center align text
-                      decoration: InputDecoration(
-                        hintText: 'أضف تعليقًا...',
-                        hintTextDirection: ui.TextDirection.rtl,
-                        // TextField's textAlign property already centers the hint text
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        filled: true,
-                        fillColor: AppStyles.grey,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        textDirection: ui.TextDirection.rtl,
+                        textAlign: TextAlign.center, // Center align text
+                        decoration: InputDecoration(
+                          hintText: 'أضف تعليقًا...',
+                          hintTextDirection: ui.TextDirection.rtl,
+                          // TextField's textAlign property already centers the hint text
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(24),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: AppStyles.grey,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
+            ],
+          ),
+        ));
   }
 
   @override
@@ -1016,6 +1015,8 @@ class PhotoViewerPage extends StatefulWidget {
 class _PhotoViewerPageState extends State<PhotoViewerPage> {
   late PageController _pageController;
   late int _currentIndex;
+  // Detect if we're on web platform
+  final bool isWeb = identical(0, 0.0);
 
   @override
   void initState() {
@@ -1028,6 +1029,24 @@ class _PhotoViewerPageState extends State<PhotoViewerPage> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _goToPreviousImage() {
+    if (_currentIndex > 0) {
+      _pageController.previousPage(
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _goToNextImage() {
+    if (_currentIndex < widget.imageUrls.length - 1) {
+      _pageController.nextPage(
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   @override
@@ -1058,34 +1077,81 @@ class _PhotoViewerPageState extends State<PhotoViewerPage> {
               },
               itemBuilder: (context, index) {
                 return InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: Center(
-                    child: Image.network(
-                      widget.imageUrls[index],
-                      fit: BoxFit.contain,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) => Center(
-                        child: Icon(Icons.broken_image,
-                            color: Colors.white60, size: 64),
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Center(
+                      child: Image.network(
+                        widget.imageUrls[index],
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                  : null,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Center(
+                          child: Icon(Icons.broken_image,
+                              color: Colors.white60, size: 64),
+                        ),
                       ),
-                    ),
-                  ),
-                );
+                    ));
               },
             ),
-            // Navigation arrows if there are multiple photos
+
+            // Navigation arrows for web platform if there are multiple photos
+            if (isWeb && widget.imageUrls.length > 1) ...[
+              // Left arrow
+              Positioned(
+                left: 16,
+                top: 0,
+                bottom: 0,
+                child: _currentIndex > 0
+                    ? IconButton(
+                        icon: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child:
+                              Icon(Icons.arrow_back_ios, color: Colors.white),
+                        ),
+                        iconSize: 42,
+                        onPressed: _goToPreviousImage,
+                      )
+                    : SizedBox.shrink(),
+              ),
+
+              // Right arrow
+              Positioned(
+                right: 16,
+                top: 0,
+                bottom: 0,
+                child: _currentIndex < widget.imageUrls.length - 1
+                    ? IconButton(
+                        icon: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.4),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.arrow_forward_ios,
+                              color: Colors.white),
+                        ),
+                        iconSize: 42,
+                        onPressed: _goToNextImage,
+                      )
+                    : SizedBox.shrink(),
+              ),
+            ],
+
+            // Navigation dots at the bottom (preserved for both platforms)
             if (widget.imageUrls.length > 1)
               Positioned(
                 left: 0,

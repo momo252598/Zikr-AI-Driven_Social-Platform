@@ -14,6 +14,7 @@ import 'package:software_graduation_project/services/message_notification_servic
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import utility
 import 'package:software_graduation_project/screens/profile/profile.dart'; // Import ProfilePage
 import 'package:software_graduation_project/services/chat_notification_helper.dart'; // Import chat notification helper
+import 'package:software_graduation_project/services/badge_refresher.dart'; // Import badge refresher
 
 class ChatPage extends StatefulWidget {
   final int chatId;
@@ -83,6 +84,12 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     // Mark as active conversation for chat notifications right away with Django ID
     ChatNotificationHelper()
         .setActiveConversation(null, djangoId: widget.chatId);
+
+    // Set active conversation and force refresh the badge count immediately when opening chat
+    // This ensures badges disappear immediately when entering a conversation
+    BadgeRefresher().setActiveConversation(widget.chatId.toString());
+    debugPrint(
+        'Set active conversation and refreshed badge count on chat screen initialization');
 
     // Once chat data is loaded, update with Firebase ID
     if (chatData != null && chatData!['firebase_id'] != null) {
@@ -277,6 +284,11 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     // Clear chat notification helper state
     ChatNotificationHelper().clearActiveConversation();
 
+    // Clear active conversation and force refresh badge count when leaving chat
+    BadgeRefresher().clearActiveConversation();
+    debugPrint(
+        'Cleared active conversation and refreshed badge count on chat screen dispose');
+
     super.dispose();
   }
 
@@ -360,11 +372,15 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
       // Register with ChatNotificationHelper once we have the firebase_id
       if (conversation['firebase_id'] != null) {
-        ChatNotificationHelper().setActiveConversation(
-            conversation['firebase_id'].toString(),
-            djangoId: widget.chatId);
+        final firebaseId = conversation['firebase_id'].toString();
+        ChatNotificationHelper()
+            .setActiveConversation(firebaseId, djangoId: widget.chatId);
+
+        // Update the BadgeRefresher with the Firebase ID to ensure accurate badge counting
+        BadgeRefresher().setActiveConversation(widget.chatId.toString(),
+            firebaseId: firebaseId);
         debugPrint(
-            'Registered active conversation ID: ${conversation['firebase_id']}');
+            'Registered active conversation with Firebase ID: $firebaseId and refreshed badges');
       }
 
       // After loading data and updating state, scroll to bottom
@@ -427,11 +443,15 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
         // Register with ChatNotificationHelper once we have the firebase_id
         if (foundChat['firebase_id'] != null) {
-          ChatNotificationHelper().setActiveConversation(
-              foundChat['firebase_id'].toString(),
-              djangoId: widget.chatId);
+          final firebaseId = foundChat['firebase_id'].toString();
+          ChatNotificationHelper()
+              .setActiveConversation(firebaseId, djangoId: widget.chatId);
+
+          // Update the BadgeRefresher with the Firebase ID to ensure accurate badge counting
+          BadgeRefresher().setActiveConversation(widget.chatId.toString(),
+              firebaseId: firebaseId);
           debugPrint(
-              'Registered active conversation ID (local): ${foundChat['firebase_id']}');
+              'Registered active conversation with Firebase ID (local): $firebaseId and refreshed badges');
         }
 
         // After loading data and updating state, scroll to bottom
@@ -459,6 +479,14 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     _messagesSubscription =
         _firebaseService.getMessagesStream(firebaseId).listen((newMessages) {
       if (mounted) {
+        // Check if there are new messages that we haven't seen yet
+        bool hasNewMessages = false;
+        if (messages.length < newMessages.length) {
+          hasNewMessages = true;
+          debugPrint(
+              'New messages detected: ${newMessages.length - messages.length} new message(s)');
+        }
+
         setState(() {
           messages = newMessages;
           hasCompletedMessagesCheck =
@@ -466,6 +494,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
           // Mark messages as read
           if (currentUserId != null) {
+            bool messageWasMarkedAsRead = false;
             for (var message in newMessages) {
               // Ensure consistent type comparison
               String msgSenderId = message['sender_id'].toString();
@@ -474,10 +503,24 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               if (msgSenderId != curUserId) {
                 _firebaseService.markMessageAsRead(
                     firebaseId, message['id'], currentUserId!);
+                messageWasMarkedAsRead = true;
               }
+            }
+
+            // Refresh badge count immediately when messages are read
+            if (messageWasMarkedAsRead) {
+              BadgeRefresher().refreshBadgeCount();
+              debugPrint(
+                  'Badge refresh triggered after marking messages as read');
             }
           }
         });
+
+        // Refresh badge count when new messages arrive (for other screens/users)
+        if (hasNewMessages) {
+          BadgeRefresher().forceRefreshBadgeCount();
+          debugPrint('Badge refresh triggered for new incoming messages');
+        }
 
         // Scroll to bottom to show new messages
         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -596,6 +639,11 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
 
       // Notify parent about the latest message
       widget.onMessageUpdate?.call(contentToSend);
+
+      // Force refresh badge count immediately after sending a message
+      // This ensures that other users will see the badge update immediately
+      BadgeRefresher().forceRefreshBadgeCount();
+      debugPrint('Force refreshed badge count after sending message');
 
       // Scroll to bottom after sending a message
       WidgetsBinding.instance.addPostFrameCallback((_) {

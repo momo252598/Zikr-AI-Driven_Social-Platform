@@ -184,6 +184,8 @@ class _AllChatsPageState extends State<AllChatsPage>
           'last_message_text': lastMessageText,
           'timestamp': timestamp,
           'is_sheikh': isSheikh, // Store if other participant is a sheikh
+          'has_unread': _hasUnreadMessages(
+              chat, _currentUserId), // Add flag for unread messages
         };
       }).toList();
 
@@ -203,6 +205,32 @@ class _AllChatsPageState extends State<AllChatsPage>
         });
       }
     }
+  }
+
+  // Helper method to check if a chat has unread messages
+  bool _hasUnreadMessages(Map<String, dynamic> chat, int? currentUserId) {
+    // First, check the unread_count field which is the most direct way
+    if (chat.containsKey('unread_count')) {
+      final unreadCount = chat['unread_count'] as int? ?? 0;
+      return unreadCount > 0;
+    }
+
+    // Fallback: check if last message is unread
+    if (chat.containsKey('last_message') &&
+        chat['last_message'] != null &&
+        chat['last_message'] is Map) {
+      final lastMessage = chat['last_message'] as Map<String, dynamic>;
+      final senderId = lastMessage['sender_id']?.toString() ??
+          lastMessage['sender']?.toString();
+      final isRead = lastMessage['is_read'] == true;
+
+      // If message is from someone else and not marked as read
+      return !isRead &&
+          senderId != null &&
+          senderId != currentUserId.toString();
+    }
+
+    return false;
   }
 
   void _showNewConversationDialog() {
@@ -410,6 +438,7 @@ class _AllChatsPageState extends State<AllChatsPage>
         '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
     final isSelected = widget.selectedChatId == chat['id'];
     final isSheikh = chat['is_sheikh'] == true;
+    final hasUnread = chat['has_unread'] == true; // Get unread status
 
     // Generate only first letter of name for avatar - EDIT #1
     final String name = (chat['name'] ?? 'محادثة').toString();
@@ -562,20 +591,53 @@ class _AllChatsPageState extends State<AllChatsPage>
                               ],
                             ),
                             const SizedBox(height: 6),
-                            Text(
-                              _ensureProperEncoding(messagePreview),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isSelected
-                                    ? AppStyles.purple
-                                    : AppStyles.greyShaded600,
-                              ),
+                            Row(
+                              children: [
+                                if (hasUnread) // Show unread indicator
+                                  Container(
+                                    margin: const EdgeInsets.only(left: 6),
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                Expanded(
+                                  child: Text(
+                                    _ensureProperEncoding(messagePreview),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: hasUnread
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: hasUnread
+                                          ? isSelected
+                                              ? AppStyles.darkPurple
+                                              : Colors.black87
+                                          : isSelected
+                                              ? AppStyles.purple
+                                              : AppStyles.greyShaded600,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ),
+                      ), // Unread message indicator at the end of the row
+                      if (hasUnread)
+                        Container(
+                          margin: const EdgeInsets.only(right: 2),
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                     ],
                   ),
                 ),
