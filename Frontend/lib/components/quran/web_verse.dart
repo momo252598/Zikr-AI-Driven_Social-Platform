@@ -5,11 +5,17 @@ import 'package:quran/quran.dart';
 import 'package:software_graduation_project/components/quran/verse_bottom_sheet.dart';
 import '../../base/res/styles/app_styles.dart';
 import '../../base/res/utils/tafseer.dart';
-import '../../services/quran_service.dart'; // Import QuranService for bookmark functionality
+import '../../services/quran_service.dart';
 import 'tafseer_bottom_sheet.dart';
-import 'web_tafseer_dialog.dart'; // Import the new web tafseer dialog
+import 'web_tafseer_dialog.dart';
 
 // Using the same ReciterManager and TafseerManager from verse_bottom_sheet.dart
+
+// Add a static class to store the last popup size
+class WebVersePopupSettings {
+  // Default initial size
+  static Size lastPopupSize = Size(300.0, 320.0);
+}
 
 /// Shows a popup near the verse for web users
 void showWebVersePopup(
@@ -19,7 +25,7 @@ void showWebVersePopup(
   int verseNumber,
   Offset position, {
   Function? onClose,
-  Function(int, int)? onVerseChange, // Add callback for verse change
+  Function(int, int)? onVerseChange,
 }) {
   // Calculate position to show popup
   final size = MediaQuery.of(context).size;
@@ -38,8 +44,32 @@ void showWebVersePopup(
   // Track drag position (added as a mutable variable outside the widget)
   Offset dragOffset = Offset.zero;
 
+  // Track popup size - use the last saved size or calculate default if first time
+  Size popupSize = WebVersePopupSettings.lastPopupSize;
+
+  // Ensure the size is within reasonable bounds for the current screen
+  if (popupSize.width > screenWidth * 0.9) {
+    popupSize = Size(
+      screenWidth * 0.8,
+      popupSize.height * (screenWidth * 0.8 / popupSize.width),
+    );
+  }
+
+  if (popupSize.height > screenHeight * 0.8) {
+    popupSize = Size(
+      popupSize.width * (screenHeight * 0.8 / popupSize.height),
+      screenHeight * 0.8,
+    );
+  }
+
+  // Store the initial aspect ratio for maintaining proportions during resize
+  final initialAspectRatio = popupSize.width / popupSize.height;
+
   // Function to handle cleanup and close
   void handleClose() {
+    // Save current size before closing
+    WebVersePopupSettings.lastPopupSize = popupSize;
+
     // First stop and dispose the audio player
     audioPlayer.stop().then((_) {
       audioPlayer.dispose();
@@ -86,6 +116,8 @@ void showWebVersePopup(
             bottom: position.dy > screenHeight / 2
                 ? (screenHeight - position.dy + 30) - dragOffset.dy
                 : null,
+            width: popupSize.width,
+            height: popupSize.height,
             child: Material(
               color: AppStyles.trans,
               child: WebVersePopupContent(
@@ -100,12 +132,49 @@ void showWebVersePopup(
                   // Force rebuild of the OverlayEntry
                   entry.markNeedsBuild();
                 },
+                onResize: (Size delta) {
+                  // Calculate diagonal resize delta (use max of width/height change)
+                  final maxDelta = delta.width.abs() > delta.height.abs()
+                      ? delta.width
+                      : delta.height;
+
+                  // Calculate new dimensions maintaining aspect ratio
+                  final newWidth = popupSize.width + maxDelta;
+                  final newHeight = newWidth / initialAspectRatio;
+
+                  // Apply constraints
+                  final minWidth =
+                      screenWidth < 500 ? screenWidth * 0.6 : 280.0;
+                  final maxWidth = screenWidth * 0.9;
+                  final minHeight = 350.0;
+                  final maxHeight = screenHeight * 0.8;
+
+                  // Clamp the dimensions respecting both limits
+                  double finalWidth = newWidth.clamp(minWidth, maxWidth);
+                  double finalHeight = finalWidth / initialAspectRatio;
+
+                  // Check if height is out of bounds, and adjust width accordingly
+                  if (finalHeight < minHeight) {
+                    finalHeight = minHeight;
+                    finalWidth = finalHeight * initialAspectRatio;
+                  } else if (finalHeight > maxHeight) {
+                    finalHeight = maxHeight;
+                    finalWidth = finalHeight * initialAspectRatio;
+                  }
+
+                  // Update popup size
+                  popupSize = Size(finalWidth, finalHeight);
+
+                  // Force rebuild of the OverlayEntry
+                  entry.markNeedsBuild();
+                },
                 onVerseChange: (newSurah, newVerse) {
                   // Update the highlighting on the main page
                   if (onVerseChange != null) {
                     onVerseChange(newSurah, newVerse);
                   }
                 },
+                currentSize: popupSize,
               ),
             ),
           ),
@@ -125,8 +194,10 @@ class WebVersePopupContent extends StatefulWidget {
   final int verseNumber;
   final Function onClose;
   final AudioPlayer audioPlayer;
-  final Function(Offset) onDrag; // New callback for drag updates
-  final Function(int, int)? onVerseChange; // Add callback for verse change
+  final Function(Offset) onDrag;
+  final Function(Size) onResize; // Added function for resizing
+  final Function(int, int)? onVerseChange;
+  final Size currentSize; // Pass current size to control scaling
 
   const WebVersePopupContent({
     Key? key,
@@ -136,7 +207,9 @@ class WebVersePopupContent extends StatefulWidget {
     required this.onClose,
     required this.audioPlayer,
     required this.onDrag,
+    required this.onResize, // Add resize callback
     this.onVerseChange,
+    required this.currentSize, // Add current size parameter
   }) : super(key: key);
 
   @override
@@ -690,12 +763,22 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     );
   }
 
-  // Helper method to safely get font size based on screen width
-  double getFontSize(BuildContext context, double size) {
-    // Use more conservative font scaling for web
+  // Helper method to safely get font size based on screen width and current popup size
+  double getFontSize(BuildContext context, double baseSize) {
+    // Calculate scale factor based on current width relative to initial width
+    final initialWidth = MediaQuery.of(context).size.width < 500
+        ? MediaQuery.of(context).size.width * 0.8
+        : 300.0;
+
+    // Scale factor is based on how much wider the popup is than its initial width
+    final scaleFactor =
+        (widget.currentSize.width / initialWidth).clamp(1.0, 1.5);
+
+    // Apply screen width adjustment + size scale factor
     final screenWidth = MediaQuery.of(context).size.width;
-    final scaleFactor = screenWidth < 600 ? 0.8 : 1.0;
-    return size * scaleFactor;
+    final screenAdjustment = screenWidth < 600 ? 0.8 : 1.0;
+
+    return baseSize * screenAdjustment * scaleFactor;
   }
 
   // Method to navigate to previous verse
@@ -786,22 +869,16 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
   @override
   Widget build(BuildContext context) {
-    // Get screen width to adjust sizing
-    final screenWidth = MediaQuery.of(context).size.width;
-
     // Make popup width responsive to screen size
-    final popupWidth = screenWidth < 500 ? screenWidth * 0.8 : 300.0;
+    final scaleFactor =
+        widget.currentSize.width / 300.0; // Base scale on initial width of 300
 
     return Stack(
       children: [
         // Main popup content
         Container(
-          width: popupWidth,
-          constraints: BoxConstraints(
-            maxHeight: 350, // Increase height for additional elements
-            maxWidth:
-                screenWidth * 0.9, // Ensure popup doesn't exceed screen width
-          ),
+          width: widget.currentSize.width,
+          height: widget.currentSize.height,
           decoration: BoxDecoration(
             color: AppStyles.bgColor,
             borderRadius: BorderRadius.circular(15),
@@ -831,15 +908,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                       topRight: Radius.circular(15),
                     ),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: EdgeInsets.symmetric(vertical: 4 * scaleFactor),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       // Drag handle indicator
                       Center(
                         child: Container(
-                          width: 40,
-                          height: 5,
+                          width: 40 * scaleFactor,
+                          height: 5 * scaleFactor,
                           decoration: BoxDecoration(
                             color: AppStyles.grey.withOpacity(0.5),
                             borderRadius: BorderRadius.circular(10),
@@ -852,10 +929,11 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                         alignment: Alignment.centerRight,
                         child: IconButton(
                           icon: Icon(Icons.close,
-                              size: 20, color: AppStyles.txtFieldColor),
+                              size: 20 * scaleFactor,
+                              color: AppStyles.txtFieldColor),
                           onPressed: () => widget.onClose(),
-                          padding: const EdgeInsets.all(8),
-                          constraints: const BoxConstraints(),
+                          padding: EdgeInsets.all(8 * scaleFactor),
+                          constraints: BoxConstraints(),
                         ),
                       ),
                     ],
@@ -865,8 +943,8 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
               // Header with decorative element
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(vertical: 8 * scaleFactor),
+                margin: EdgeInsets.symmetric(horizontal: 16 * scaleFactor),
                 decoration: BoxDecoration(
                   color: AppStyles.white,
                   borderRadius: BorderRadius.circular(15),
@@ -896,9 +974,10 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
                     // Decorative divider
                     Container(
-                      margin: const EdgeInsets.symmetric(
-                          vertical: 6, horizontal: 50),
-                      height: 1,
+                      margin: EdgeInsets.symmetric(
+                          vertical: 6 * scaleFactor,
+                          horizontal: 50 * scaleFactor),
+                      height: 1 * scaleFactor,
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -925,11 +1004,11 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              SizedBox(height: 6 * scaleFactor), // Reduced from 10 to 6
 
               // Reciter row - right-to-left order for Arabic
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: EdgeInsets.symmetric(horizontal: 16 * scaleFactor),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -956,12 +1035,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
               // Reciter selection button
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                margin: EdgeInsets.symmetric(
+                    horizontal: 16 * scaleFactor,
+                    vertical:
+                        2 * scaleFactor), // Reduced vertical margin from 4 to 2
                 child: TextButton.icon(
                   icon: Icon(
                     Icons.person,
                     color: AppStyles.txtFieldColor,
-                    size: 14,
+                    size: 14 * scaleFactor,
                   ),
                   label: Text(
                     "تغيير القارئ",
@@ -973,15 +1055,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   ),
                   onPressed: _showReciterSelectionDialog,
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    minimumSize: const Size(0, 30),
+                    padding: EdgeInsets.symmetric(vertical: 2 * scaleFactor),
+                    minimumSize: Size(0, 30 * scaleFactor),
                   ),
                 ),
               ),
 
               // Tafseer row - right-to-left order for Arabic
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: EdgeInsets.symmetric(horizontal: 16 * scaleFactor),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -1010,12 +1092,15 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
               // Tafseer selection button
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                margin: EdgeInsets.symmetric(
+                    horizontal: 16 * scaleFactor,
+                    vertical:
+                        2 * scaleFactor), // Reduced vertical margin from 4 to 2
                 child: TextButton.icon(
                   icon: Icon(
                     Icons.book,
                     color: AppStyles.txtFieldColor,
-                    size: 14,
+                    size: 14 * scaleFactor,
                   ),
                   label: Text(
                     "تغيير التفسير",
@@ -1027,21 +1112,31 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                   ),
                   onPressed: _showTafseerSelectionDialog,
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    minimumSize: const Size(0, 30),
+                    padding: EdgeInsets.symmetric(vertical: 2 * scaleFactor),
+                    minimumSize: Size(0, 30 * scaleFactor),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 8),
+              SizedBox(height: 6 * scaleFactor), // Reduced from 10 to 6
 
-              // Action Buttons Row
+              // Use a smaller flex weight to reduce the expanding space
+              Expanded(
+                flex: 1, // Smaller flex weight
+                child: Container(),
+              ),
+
+              // Action Buttons Row - with less bottom padding to be closer to the edge
               Container(
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                margin: EdgeInsets.only(
+                  left: 16 * scaleFactor,
+                  right: 16 * scaleFactor,
+                  bottom: 16 * scaleFactor, // Reduced from 24 to 16
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // Bookmark Button - now with dynamic state
+                    // Bookmark Button
                     _buildIconButton(
                       context,
                       icon: _isBookmarked
@@ -1052,9 +1147,10 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                           : AppStyles.lightPurple,
                       onPressed: _isBookmarkLoading ? null : _toggleBookmark,
                       showLoader: _isBookmarkLoading,
+                      scaleFactor: scaleFactor,
                     ),
 
-                    // Play Button - now with dynamic state
+                    // Play Button
                     _buildTextButton(
                       context,
                       icon: _isLoading
@@ -1072,15 +1168,17 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
                       onPressed: (_isLoading || _isOperationInProgress)
                           ? null
                           : _togglePlayPause,
+                      scaleFactor: scaleFactor,
                     ),
 
-                    // Tafsir Button - now directly shows the selected tafseer
+                    // Tafsir Button
                     _buildTextButton(
                       context,
                       icon: Icons.menu_book,
                       text: "التفسير",
                       backgroundColor: AppStyles.txtFieldColor,
                       onPressed: _showTafseerDirectly,
+                      scaleFactor: scaleFactor,
                     ),
                   ],
                 ),
@@ -1091,21 +1189,54 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
 
         // Left navigation button (NEXT verse - functionality flipped)
         Positioned(
-          left: 10, // Moved inward from -20 to 10
-          top: 150, // Fixed position instead of relative calculation
+          left: 10 * scaleFactor,
+          top: 150 * scaleFactor,
           child: _buildNavigationButton(
             Icons.arrow_back_ios_rounded,
-            _goToNextVerse, // Swapped to next verse
+            _goToNextVerse,
+            scaleFactor,
           ),
         ),
 
         // Right navigation button (PREVIOUS verse - functionality flipped)
         Positioned(
-          right: 10, // Moved inward from -20 to 10
-          top: 150, // Fixed position instead of relative calculation
+          right: 10 * scaleFactor,
+          top: 150 * scaleFactor,
           child: _buildNavigationButton(
             Icons.arrow_forward_ios_rounded,
-            _goToPreviousVerse, // Swapped to previous verse
+            _goToPreviousVerse,
+            scaleFactor,
+          ),
+        ),
+
+        // Resize handle in the bottom-right corner
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.resizeDownRight,
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                // Pass size delta to parent for diagonal resizing
+                widget.onResize(Size(details.delta.dx, details.delta.dy));
+              },
+              child: Container(
+                width: 20 * scaleFactor,
+                height: 20 * scaleFactor,
+                decoration: BoxDecoration(
+                  color: AppStyles.lightPurple.withOpacity(0.5),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    bottomRight: Radius.circular(15),
+                  ),
+                ),
+                child: Icon(
+                  Icons.open_in_full,
+                  size: 12 * scaleFactor,
+                  color: AppStyles.white,
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -1113,10 +1244,11 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
   }
 
   // Helper method to build navigation buttons
-  Widget _buildNavigationButton(IconData icon, VoidCallback onPressed) {
+  Widget _buildNavigationButton(
+      IconData icon, VoidCallback onPressed, double scaleFactor) {
     return Container(
-      width: 36, // Slightly smaller than before (was 40)
-      height: 36, // Slightly smaller than before (was 40)
+      width: 36 * scaleFactor,
+      height: 36 * scaleFactor,
       decoration: BoxDecoration(
         color: AppStyles.txtFieldColor.withOpacity(0.9),
         shape: BoxShape.circle,
@@ -1130,8 +1262,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
         ],
       ),
       child: IconButton(
-        icon: Icon(icon,
-            color: AppStyles.white, size: 16), // Smaller icon (was 18)
+        icon: Icon(icon, color: AppStyles.white, size: 16 * scaleFactor),
         onPressed: onPressed,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
@@ -1146,6 +1277,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     required Color backgroundColor,
     VoidCallback? onPressed,
     bool showLoader = false,
+    required double scaleFactor,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -1159,21 +1291,21 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
           ),
         ],
       ),
-      width: 36,
-      height: 36,
+      width: 36 * scaleFactor,
+      height: 36 * scaleFactor,
       child: showLoader
           ? Center(
               child: SizedBox(
-                width: 16,
-                height: 16,
+                width: 16 * scaleFactor,
+                height: 16 * scaleFactor,
                 child: CircularProgressIndicator(
                   color: AppStyles.white,
-                  strokeWidth: 2,
+                  strokeWidth: 2 * scaleFactor,
                 ),
               ),
             )
           : IconButton(
-              icon: Icon(icon, color: AppStyles.white, size: 16),
+              icon: Icon(icon, color: AppStyles.white, size: 16 * scaleFactor),
               onPressed: onPressed,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -1189,6 +1321,7 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
     required Color backgroundColor,
     VoidCallback? onPressed,
     bool showLoader = false,
+    required double scaleFactor,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -1202,11 +1335,11 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
           ),
         ],
       ),
-      height: 36,
-      width: 80,
+      height: 36 * scaleFactor,
+      width: 80 * scaleFactor,
       child: MaterialButton(
         onPressed: onPressed,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
+        padding: EdgeInsets.symmetric(horizontal: 6 * scaleFactor, vertical: 0),
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1217,16 +1350,16 @@ class _WebVersePopupContentState extends State<WebVersePopupContent> {
           children: [
             if (showLoader)
               SizedBox(
-                width: 14,
-                height: 14,
+                width: 14 * scaleFactor,
+                height: 14 * scaleFactor,
                 child: CircularProgressIndicator(
                   color: AppStyles.white,
-                  strokeWidth: 2,
+                  strokeWidth: 2 * scaleFactor,
                 ),
               )
             else if (icon != null)
-              Icon(icon, color: AppStyles.white, size: 14),
-            const SizedBox(width: 3),
+              Icon(icon, color: AppStyles.white, size: 14 * scaleFactor),
+            SizedBox(width: 3 * scaleFactor),
             Flexible(
               child: FittedBox(
                 fit: BoxFit.scaleDown,

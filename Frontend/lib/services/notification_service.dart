@@ -29,10 +29,10 @@ class NotificationService {
       main_app.flutterLocalNotificationsPlugin;
   bool _isInitialized = false;
   bool _isRequestingPermission = false;
-
   // Channel IDs
   static const String prayerChannelId = 'prayer_channel_id';
   static const String messageChannelId = 'message_channel_id';
+  static const String socialChannelId = 'social_channel_id';
   // Setup notification channel through native platform code
   Future<void> setupNativeNotificationChannel() async {
     // Skip for web platform
@@ -75,13 +75,29 @@ class NotificationService {
           // Using default sound instead of custom sound
           playSound: true,
         ),
-      ); // Message notifications channel with highest importance for heads-up display
+      );
+
+      // Message notifications channel with highest importance for heads-up display
       await androidPlugin.createNotificationChannel(
         const AndroidNotificationChannel(
           messageChannelId,
           'Messages',
           description: 'Notifications for new messages',
           importance: Importance.max,
+          playSound: true,
+          showBadge: true,
+          enableVibration: true,
+          enableLights: true,
+        ),
+      );
+
+      // Social notifications channel for likes and comments
+      await androidPlugin.createNotificationChannel(
+        const AndroidNotificationChannel(
+          socialChannelId,
+          'Social',
+          description: 'Notifications for likes and comments',
+          importance: Importance.high,
           playSound: true,
           showBadge: true,
           enableVibration: true,
@@ -312,6 +328,67 @@ class NotificationService {
   // Cancel a specific notification by ID
   Future<void> cancelNotification(int id) async {
     await _notificationsPlugin.cancel(id);
+  }
+
+  // Show social notification for likes or comments
+  Future<void> showSocialNotification({
+    required int id,
+    required String title,
+    required String body,
+    required String notificationType,
+    required String senderId,
+    required String postId,
+  }) async {
+    debugPrint(
+        'showSocialNotification called with ID: $id, Title: $title, Type: $notificationType');
+    if (!_isInitialized) {
+      debugPrint('NotificationService not initialized, initializing now.');
+      await initialize();
+    }
+
+    try {
+      // Create the payload with all necessary data for navigation
+      final String payload = json.encode({
+        'type': 'social_notification',
+        'notificationType': notificationType,
+        'senderId': senderId,
+        'postId': postId,
+      });
+
+      await _notificationsPlugin.show(
+        id,
+        title,
+        body,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            socialChannelId,
+            'Social Notifications',
+            channelDescription: 'Notifications for social interactions',
+            importance: Importance.high,
+            priority: Priority.high,
+            fullScreenIntent: true,
+            category: AndroidNotificationCategory.social,
+            visibility: NotificationVisibility.public,
+            ticker: 'New Social Notification',
+            playSound: true,
+            enableVibration: true,
+            vibrationPattern: Int64List.fromList([0, 200, 200, 200]),
+            color: const Color(0xFF6A3DE2), // Purple color
+            showWhen: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: payload,
+      );
+      debugPrint(
+          'Social notification sent. ID: $id, Title: $title, Payload: $payload');
+    } catch (e) {
+      debugPrint('Error showing social notification: $e');
+    }
   }
 
   // Cleanup old notification metadata to prevent memory leaks

@@ -46,6 +46,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
   String contactName = '';
   Map<String, dynamic>? chatData;
   bool isLoading = true;
+  bool hasCompletedMessagesCheck = false; // Add this flag
   List<Map<String, dynamic>> messages = [];
   StreamSubscription? _messagesSubscription;
   StreamSubscription? _typingSubscription;
@@ -460,6 +461,8 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       if (mounted) {
         setState(() {
           messages = newMessages;
+          hasCompletedMessagesCheck =
+              true; // Set the flag when we've received messages data
 
           // Mark messages as read
           if (currentUserId != null) {
@@ -805,7 +808,7 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
               children: [
                 // Expanded list of messages
                 Expanded(
-                  child: isLoading
+                  child: isLoading || !hasCompletedMessagesCheck
                       ? const Center(child: CircularProgressIndicator())
                       : _buildMessagesList(),
                 ),

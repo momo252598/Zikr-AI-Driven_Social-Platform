@@ -29,6 +29,8 @@ class QuranViewPage extends StatefulWidget {
   final String highlightVerse;
   final bool isWeb;
   final String initialSurahName; // New property to receive surah name
+  final Function()? onToggleFullscreen; // Add callback for fullscreen toggle
+  final bool isFullscreen; // Add state of fullscreen mode
 
   const QuranViewPage({
     Key? key,
@@ -38,6 +40,8 @@ class QuranViewPage extends StatefulWidget {
     required this.highlightVerse,
     this.isWeb = false,
     this.initialSurahName = "", // Default to empty string
+    this.onToggleFullscreen, // Optional callback for toggling fullscreen
+    this.isFullscreen = false, // Default to not fullscreen
   }) : super(key: key);
 
   @override
@@ -910,6 +914,28 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                               constraints: BoxConstraints(),
                                             ),
 
+                                          // Add fullscreen toggle button for web only
+                                          if (widget.isWeb &&
+                                              widget.onToggleFullscreen != null)
+                                            IconButton(
+                                              onPressed:
+                                                  widget.onToggleFullscreen,
+                                              icon: Icon(
+                                                widget.isFullscreen
+                                                    ? Icons.fullscreen_exit
+                                                    : Icons.fullscreen,
+                                                size: 22,
+                                                color: AppStyles.txtFieldColor,
+                                              ),
+                                              padding: EdgeInsets.zero,
+                                              visualDensity: VisualDensity(
+                                                  horizontal: -4, vertical: 0),
+                                              constraints: BoxConstraints(),
+                                              tooltip: widget.isFullscreen
+                                                  ? 'إظهار الفهرس'
+                                                  : 'إخفاء الفهرس',
+                                            ),
+
                                           // Surah name - use the state variable that persists across rebuilds
                                           Flexible(
                                             child: Padding(
@@ -947,7 +973,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                               EdgeInsets.only(right: 16),
                                           child: Center(
                                             child: Text(
-                                              "${"page"} $index ",
+                                              "${"الصفحة"} $index ",
                                               style: TextStyle(
                                                 fontFamily: 'aldahabi',
                                                 fontSize: 12,
@@ -1106,6 +1132,19 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                                         .isWeb, // Pass isWeb flag to header
                                                   ),
                                                 ));
+
+                                                // Add a line break after the header for Surah Al-Fatiha (surah 1)
+                                                if (e["surah"] == 1) {
+                                                  spans.add(WidgetSpan(
+                                                    child: SizedBox(
+                                                      width: double.infinity,
+                                                      height: widget.isWeb
+                                                          ? 10
+                                                          : 20.h,
+                                                    ),
+                                                  ));
+                                                }
+
                                                 if (index != 187 &&
                                                     index != 1) {
                                                   spans.add(WidgetSpan(

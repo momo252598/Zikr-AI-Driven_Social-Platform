@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // import ScreenUtil
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:software_graduation_project/screens/Signup/signup.dart';
 import 'package:software_graduation_project/screens/signin/signin.dart';
 import 'package:software_graduation_project/components/signup/sign_up_form.dart';
@@ -16,12 +17,11 @@ import 'package:software_graduation_project/services/api_service.dart';
 import 'package:software_graduation_project/services/firebase_messaging_service.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart';
 import 'package:software_graduation_project/screens/chat/chat.dart';
-// Import the safe animation controller
-import 'package:software_graduation_project/utils/safe_animation_controller.dart';
 // Import notification services
 import 'package:software_graduation_project/services/notification_service.dart'
     as notification_service;
 import 'package:software_graduation_project/services/message_notification_service.dart';
+import 'package:software_graduation_project/services/social_notification_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
 // Import forgot password screen
@@ -42,7 +42,8 @@ AppLifecycleState appState = AppLifecycleState.resumed;
 
 // This callback is called for background notification handling
 @pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse notificationResponse) {
+Future<void> notificationTapBackground(
+    NotificationResponse notificationResponse) async {
   // Handle notification tap when app is in background or closed
   debugPrint(
       'Notification tapped in background: ${notificationResponse.payload}');
@@ -58,16 +59,43 @@ void notificationTapBackground(NotificationResponse notificationResponse) {
       } catch (e) {
         // If not JSON, use as raw string
         payloadData = {'conversationId': payload};
-      }
+      } // Check if this is a social notification
+      if (payloadData['type'] == 'social_notification') {
+        // Store social notification data in shared prefs for when app opens
+        // We can't directly call SocialNotificationService here as it may not be initialized yet
+        try {
+          final SharedPreferences prefs = await SharedPreferences.getInstance();
 
-      // Extract the conversation ID
-      final conversationId = payloadData['conversationId']?.toString();
-      if (conversationId != null) {
-        // Store in the global variable so it can be accessed when app starts
-        _lastTappedConversationId = conversationId;
-        debugPrint(
-            'Background/terminated: Should navigate to conversation: $conversationId when app opens');
-        // We can't navigate here directly as the app might not be fully initialized
+          // Mark this notification as coming from a tap
+          await prefs.setString('social_notification_type',
+              payloadData['notificationType'] ?? '');
+          await prefs.setString(
+              'social_notification_sender_id', payloadData['senderId'] ?? '');
+          await prefs.setString(
+              'social_notification_post_id', payloadData['postId'] ?? '');
+          await prefs.setString('social_notification_sender_name',
+              payloadData['senderName'] ?? '');
+          await prefs.setInt('social_notification_timestamp',
+              DateTime.now().millisecondsSinceEpoch);
+          await prefs.setBool(
+              'social_notification_from_tap', true); // Mark as from a tap
+
+          debugPrint(
+              'Background/terminated: Stored social notification data for when app opens');
+        } catch (e) {
+          debugPrint('Error storing social notification data: $e');
+        }
+      }
+      // Otherwise check for chat conversation ID
+      else {
+        final conversationId = payloadData['conversationId']?.toString();
+        if (conversationId != null) {
+          // Store in the global variable so it can be accessed when app starts
+          _lastTappedConversationId = conversationId;
+          debugPrint(
+              'Background/terminated: Should navigate to conversation: $conversationId when app opens');
+          // We can't navigate here directly as the app might not be fully initialized
+        }
       }
     } catch (e) {
       debugPrint('Error processing notification payload: $e');
@@ -133,9 +161,7 @@ void main() async {
           } catch (e) {
             // If not JSON, use as raw string
             payloadData = {'conversationId': details.payload};
-          }
-
-          // If this is a chat message, store the conversation ID for navigation
+          } // If this is a chat message, store the conversation ID for navigation
           if (payloadData['type'] == 'chat_message') {
             final conversationId = payloadData['conversationId']?.toString();
             if (conversationId != null) {
@@ -146,6 +172,16 @@ void main() async {
               final messagingService = FirebaseMessagingService();
               messagingService.navigateToChat(conversationId);
             }
+          }
+          // If this is a social notification, process it
+          else if (payloadData['type'] == 'social_notification') {
+            debugPrint('Foreground: Processing social notification tap');
+
+            // Process social notification with fromTap=true flag
+            // This will store the necessary data for navigation
+            final socialNotificationService = SocialNotificationService();
+            socialNotificationService.handleSocialNotification(payloadData,
+                fromTap: true);
           }
         } catch (e) {
           debugPrint('Error processing foreground notification payload: $e');
@@ -208,7 +244,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final FirebaseMessagingService _messagingService = FirebaseMessagingService();
   final MessageNotificationService _messageNotificationService =
       MessageNotificationService();
+  final SocialNotificationService _socialNotificationService =
+      SocialNotificationService();
   Timer? _notificationCheckTimer;
+  bool _notificationTapped = false;
 
   @override
   void initState() {
@@ -244,6 +283,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Notify services
     _messageNotificationService.setAppState(state);
     _messagingService.setAppState(state);
+    _socialNotificationService.setAppState(state);
 
     if (state == AppLifecycleState.resumed) {
       // Refresh messages when app comes to foreground
@@ -259,13 +299,38 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // First check the Firebase messaging service for navigation data
     final navigationData =
         _messagingService.getAndClearNotificationNavigation();
-    if (navigationData != null && navigationData['type'] == 'chat') {
-      final conversationId = navigationData['conversationId'];
-      if (conversationId != null) {
+    if (navigationData != null) {
+      if (navigationData['type'] == 'chat') {
+        final conversationId = navigationData['conversationId'];
+        if (conversationId != null) {
+          debugPrint(
+              'Processing navigation to chat from messaging service: $conversationId');
+          // Get Firebase ID and find the corresponding Django ID using a service
+          await _handleChatNavigation(conversationId);
+          return;
+        }
+      } else if (navigationData['type'] == 'social_notification') {
+        // For social notifications from tap, we should navigate
+        if (_wasNotificationTapped()) {
+          debugPrint('Processing navigation for tapped social notification');
+          await _handleSocialNotificationNavigation();
+          return;
+        } else {
+          debugPrint(
+              'Social notification received but not tapped, skipping navigation');
+        }
+      }
+    }
+
+    // Check for social notifications (from SharedPreferences) only if notification was tapped
+    if (_wasNotificationTapped()) {
+      await _socialNotificationService.initialize();
+      final socialData =
+          await _socialNotificationService.getLastNotificationData();
+      if (socialData != null) {
         debugPrint(
-            'Processing navigation to chat from messaging service: $conversationId');
-        // Get Firebase ID and find the corresponding Django ID using a service
-        await _handleChatNavigation(conversationId);
+            'Found pending social notification from tap: ${socialData['notificationType']}');
+        await _handleSocialNotificationNavigation();
         return;
       }
     }
@@ -328,6 +393,64 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       }
     } catch (e) {
       debugPrint('Error handling notification navigation: $e');
+    }
+  } // Check if the notification was actually tapped by the user
+
+  bool _wasNotificationTapped() {
+    // For now we'll assume any notification data coming from FirebaseMessaging.onMessageOpenedApp
+    // or FirebaseMessaging.getInitialMessage() was tapped
+    return true;
+  }
+
+  Future<void> _handleSocialNotificationNavigation() async {
+    debugPrint('Handling social notification navigation');
+
+    try {
+      // Get the stored notification data
+      final notificationData =
+          await _socialNotificationService.getLastNotificationData();
+
+      if (notificationData == null) {
+        debugPrint('No social notification data found');
+        return;
+      }
+
+      // Extract sender ID for navigation to profile
+      final senderId = notificationData['senderId'];
+
+      if (senderId == null) {
+        debugPrint('No sender ID found in notification data');
+        return;
+      }
+
+      debugPrint('Navigating to profile tab in Skeleton');
+
+      // Use the Skeleton's navigation to navigate to the profile tab
+      final context = navigatorKey.currentContext;
+      if (context != null) {
+        // Find the nearest Skeleton instance
+        final skeletonState = Skeleton.navigatorKey.currentState;
+        if (skeletonState != null) {
+          // Navigate to profile tab (index 4)
+          skeletonState.navigateToTab(4);
+          debugPrint('Successfully navigated to profile tab in Skeleton');
+        } else {
+          debugPrint('Skeleton state is null, navigating to Skeleton widget');
+          // If Skeleton state is not found, navigate to Skeleton
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+                builder: (context) => Skeleton(key: Skeleton.navigatorKey)),
+            (route) => false, // remove all previous routes
+          );
+        }
+
+        // Clear the notification data to prevent duplicate navigation
+        await _socialNotificationService.clearNotificationData();
+      } else {
+        debugPrint('Navigator context is null, cannot navigate');
+      }
+    } catch (e) {
+      debugPrint('Error handling social notification navigation: $e');
     }
   }
 

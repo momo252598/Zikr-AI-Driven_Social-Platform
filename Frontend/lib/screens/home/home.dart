@@ -810,8 +810,8 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Text(
                             firstName.isNotEmpty
-                                ? "مرحبا $firstName"
-                                : "مرحبا بك",
+                                ? "السلام عليكم $firstName"
+                                : "السلام عليكم",
                             style: TextStyle(
                               color: AppStyles.white,
                               fontSize: 22,

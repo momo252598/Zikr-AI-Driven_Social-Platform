@@ -9,6 +9,7 @@ import 'package:software_graduation_project/services/notification_service.dart'
     as notification_service;
 import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/services/chat_notification_helper.dart';
+import 'package:software_graduation_project/services/social_notification_service.dart';
 
 // Add logging to track all notification-related handlers
 // Handle background messages
@@ -87,12 +88,32 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Use the imported NotificationService
   final notificationService = notification_service.NotificationService();
   await notificationService.initialize();
-
   Map<String, dynamic> data = message.data;
   int notificationIdBase = messageId != null
       ? messageId.hashCode
       : DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  if (data.containsKey('type') && data['type'] == 'chat_message') {
+  // Handle social notifications (likes and comments)
+  if (data.containsKey('type') && data['type'] == 'social_notification') {
+    debugPrint(
+        '[BACKGROUND HANDLER] Received social notification: ${message.messageId}');
+
+    String notificationType = data['notificationType'] ?? '';
+    String senderName = data['senderName'] ?? '';
+    String senderId = data['senderId'] ?? '';
+    String postId = data['postId'] ?? '';
+
+    // Store notification data for when user taps on notification
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('social_notification_type', notificationType);
+    await prefs.setString('social_notification_sender_id', senderId);
+    await prefs.setString('social_notification_post_id', postId);
+    await prefs.setString('social_notification_sender_name', senderName);
+    await prefs.setInt(
+        'social_notification_timestamp', DateTime.now().millisecondsSinceEpoch);
+
+    // Let the FCM notification handle display in background mode
+    return;
+  } else if (data.containsKey('type') && data['type'] == 'chat_message') {
     String conversationId = data['conversationId'] ?? '';
     String senderName = data['senderName'] ?? 'رسالة جديدة';
     String messageContent = data['messageContent'] ?? '';
@@ -429,7 +450,6 @@ class FirebaseMessagingService {
         ? messageId.hashCode
         : DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final data = message.data;
-
     if (data.containsKey('type') && data['type'] == 'chat_message') {
       final conversationId = data['conversationId'];
       final chatNotificationHelper = ChatNotificationHelper();
@@ -450,6 +470,51 @@ class FirebaseMessagingService {
         senderName: senderName,
         messageContent: messageContent,
         conversationId: conversationId,
+      );
+      return;
+    }
+
+    // Handle social notifications (likes and comments)
+    if (data.containsKey('type') && data['type'] == 'social_notification') {
+      debugPrint(
+          'Processing social notification in foreground handler: $messageId');
+
+      final String notificationType = data['notificationType'] ?? '';
+      final String senderName = data['senderName'] ?? '';
+      final String postContent = data['postContent'] ?? '';
+      final String senderId = data['senderId'] ?? '';
+      final String postId =
+          data['postId'] ?? ''; // Initialize social notification service
+      final socialNotificationService = SocialNotificationService();
+      await socialNotificationService.initialize();
+
+      // Process the notification - in foreground mode, it's not from a tap
+      await socialNotificationService.handleSocialNotification(data,
+          fromTap: false);
+
+      // Set the title and body based on notification type
+      String title;
+      if (notificationType == 'like') {
+        title = '$senderName أعجب بمنشورك';
+      } else if (notificationType == 'comment') {
+        title = '$senderName علق على منشورك';
+      } else {
+        title = 'تفاعل جديد';
+      }
+
+      // Show a local notification
+      await _notificationService.showNotification(
+        id: notificationIdBase,
+        title: title,
+        body: postContent.length > 100
+            ? '${postContent.substring(0, 100)}...'
+            : postContent,
+        payload: json.encode({
+          'type': 'social_notification',
+          'senderId': senderId,
+          'postId': postId,
+          'notificationType': notificationType
+        }),
       );
       return;
     }
@@ -538,21 +603,36 @@ class FirebaseMessagingService {
     // Notify about received FCM message for deduplication
     if (message.messageId != null && _notificationReceivedCallback != null) {
       _notificationReceivedCallback!(message.messageId!);
-    }
+    } // Handle navigation based on notification type
 
-    // Handle navigation for chat messages - look in both data and notification
-    String? conversationId;
-
-    // First check the data part (priority)
+    // Handle chat messages
     if (message.data.containsKey('type') &&
         message.data['type'] == 'chat_message') {
-      conversationId = message.data['conversationId'];
-    }
+      String? conversationId = message.data['conversationId'];
+      if (conversationId != null) {
+        debugPrint(
+            'Navigating to conversation from opened app: $conversationId');
+        navigateToChat(conversationId);
+      }
+    } // Handle social notifications
+    else if (message.data.containsKey('type') &&
+        message.data['type'] == 'social_notification') {
+      debugPrint('Processing social notification from opened app');
 
-    // If we found a conversation ID, navigate to it
-    if (conversationId != null) {
-      debugPrint('Navigating to conversation from opened app: $conversationId');
-      navigateToChat(conversationId);
+      // Store this notification data for navigation
+      _notificationNavigationData = {
+        'type': 'social_notification',
+        'senderId': message.data['senderId'],
+        'postId': message.data['postId'],
+        'notificationType': message.data['notificationType'],
+      };
+
+      // Store in shared preferences for the social notification service
+      // This was from a tap (onMessageOpenedApp), so pass fromTap=true
+      final socialNotificationService = SocialNotificationService();
+      await socialNotificationService.initialize();
+      await socialNotificationService.handleSocialNotification(message.data,
+          fromTap: true);
     }
   }
 
@@ -593,22 +673,35 @@ class FirebaseMessagingService {
     // Notify about received FCM message for deduplication
     if (message.messageId != null && _notificationReceivedCallback != null) {
       _notificationReceivedCallback!(message.messageId!);
-    }
+    } // Handle navigation based on notification type
 
-    // Handle navigation for chat messages - look in both data and notification
-    String? conversationId;
-
-    // First check the data part (priority)
+    // Handle chat messages
     if (message.data.containsKey('type') &&
         message.data['type'] == 'chat_message') {
-      conversationId = message.data['conversationId'];
-    }
+      String? conversationId = message.data['conversationId'];
+      if (conversationId != null) {
+        debugPrint(
+            'Navigating to conversation from initial message: $conversationId');
+        navigateToChat(conversationId);
+      }
+    } // Handle social notifications
+    else if (message.data.containsKey('type') &&
+        message.data['type'] == 'social_notification') {
+      debugPrint('Processing social notification from initial message');
 
-    // If we found a conversation ID, navigate to it
-    if (conversationId != null) {
-      debugPrint(
-          'Navigating to conversation from initial message: $conversationId');
-      navigateToChat(conversationId);
+      // Store this notification data for navigation
+      _notificationNavigationData = {
+        'type': 'social_notification',
+        'senderId': message.data['senderId'],
+        'postId': message.data['postId'],
+        'notificationType': message.data['notificationType'],
+      };
+
+      // Store in shared preferences for the social notification service
+      // (but don't navigate automatically)
+      final socialNotificationService = SocialNotificationService();
+      await socialNotificationService.initialize();
+      await socialNotificationService.handleSocialNotification(message.data);
     }
   }
 

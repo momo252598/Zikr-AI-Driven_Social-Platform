@@ -25,6 +25,7 @@ class _ResponsiveQuranLayoutState extends State<ResponsiveQuranLayout> {
   late int _selectedPageNumber; // Will be initialized in initState
   bool _shouldHighlightText = false;
   String _highlightVerse = "";
+  bool _isFullscreen = false; // New state to track fullscreen mode
 
   @override
   void initState() {
@@ -93,6 +94,13 @@ class _ResponsiveQuranLayoutState extends State<ResponsiveQuranLayout> {
     }
   }
 
+  // New method to toggle fullscreen mode
+  void _toggleFullscreen() {
+    setState(() {
+      _isFullscreen = !_isFullscreen;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     // Use Row with Directionality to ensure correct RTL layout
@@ -100,25 +108,26 @@ class _ResponsiveQuranLayoutState extends State<ResponsiveQuranLayout> {
       textDirection: TextDirection.ltr, // Override parent RTL for this layout
       child: Row(
         children: [
-          // Left panel - Sura list (30% width)
-          Container(
-            width: MediaQuery.of(context).size.width * 0.3,
-            decoration: BoxDecoration(
-              border: Border(
-                right: BorderSide(
-                  color: AppStyles.lightPurple.withOpacity(0.3),
-                  width: 1,
+          // Left panel - Sura list (30% width) - Only show if not in fullscreen mode
+          if (!_isFullscreen)
+            Container(
+              width: MediaQuery.of(context).size.width * 0.3,
+              decoration: BoxDecoration(
+                border: Border(
+                  right: BorderSide(
+                    color: AppStyles.lightPurple.withOpacity(0.3),
+                    width: 1,
+                  ),
                 ),
               ),
+              child: QuranPage2(
+                suraJsonData: widget.suraJsonData,
+                isWeb: true,
+                onPageSelected: _updateSelectedPage,
+              ),
             ),
-            child: QuranPage2(
-              suraJsonData: widget.suraJsonData,
-              isWeb: true,
-              onPageSelected: _updateSelectedPage,
-            ),
-          ),
 
-          // Right panel - Quran content (70%)
+          // Right panel - Quran content (70% or 100% depending on fullscreen mode)
           Expanded(
             child: QuranViewPage(
               key: ValueKey<String>(
@@ -128,6 +137,9 @@ class _ResponsiveQuranLayoutState extends State<ResponsiveQuranLayout> {
               shouldHighlightText: _shouldHighlightText, // Use state variable
               highlightVerse: _highlightVerse, // Use state variable
               isWeb: true, // Pass isWeb flag
+              onToggleFullscreen:
+                  _toggleFullscreen, // Pass callback to toggle fullscreen
+              isFullscreen: _isFullscreen, // Pass current fullscreen state
             ),
           ),
         ],

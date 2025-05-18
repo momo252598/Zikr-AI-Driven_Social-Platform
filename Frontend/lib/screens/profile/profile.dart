@@ -12,7 +12,9 @@ import 'package:software_graduation_project/services/social_api_service.dart';
 import 'package:software_graduation_project/components/community/post.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart'; // Add chat service
 import 'package:software_graduation_project/screens/chat/chat.dart'; // Use existing chat page
+import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart'; // Use existing chat page
 import 'dart:ui' as ui;
+// import 'package:software_graduation_project/layouts/browser_chat_layout.dart'; // Import for web chat layout
 
 class ProfilePage extends StatefulWidget {
   final String? userId; // Optional parameter to view other users' profiles
@@ -274,7 +276,22 @@ class _ProfilePageState extends State<ProfilePage> {
         throw Exception('Could not determine conversation ID from response');
       }
 
-      // Navigate to existing ChatPage with the conversation data
+      // --- WEB: Use BrowserChatLayout and select the chat ---
+      if (kIsWeb) {
+        // Pop the overlay/modal if present
+        Navigator.of(context).pop();
+        // Push the browser chat layout and select the conversation
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => BrowserChatLayoutInitialSelectedChat(
+              initialChatId: conversationId!,
+            ),
+          ),
+        );
+        return;
+      }
+
+      // --- MOBILE: Keep existing behavior ---
       Navigator.push(
         context,
         MaterialPageRoute(
