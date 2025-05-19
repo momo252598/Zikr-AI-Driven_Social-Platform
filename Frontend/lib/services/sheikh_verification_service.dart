@@ -14,6 +14,30 @@ class SheikhVerificationService {
     _baseUrl = 'http://$host:8000';
   }
 
+  // Check if user has pending verification requests
+  Future<bool> hasExistingPendingVerification(int userId) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/api/accounts/check-verification-status/$userId/'),
+        headers: <String, String>{
+          'Content-Type': 'application/json; charset=UTF-8',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        return data['has_pending_request'] ?? false;
+      } else {
+        print('Failed to check verification status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print("Error checking verification status: $e");
+      return false;
+    }
+  }
+
   // Upload sheikh certification images
   Future<List<String>> uploadCertifications(List<XFile> images) async {
     List<String> uploadedUrls = [];

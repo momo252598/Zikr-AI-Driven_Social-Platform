@@ -3,7 +3,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from accounts.views import verify_account, resend_verification_code, logout_view, update_profile, change_password, get_user_public_profile, check_auth, search_users, register_fcm_token
 from .views import RegisterView, LoginView
 from .password_reset_views import request_password_reset, verify_reset_code, reset_password
-from .sheikh_views import upload_certification, submit_sheikh_certifications
+from .sheikh_views import upload_certification, submit_sheikh_certifications, check_verification_status
 from .admin_views import list_pending_sheikh_verifications, approve_sheikh_verification, reject_sheikh_verification
 
 urlpatterns = [
@@ -22,9 +22,10 @@ urlpatterns = [
       # Password reset endpoints
     path('request-password-reset/', request_password_reset, name='request-password-reset'),
     path('verify-reset-code/', verify_reset_code, name='verify-reset-code'),
-    path('reset-password/', reset_password, name='reset-password'),      # Sheikh verification endpoints
+    path('reset-password/', reset_password, name='reset-password'),    # Sheikh verification endpoints
     path('submit-sheikh-certifications/', submit_sheikh_certifications, name='submit-sheikh-certifications'),
     path('upload-certification/', upload_certification, name='upload-certification'),
+    path('check-verification-status/<int:user_id>/', check_verification_status, name='check-verification-status'),
     
     # Admin sheikh verification endpoints
     path('admin/sheikh-verifications/', list_pending_sheikh_verifications, name='list-pending-sheikh-verifications'),

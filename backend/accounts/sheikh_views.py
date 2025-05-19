@@ -10,6 +10,39 @@ import traceback
 from supabase import create_client
 from .models import User, SheikhVerification
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def check_verification_status(request, user_id):
+    """
+    Check if a user has any pending sheikh verification requests
+    """
+    try:
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check for pending verification requests
+        has_pending = SheikhVerification.objects.filter(
+            user=user, 
+            status='pending'
+        ).exists()
+        
+        return Response({
+            'has_pending_request': has_pending,
+        }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+        # Print detailed error for debugging
+        print(f"Error checking verification status: {str(e)}")
+        print(traceback.format_exc())
+        
+        return Response({
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @parser_classes([MultiPartParser, FormParser])

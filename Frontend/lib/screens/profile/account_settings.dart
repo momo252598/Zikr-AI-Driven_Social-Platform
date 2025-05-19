@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:software_graduation_project/screens/profile/edit_profile.dart';
 import 'package:software_graduation_project/screens/profile/change_password.dart';
 import 'package:software_graduation_project/screens/profile/request_sheikh_verification.dart'; // Add this import
+import 'package:software_graduation_project/services/sheikh_verification_service.dart'; // Import the service
+import 'dart:ui' as ui;
 
 class AccountSettingsPage extends StatefulWidget {
   final User user;
@@ -55,14 +57,89 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   // Add new navigation method for sheikh verification
   Future<void> _navigateToSheikhVerification() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RequestSheikhVerificationPage(user: _user),
+    // Show loading indicator
+    _showLoadingDialog('جاري التحقق من طلباتك السابقة...');
+
+    try {
+      final sheikhService = SheikhVerificationService();
+      final hasPendingRequest =
+          await sheikhService.hasExistingPendingVerification(_user.id);
+
+      // Dismiss the loading dialog
+      Navigator.pop(context);
+
+      if (hasPendingRequest) {
+        // Show message if there's already a pending request
+        _showPendingRequestDialog();
+      } else {
+        // If no pending requests, navigate to the verification page
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RequestSheikhVerificationPage(user: _user),
+          ),
+        );
+        // No need to update user state, as that's handled elsewhere
+      }
+    } catch (e) {
+      // Dismiss the loading dialog in case of error
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('حدث خطأ أثناء التحقق من طلبات التوثيق السابقة'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Helper dialog to show pending request message
+  void _showPendingRequestDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange),
+            const SizedBox(width: 10),
+            const Text('طلب قيد المراجعة'),
+          ],
+        ),
+        content: const Text(
+          'لديك بالفعل طلب توثيق كشيخ قيد المراجعة. يرجى الانتظار حتى يتم مراجعة طلبك الحالي قبل تقديم طلب جديد.',
+          textAlign: TextAlign.right,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('حسناً'),
+          ),
+        ],
       ),
     );
+  }
 
-    // No need to update user state, as that's handled elsewhere
+  // Helper dialog to show loading indicator
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: AppStyles.buttonColor),
+              const SizedBox(width: 20),
+              Text(message),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   // Helper method to format DateTime objects
@@ -214,7 +291,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             _buildInfoRow('رقم الهاتف',
                 _user.phoneNumber.isNotEmpty ? _user.phoneNumber : 'غير متوفر'),
             _buildInfoRow(
-                'الجنس', _translateGender(_user.gender ?? 'غير محدد')),
+                'الجنس',
+                _translateGender(
+                    _user.gender.isEmpty ? 'غير محدد' : _user.gender)),
             _buildInfoRow('تاريخ الميلاد', _formatDate(_user.birthDate)),
           ],
         ),
@@ -310,10 +389,15 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Colors.black87,
+                Flexible(
+                  child: Text(
+                    value,
+                    style: const TextStyle(
+                      color: Colors.black87,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    textDirection:
+                        ui.TextDirection.ltr, // Ensure emails display correctly
                   ),
                 ),
                 // Show verification badge if needed
