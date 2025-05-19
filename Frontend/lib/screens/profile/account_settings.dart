@@ -7,6 +7,7 @@ import 'package:software_graduation_project/utils/verification_badge.dart'; // I
 import 'package:intl/intl.dart';
 import 'package:software_graduation_project/screens/profile/edit_profile.dart';
 import 'package:software_graduation_project/screens/profile/change_password.dart';
+import 'package:software_graduation_project/screens/profile/request_sheikh_verification.dart'; // Add this import
 
 class AccountSettingsPage extends StatefulWidget {
   final User user;
@@ -50,6 +51,18 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         builder: (context) => const ChangePasswordPage(),
       ),
     );
+  }
+
+  // Add new navigation method for sheikh verification
+  Future<void> _navigateToSheikhVerification() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RequestSheikhVerificationPage(user: _user),
+      ),
+    );
+
+    // No need to update user state, as that's handled elsewhere
   }
 
   // Helper method to format DateTime objects
@@ -147,6 +160,20 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                               horizontal: 20, vertical: 12),
                         ),
                       ),
+
+                      // Add Sheikh Verification request button if user is not a sheikh
+                      if (_user.userType != 'sheikh')
+                        ElevatedButton.icon(
+                          onPressed: _navigateToSheikhVerification,
+                          icon: const Icon(Icons.verified_user),
+                          label: const Text('طلب التحقق كشيخ'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppStyles.purple,
+                            foregroundColor: AppStyles.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                          ),
+                        ),
                     ],
                   ),
                 ),

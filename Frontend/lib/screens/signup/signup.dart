@@ -5,6 +5,7 @@ import 'package:flutter_islamic_icons/flutter_islamic_icons.dart';
 import 'package:software_graduation_project/components/signup/signup_step_one.dart';
 import 'package:software_graduation_project/components/signup/signup_step_two.dart';
 import 'package:software_graduation_project/components/signup/signup_step_three.dart';
+import 'package:software_graduation_project/components/signup/signup_sheikh_verify.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:software_graduation_project/utils/safe_animation_controller.dart';
@@ -30,7 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen>
   void initState() {
     super.initState();
     // Set base URL based on platform
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.6';
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.4';
     _baseUrl = 'http://$host:8000';
 
     _animationController = createSafeAnimationController(
@@ -69,6 +70,8 @@ class _SignUpScreenState extends State<SignUpScreen>
       await _createAccount();
     } else {
       setState(() {
+        // If current step is 2 and account type is sheikh, go to sheikh verification
+        // Otherwise, go to normal verification step
         if (_currentStep < 2) {
           _currentStep++;
         }
@@ -96,8 +99,7 @@ class _SignUpScreenState extends State<SignUpScreen>
         'password': _userData['password'],
         'password2': _userData['password'],
         'email': _userData['email'],
-        'user_type':
-            _userData['account_type'], // Changed from account_type to user_type
+        'user_type': 'regular', // Always create as regular user initially
         'phone_number': _userData['phone_number'],
         'birth_date':
             _userData['birthdate'], // Changed from birthdate to birth_date
@@ -125,7 +127,12 @@ class _SignUpScreenState extends State<SignUpScreen>
         // Account created successfully
         setState(() {
           _isLoading = false;
-          _currentStep++; // Move to verification step
+          // Check if user is registering as a sheikh
+          if (_userData['account_type'] == 'sheikh') {
+            _currentStep = 2; // Move to sheikh verification step
+          } else {
+            _currentStep = 3; // Move to regular verification step
+          }
         });
       } else {
         // Parse error response and display more specific error
@@ -266,21 +273,35 @@ class _SignUpScreenState extends State<SignUpScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 30),
-
-                    // Modern step indicators with labels
+                    const SizedBox(
+                        height: 30), // Modern step indicators with labels
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _buildStepIndicator(0, "الحساب"),
-                          _buildStepConnector(0),
-                          _buildStepIndicator(1, "معلومات"),
-                          _buildStepConnector(1),
-                          _buildStepIndicator(2, "التحقق"),
-                        ],
-                      ),
+                      child: _userData['account_type'] == 'sheikh'
+                          ? Row(
+                              // Sheikh users have 4 steps
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildStepIndicator(0, "حساب"),
+                                _buildStepConnector(0),
+                                _buildStepIndicator(1, "تفاصيل"),
+                                _buildStepConnector(1),
+                                _buildStepIndicator(2, "شهادات"),
+                                _buildStepConnector(2),
+                                _buildStepIndicator(3, "تحقق"),
+                              ],
+                            )
+                          : Row(
+                              // Regular users have 3 steps
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _buildStepIndicator(0, "الحساب"),
+                                _buildStepConnector(0),
+                                _buildStepIndicator(1, "تفاصيل"),
+                                _buildStepConnector(1),
+                                _buildStepIndicator(2, "التحقق"),
+                              ],
+                            ),
                     ),
                     const SizedBox(height: 40),
 
@@ -364,10 +385,23 @@ class _SignUpScreenState extends State<SignUpScreen>
                                       });
                                     },
                                   )
-                                : SignUpStepThree(
-                                    userData: _userData,
-                                    onSubmit: _submitData,
-                                  ),
+                                : _currentStep == 2 &&
+                                        _userData['account_type'] == 'sheikh'
+                                    ? SignUpSheikhVerify(
+                                        userData: _userData,
+                                        onNext: () {
+                                          setState(() {
+                                            _currentStep =
+                                                3; // Move to regular verification after sheikh verification
+                                            // This is where sheikh verification happens - by this point the user
+                                            // account has already been created as a regular user
+                                          });
+                                        },
+                                      )
+                                    : SignUpStepThree(
+                                        userData: _userData,
+                                        onSubmit: _submitData,
+                                      ),
                       ),
                   ],
                 ),

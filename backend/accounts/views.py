@@ -147,7 +147,6 @@ class RegisterView(generics.CreateAPIView):
         
         headers = self.get_success_headers(serializer.data)
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
-    
     def send_activation_email(self, user, code):
         subject = 'تأكيد حسابك'
         

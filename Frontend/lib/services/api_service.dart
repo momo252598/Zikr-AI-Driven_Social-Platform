@@ -15,8 +15,8 @@ class ApiService {
   static const int _maxRetries = 1;
 
   ApiService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.6 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.6';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.4 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.4';
     _baseUrl = 'http://$host:8000/api';
   }
 

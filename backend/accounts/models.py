@@ -61,6 +61,23 @@ class SheikhProfile(models.Model):
     
     def __str__(self):
         return f"Sheikh Profile for {self.user.username}"
+        
+class SheikhVerification(models.Model):
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    )
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    certification_urls = models.JSONField()  # Stores list of certification image URLs from Supabase
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer_notes = models.TextField(blank=True)
+    
+    def __str__(self):
+        return f"Sheikh Verification for {self.user.username} - {self.status}"
 
 class AccountActivationToken(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
