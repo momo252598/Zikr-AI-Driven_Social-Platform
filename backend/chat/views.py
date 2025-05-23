@@ -91,13 +91,12 @@ def start_conversation(request):
                 sender=request.user,
                 firebase_id=message_firebase_id,
                 content_preview=initial_message[:97] + '...' if len(initial_message) > 100 else initial_message
-            )
-          # Update the conversation's timestamp
+            )        # Update the conversation's timestamp
         conversation.updated_at = timezone.now()
         conversation.save()
         
         # Return the conversation details
-        serializer = ConversationSerializer(conversation)
+        serializer = ConversationSerializer(conversation, context={'request': request})
         response_data = {
             "conversation": serializer.data,
             "success": "Conversation started successfully."

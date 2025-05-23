@@ -1,11 +1,11 @@
 {
-  "name": "software_graduation_project",
-  "short_name": "software_graduation_project",
+  "name": "Zikr",
+  "short_name": "Zikr",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#0175C2",
   "theme_color": "#0175C2",
-  "description": "Quran App",
+  "description": "Islamic Social and Spiritual App",
   "orientation": "portrait-primary",
   "prefer_related_applications": false,
   "icons": [

@@ -11,8 +11,8 @@ class ChatApiService {
   final FirebaseService _firebaseService = FirebaseService();
 
   ChatApiService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.9 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.14 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
     baseUrl = 'http://$host:8000/api/chat';
   }
 
@@ -28,7 +28,7 @@ class ChatApiService {
 
     try {
       final token = await _authService.getAccessToken();
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
 
       // Properly encode the Arabic query with spaces preserved
       final encodedQuery = Uri.encodeComponent(query);
@@ -208,12 +208,31 @@ class ChatApiService {
         // Return the full response data for maximum compatibility
         return responseData;
       } else {
-        final errorBody = json.decode(response.body);
-        print("Server error response: $errorBody");
-        throw Exception('Failed to start conversation: ${response.statusCode}');
+        try {
+          final errorBody = json.decode(response.body);
+          print("Server error response: $errorBody");
+
+          // Extract the actual error message from the server
+          String errorMessage = 'Failed to start conversation';
+          if (errorBody is Map && errorBody.containsKey('error')) {
+            errorMessage = errorBody['error'].toString();
+          } else if (errorBody is Map && errorBody.containsKey('detail')) {
+            errorMessage = errorBody['detail'].toString();
+          }
+
+          throw Exception(errorMessage);
+        } catch (jsonError) {
+          // If we can't parse the error response, fall back to status code
+          throw Exception(
+              'Failed to start conversation: ${response.statusCode}');
+        }
       }
     } catch (e) {
       print("Exception in startConversation: $e");
+      // Don't wrap the exception if it's already meaningful
+      if (e is Exception) {
+        rethrow;
+      }
       throw Exception('Failed to start conversation: $e');
     }
   }

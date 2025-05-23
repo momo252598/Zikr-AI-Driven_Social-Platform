@@ -209,6 +209,7 @@ class _RequestSheikhVerificationPageState
                 SignUpSheikhVerify(
                   userData: userData,
                   onNext: _onVerificationCompleted,
+                  onSkip: _onSkipVerification,
                 ),
             ],
           ),

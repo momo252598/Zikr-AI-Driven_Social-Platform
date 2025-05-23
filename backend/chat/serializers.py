@@ -29,12 +29,12 @@ class ConversationSerializer(serializers.ModelSerializer):
                 'is_read': last_message.is_read
             }
         return None
-    
     def get_unread_count(self, obj):
         """Get the count of unread messages for the current user in this conversation"""
-        user = self.context.get('request').user
-        if not user:
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user') or not request.user:
             return 0
+        user = request.user
         # Count unread messages that were NOT sent by the current user
         return obj.messages.filter(is_read=False).exclude(sender=user).count()
 

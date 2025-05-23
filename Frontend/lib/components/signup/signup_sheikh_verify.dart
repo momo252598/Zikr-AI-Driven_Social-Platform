@@ -8,11 +8,13 @@ import '../../services/sheikh_verification_service.dart';
 class SignUpSheikhVerify extends StatefulWidget {
   final Map<String, dynamic> userData;
   final VoidCallback onNext;
+  final VoidCallback? onSkip;
 
   const SignUpSheikhVerify({
     Key? key,
     required this.userData,
     required this.onNext,
+    this.onSkip,
   }) : super(key: key);
 
   @override
@@ -191,6 +193,31 @@ class _SignUpSheikhVerifyState extends State<SignUpSheikhVerify> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.face, color: Colors.orange[700], size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'مطلوب: صورة واحدة على الأقل تحتوي على وجهك مع الشهادة في نفس الصورة',
+                            style: TextStyle(
+                              color: Colors.orange[800],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -402,7 +429,7 @@ class _SignUpSheikhVerifyState extends State<SignUpSheikhVerify> {
                   textAlign: TextAlign.center,
                 ),
                 TextButton(
-                  onPressed: widget.onNext,
+                  onPressed: widget.onSkip ?? widget.onNext,
                   child: Text(
                     'تخطي التحقق والمتابعة كمستخدم عادي',
                     style: TextStyle(

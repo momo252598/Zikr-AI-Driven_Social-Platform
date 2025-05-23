@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For text direction controls
 import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/services/chat_api_service.dart';
-import 'package:software_graduation_project/services/firebase_service.dart';
-import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/utils/text_utils.dart'; // Import text utilities
 import 'package:software_graduation_project/utils/verification_badge.dart'; // Import for sheikh badges
 
@@ -21,7 +19,6 @@ class NewConversationDialog extends StatefulWidget {
 class _NewConversationDialogState extends State<NewConversationDialog> {
   final TextEditingController _searchController = TextEditingController();
   final ChatApiService _chatApiService = ChatApiService();
-  final AuthService _authService = AuthService();
   bool _isLoading = false;
   bool _isSearching = false;
   String _errorMessage = '';
@@ -127,8 +124,12 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
     });
 
     try {
+      print('Starting conversation with user: $username');
+
       // Start conversation with this user
       final result = await _chatApiService.startConversation(username, '');
+
+      print('Conversation API result: $result');
 
       // Extract the conversation ID
       int? conversationId;
@@ -137,14 +138,30 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
         conversationId = conversation['id'] is int
             ? conversation['id']
             : int.tryParse(conversation['id'].toString());
+        print(
+            'Extracted conversation ID from nested structure: $conversationId');
       } else if (result.containsKey('id')) {
         conversationId = result['id'] is int
             ? result['id']
             : int.tryParse(result['id'].toString());
+        print(
+            'Extracted conversation ID from direct structure: $conversationId');
       }
 
+      print('Final conversation ID: $conversationId');
+
       if (conversationId == null) {
+        print('Failed to extract conversation ID from result: $result');
         throw Exception('لم يتم العثور على معرف المحادثة في الرد');
+      }
+
+      print('Successfully extracted conversation ID: $conversationId');
+
+      // Reset loading state before navigation
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
 
       // First close the dialog
@@ -163,6 +180,26 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
                   .contains('cannot start a conversation with yourself') ||
               errorString.contains('conversation with yourself')) {
             _errorMessage = 'لا يمكنك بدء محادثة مع نفسك';
+          } else if (errorString.contains('user not found')) {
+            _errorMessage = 'المستخدم غير موجود';
+          } else if (errorString.contains('exception:')) {
+            // Extract the actual error message after "Exception:"
+            final parts = e.toString().split('Exception:');
+            if (parts.length > 1) {
+              final actualError = parts[1].trim();
+              if (actualError
+                      .contains('cannot start a conversation with yourself') ||
+                  actualError.contains(
+                      'You cannot start a conversation with yourself')) {
+                _errorMessage = 'لا يمكنك بدء محادثة مع نفسك';
+              } else if (actualError.contains('User not found')) {
+                _errorMessage = 'المستخدم غير موجود';
+              } else {
+                _errorMessage = 'فشل في بدء المحادثة: $actualError';
+              }
+            } else {
+              _errorMessage = 'فشل في بدء المحادثة';
+            }
           } else {
             _errorMessage = 'فشل في بدء المحادثة';
           }
@@ -260,11 +297,6 @@ class _NewConversationDialogState extends State<NewConversationDialog> {
                             final String displayName = _formatName(user);
                             final String? profilePicture =
                                 user['profile_picture'];
-                            final bool hasFullName =
-                                (user['first_name'] != null &&
-                                        user['first_name'].isNotEmpty) ||
-                                    (user['last_name'] != null &&
-                                        user['last_name'].isNotEmpty);
 
                             return ListTile(
                               contentPadding: const EdgeInsets.symmetric(
