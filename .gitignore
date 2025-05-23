@@ -1,2 +1,12 @@
 backend/islamicsocial-15380-firebase-adminsdk-fbsvc-c5ed0571f1.json
 backend/.env
+# Python virtual environment directories
+backend/venv/
+backend/env/
+backend/ENV/
+backend/.venv/
+.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+backend/*.py[cod]
+backend/*$py.class
