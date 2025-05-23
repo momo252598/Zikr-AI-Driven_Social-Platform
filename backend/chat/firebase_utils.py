@@ -6,12 +6,12 @@ def initialize_firebase():
     # Get your service account key from Firebase console > Project settings > Service accounts
     # Use path relative to this file instead of working directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    credentials_path = os.path.join(current_dir, "../zikr-94f9a-firebase-adminsdk-fbsvc-d32aba577e.json")
+    credentials_path = os.path.join(current_dir, "../zikr-94f9a-firebase-adminsdk-fbsvc-8c693eec91.json")
     
     # Alternative: use environment variable (more secure for production)
     # credentials_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", credentials_path)
     
-    cred = credentials.Certificate("D:\College\Flutter_Projects\software_graduation_project\\backend\zikr-94f9a-firebase-adminsdk-fbsvc-8c693eec91.json")
+    cred = credentials.Certificate(credentials_path)
     
     # Initialize the app if it hasn't been initialized already
     if not firebase_admin._apps:

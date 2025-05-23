@@ -16,8 +16,8 @@ class AuthService {
   Timer? _tokenRefreshTimer;
 
   AuthService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.14 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.9 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
     _baseUrl = 'http://$host:8000/api/accounts';
   }
 
@@ -101,17 +101,29 @@ class AuthService {
   Future<User?> getUserData() async {
     if (_currentUser != null) return _currentUser;
 
-    final userData = await _storage.read(key: USER_DATA_KEY);
-    if (userData != null) {
-      _currentUser = User.fromJson(jsonDecode(userData));
-      return _currentUser;
+    try {
+      final userData = await _storage.read(key: USER_DATA_KEY);
+      if (userData != null) {
+        _currentUser = User.fromJson(jsonDecode(userData));
+        return _currentUser;
+      }
+    } catch (e) {
+      print("Error reading user data: $e");
+      // Clear corrupt data
+      await _storage.delete(key: USER_DATA_KEY);
     }
     return null;
   }
 
   // Get refresh token
   Future<String?> getRefreshToken() async {
-    return await _storage.read(key: REFRESH_TOKEN_KEY);
+    try {
+      return await _storage.read(key: REFRESH_TOKEN_KEY);
+    } catch (e) {
+      print("Error reading refresh token: $e");
+      await _storage.delete(key: REFRESH_TOKEN_KEY);
+      return null;
+    }
   }
 
   // Clear all stored data (for logout)
@@ -288,41 +300,48 @@ class AuthService {
 
   // Get current user ID - enhanced with more logging and fallback
   Future<int?> getCurrentUserId() async {
-    // Try reading the ID directly
-    final userIdStr = await _storage.read(key: USER_ID_KEY);
-    print("Direct USER_ID_KEY read: $userIdStr");
+    try {
+      // Try reading the ID directly
+      final userIdStr = await _storage.read(key: USER_ID_KEY);
+      print("Direct USER_ID_KEY read: $userIdStr");
 
-    if (userIdStr != null) {
-      try {
-        return int.parse(userIdStr);
-      } catch (e) {
-        print("Error parsing user ID: $e");
-      }
-    }
-
-    // If ID isn't directly available, try to get it from stored user data
-    if (_currentUser?.id != null) {
-      print("Using cached current user ID: ${_currentUser!.id}");
-      return _currentUser!.id;
-    }
-
-    // Try to extract from full user data
-    final userData = await _storage.read(key: USER_DATA_KEY);
-    if (userData != null) {
-      try {
-        final userMap = jsonDecode(userData);
-        if (userMap.containsKey('id')) {
-          final id = userMap['id'];
-          print("Extracted user ID from full user data: $id");
-
-          // Store it for future use
-          await _storage.write(key: USER_ID_KEY, value: id.toString());
-
-          return id is int ? id : int.parse(id.toString());
+      if (userIdStr != null) {
+        try {
+          return int.parse(userIdStr);
+        } catch (e) {
+          print("Error parsing user ID: $e");
         }
-      } catch (e) {
-        print("Error extracting ID from user data: $e");
       }
+
+      // If ID isn't directly available, try to get it from stored user data
+      if (_currentUser?.id != null) {
+        print("Using cached current user ID: ${_currentUser!.id}");
+        return _currentUser!.id;
+      }
+
+      // Try to extract from full user data
+      final userData = await _storage.read(key: USER_DATA_KEY);
+      if (userData != null) {
+        try {
+          final userMap = jsonDecode(userData);
+          if (userMap.containsKey('id')) {
+            final id = userMap['id'];
+            print("Extracted user ID from full user data: $id");
+
+            // Store it for future use
+            await _storage.write(key: USER_ID_KEY, value: id.toString());
+
+            return id is int ? id : int.parse(id.toString());
+          }
+        } catch (e) {
+          print("Error extracting ID from user data: $e");
+        }
+      }
+    } catch (e) {
+      print("Error in getCurrentUserId: $e");
+      // Clear corrupt data
+      await _storage.delete(key: USER_ID_KEY);
+      await _storage.delete(key: USER_DATA_KEY);
     }
 
     print("Could not retrieve user ID from any source");
@@ -336,32 +355,39 @@ class AuthService {
 
   // Get access token (refreshes if needed)
   Future<String?> getAccessToken() async {
-    String? accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+    try {
+      String? accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
 
-    if (accessToken == null) {
-      print('No access token found, attempting to refresh');
-      // No access token found, try to refresh
-      final refreshed = await refreshToken();
-      if (refreshed) {
-        accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
-      } else {
-        return null; // No valid tokens available
-      }
-    } else {
-      // Check if token is expired or will expire soon
-      final isExpired = await isAccessTokenExpired();
-      if (isExpired) {
-        print('Access token expired or expiring soon, refreshing');
+      if (accessToken == null) {
+        print('No access token found, attempting to refresh');
+        // No access token found, try to refresh
         final refreshed = await refreshToken();
         if (refreshed) {
           accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
         } else {
-          return null;
+          return null; // No valid tokens available
+        }
+      } else {
+        // Check if token is expired or will expire soon
+        final isExpired = await isAccessTokenExpired();
+        if (isExpired) {
+          print('Access token expired or expiring soon, refreshing');
+          final refreshed = await refreshToken();
+          if (refreshed) {
+            accessToken = await _storage.read(key: ACCESS_TOKEN_KEY);
+          } else {
+            return null;
+          }
         }
       }
-    }
 
-    return accessToken;
+      return accessToken;
+    } catch (e) {
+      print('Error getting access token: $e');
+      // Clear potentially corrupt token
+      await _storage.delete(key: ACCESS_TOKEN_KEY);
+      return null;
+    }
   }
 
   // Save user info after login
@@ -405,7 +431,7 @@ class AuthService {
       final accessToken = await getAccessToken();
 
       // Use the chat API base URL instead of accounts
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
       final chatApiUrl = 'http://$host:8000/api/chat';
 
       // Call Django endpoint to get a Firebase custom token
@@ -470,7 +496,37 @@ class AuthService {
       return false; // No valid session found
     } catch (e) {
       print("Error initializing auth: $e");
+      // If there's an error, clear all stored data to start fresh
+      await _handleStorageError();
       return false;
+    }
+  }
+
+  // Handle storage error by clearing all stored data
+  Future<void> _handleStorageError() async {
+    print("Handling storage error by clearing all data");
+    try {
+      await _storage.deleteAll();
+      _currentUser = null;
+    } catch (e) {
+      print("Error clearing storage: $e");
+      // Try to delete individual keys
+      final keys = [
+        ACCESS_TOKEN_KEY,
+        REFRESH_TOKEN_KEY,
+        USER_DATA_KEY,
+        USER_ID_KEY,
+        USERNAME_KEY,
+        TOKEN_EXPIRY_KEY
+      ];
+
+      for (final key in keys) {
+        try {
+          await _storage.delete(key: key);
+        } catch (e) {
+          print("Could not delete key $key: $e");
+        }
+      }
     }
   }
 
@@ -483,7 +539,7 @@ class AuthService {
         return false;
       }
 
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
       final baseUrl = 'http://$host:8000';
       final response = await http.post(
         Uri.parse('$baseUrl/api/accounts/register-fcm-token/'),
