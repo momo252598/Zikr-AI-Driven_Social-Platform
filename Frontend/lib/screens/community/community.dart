@@ -7,8 +7,8 @@ import 'package:software_graduation_project/screens/chat/browser_chat_layout.dar
 import 'package:software_graduation_project/services/social_api_service.dart';
 import 'package:software_graduation_project/screens/community/create_post.dart';
 import 'package:software_graduation_project/screens/profile/profile.dart';
-import 'package:software_graduation_project/components/community/post.dart'; // Import the shared post components
-import 'package:software_graduation_project/services/unread_messages_service.dart'; // Import unread messages service
+import 'package:software_graduation_project/components/community/post.dart';
+import 'package:software_graduation_project/services/unread_messages_service.dart';
 
 class CommunityPage extends StatefulWidget {
   const CommunityPage({Key? key}) : super(key: key);
@@ -23,18 +23,37 @@ class _CommunityPageState extends State<CommunityPage> {
   List<dynamic>? _posts;
   bool _isLoading = false;
   bool _isLoadingMore = false;
+  bool _isLoadingTags = false;
   String? _error;
   int _currentPage = 1;
   bool _hasMorePages = true;
   final Set<dynamic> _loadedPostIds = <dynamic>{};
+
+  // Tag filtering
+  List<dynamic> _tags = [];
+  List<dynamic> _filteredTags = [];
+  List<int> _selectedTagIds = [];
+  String _selectedCategory = '';
+  String _tagSearchQuery = '';
+  bool _isFilterExpanded = false;
+
+  final List<String> _categories = [
+    'religious',
+    'practice',
+    'lifestyle',
+    'contemporary',
+    'community',
+    'suggestions',
+    'other'
+  ];
+
   @override
   void initState() {
     super.initState();
+    _loadTags();
     _fetchPosts();
 
-    // Set up scroll listener for pagination
     _scrollController.addListener(() {
-      // Only trigger loading more if we're near the bottom, not already loading, and have more pages
       if (_scrollController.position.pixels >=
               _scrollController.position.maxScrollExtent * 0.8 &&
           !_isLoading &&
@@ -43,6 +62,70 @@ class _CommunityPageState extends State<CommunityPage> {
         _loadMorePosts();
       }
     });
+  }
+
+  Future<void> _loadTags() async {
+    try {
+      setState(() {
+        _isLoadingTags = true;
+      });
+
+      final tags = await _socialService.getTags();
+
+      if (!mounted) return;
+
+      setState(() {
+        _tags = tags;
+        _filteredTags = tags;
+        _isLoadingTags = false;
+      });
+    } catch (e) {
+      print('Error loading tags: $e');
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingTags = false;
+      });
+    }
+  }
+
+  void _filterTags() {
+    setState(() {
+      _filteredTags = _tags.where((tag) {
+        bool matchesCategory =
+            _selectedCategory.isEmpty || tag['category'] == _selectedCategory;
+        bool matchesSearch = _tagSearchQuery.isEmpty ||
+            tag['name'].toString().contains(_tagSearchQuery) ||
+            (tag['display_name_ar'] != null &&
+                tag['display_name_ar'].toString().contains(_tagSearchQuery));
+        return matchesCategory && matchesSearch;
+      }).toList();
+    });
+  }
+
+  void _toggleTagSelection(dynamic tag) {
+    final int tagId = tag['id'];
+    setState(() {
+      if (_selectedTagIds.contains(tagId)) {
+        _selectedTagIds.remove(tagId);
+      } else {
+        _selectedTagIds.add(tagId);
+      }
+    });
+
+    // Refresh posts with new tag filter
+    _fetchPosts();
+  }
+
+  void _clearTagFilters() {
+    setState(() {
+      _selectedTagIds.clear();
+      _selectedCategory = '';
+      _tagSearchQuery = '';
+      _filteredTags = _tags;
+    });
+
+    _fetchPosts();
   }
 
   Future<void> _fetchPosts() async {
@@ -54,21 +137,34 @@ class _CommunityPageState extends State<CommunityPage> {
     });
 
     try {
-      final posts = await _socialService.getPosts();
+      List<dynamic> posts;
+      if (_selectedTagIds.isNotEmpty) {
+        Map<String, dynamic> uniquePosts = {};
 
-      // Debug: Print the first post structure
+        for (int tagId in _selectedTagIds) {
+          final tagPosts = await _socialService.getPosts(tagId: tagId);
+          for (var post in tagPosts) {
+            if (post['id'] != null) {
+              uniquePosts[post['id'].toString()] = post;
+            }
+          }
+        }
+
+        posts = uniquePosts.values.toList();
+      } else {
+        posts = await _socialService.getPosts();
+      }
+
       if (posts.isNotEmpty) {
         print("First post structure: ${json.encode(posts.first)}");
       }
 
-      // Check if widget is still mounted before updating state
       if (!mounted) return;
 
       setState(() {
         _posts = posts;
         _isLoading = false;
         _currentPage = 1;
-        // Reset loaded post IDs and populate with current posts
         _loadedPostIds.clear();
         for (final post in posts) {
           if (post['id'] != null) {
@@ -79,7 +175,6 @@ class _CommunityPageState extends State<CommunityPage> {
     } catch (e) {
       print("Error fetching posts: $e");
 
-      // Check if widget is still mounted before updating state
       if (!mounted) return;
 
       setState(() {
@@ -90,10 +185,16 @@ class _CommunityPageState extends State<CommunityPage> {
   }
 
   Future<void> _loadMorePosts() async {
-    // Guard clauses to prevent unnecessary API calls
     if (_isLoadingMore) return;
     if (!_hasMorePages) {
       print("No more pages to load - skipping API call");
+      return;
+    }
+
+    if (_selectedTagIds.isNotEmpty) {
+      setState(() {
+        _hasMorePages = false;
+      });
       return;
     }
 
@@ -101,7 +202,6 @@ class _CommunityPageState extends State<CommunityPage> {
         "Loading more posts - Current page: $_currentPage, Next page to load: ${_currentPage + 1}");
     print("Currently loaded post IDs: ${_loadedPostIds.length}");
 
-    // Check if widget is still mounted before updating state
     if (!mounted) return;
 
     setState(() {
@@ -112,10 +212,8 @@ class _CommunityPageState extends State<CommunityPage> {
       final nextPage = _currentPage + 1;
       final morePosts = await _socialService.getPosts(page: nextPage);
 
-      // Check if we got any posts
       print("Received ${morePosts.length} posts from page $nextPage");
 
-      // Filter out duplicates
       final List<dynamic> newPosts = [];
       for (final post in morePosts) {
         if (post['id'] != null &&
@@ -129,16 +227,13 @@ class _CommunityPageState extends State<CommunityPage> {
 
       print("After filtering duplicates: ${newPosts.length} new posts to add");
 
-      // Check if widget is still mounted before updating state
       if (!mounted) return;
 
       setState(() {
         if (newPosts.isNotEmpty) {
-          // Add only non-duplicate posts
           _posts?.addAll(newPosts);
           _currentPage = nextPage;
         } else {
-          // If no new unique posts were found, end pagination
           _hasMorePages = false;
           print("No more unique posts available - reached the end");
         }
@@ -147,7 +242,6 @@ class _CommunityPageState extends State<CommunityPage> {
     } catch (e) {
       print("Error loading more posts: $e");
 
-      // Only show snackbar if still mounted
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,11 +259,9 @@ class _CommunityPageState extends State<CommunityPage> {
     try {
       final isLiked = await _socialService.togglePostLike(postId);
 
-      // Check if widget is still mounted before updating state
       if (!mounted) return;
 
       setState(() {
-        // Use toString() on both sides to ensure consistent comparison
         final postIndex =
             _posts!.indexWhere((p) => p['id'].toString() == postId.toString());
         if (postIndex >= 0) {
@@ -180,7 +272,6 @@ class _CommunityPageState extends State<CommunityPage> {
         }
       });
     } catch (e) {
-      // Only show snackbar if still mounted
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -189,7 +280,6 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
-  // Building chat icon with badge indicator
   Widget _buildChatIconWithBadge() {
     return StreamBuilder<int>(
       stream: UnreadMessagesService().unreadCountStream,
@@ -207,18 +297,27 @@ class _CommunityPageState extends State<CommunityPage> {
     );
   }
 
-  // Navigate to user profile when username is clicked - updated to use overlay
+  void _showComments(BuildContext context, dynamic post) {
+    PostUtils.showCommentsSheet(context, post, (newCount) {
+      setState(() {
+        final postIndex = _posts!
+            .indexWhere((p) => p['id'].toString() == post['id'].toString());
+        if (postIndex >= 0) {
+          _posts![postIndex]['comments_count'] = newCount;
+        }
+      });
+    });
+  }
+
   void _navigateToUserProfile(dynamic authorDetails) {
     if (authorDetails != null && authorDetails['id'] != null) {
-      // Show profile overlay instead of navigating to a new screen
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => DraggableScrollableSheet(
-          initialChildSize:
-              0.92, // Almost full screen but keeps app bar visible
-          minChildSize: 0.5, // Allow drag to half screen
+          initialChildSize: 0.92,
+          minChildSize: 0.5,
           maxChildSize: 0.92,
           builder: (context, scrollController) => Container(
             decoration: BoxDecoration(
@@ -245,6 +344,27 @@ class _CommunityPageState extends State<CommunityPage> {
     }
   }
 
+  String _getCategoryDisplayName(String category) {
+    switch (category) {
+      case 'religious':
+        return 'معرفة دينية';
+      case 'practice':
+        return 'عبادات يومية';
+      case 'lifestyle':
+        return 'حياة إسلامية';
+      case 'contemporary':
+        return 'قضايا معاصرة';
+      case 'community':
+        return 'المجتمع';
+      case 'suggestions':
+        return 'المقترحات';
+      case 'other':
+        return 'أخرى';
+      default:
+        return category;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -252,11 +372,37 @@ class _CommunityPageState extends State<CommunityPage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: GestureDetector(
+          onTap: () {
+            setState(() {
+              _isFilterExpanded = !_isFilterExpanded;
+            });
+          },
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _selectedTagIds.isEmpty ? 'المنشورات' : 'تصفية حسب المواضيع',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppStyles.darkPurple,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                _isFilterExpanded ? Icons.expand_less : Icons.expand_more,
+                size: 20,
+                color: AppStyles.darkPurple,
+              ),
+            ],
+          ),
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: _buildChatIconWithBadge(),
             onPressed: () {
-              // Navigate to different chat pages based on platform
               if (kIsWeb) {
                 Navigator.push(
                   context,
@@ -285,7 +431,6 @@ class _CommunityPageState extends State<CommunityPage> {
               );
 
               if (result == true) {
-                // Post was created successfully, refresh the list
                 _fetchPosts();
               }
             },
@@ -297,93 +442,344 @@ class _CommunityPageState extends State<CommunityPage> {
           constraints: BoxConstraints(
             maxWidth: kIsWeb ? 700 : double.infinity,
           ),
-          child: RefreshIndicator(
-            onRefresh: _fetchPosts,
-            child: _isLoading && (_posts == null || _posts!.isEmpty)
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null && (_posts == null || _posts!.isEmpty)
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'حدث خطأ: $_error',
-                              style: TextStyle(color: AppStyles.red),
-                              textAlign: TextAlign.center,
-                            ),
-                            ElevatedButton(
-                              onPressed: _fetchPosts,
-                              child: const Text('إعادة المحاولة'),
-                            ),
-                          ],
+          child: Column(
+            children: [
+              // Tag filtering section - shown when expanded
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                height: _isFilterExpanded ? null : 0,
+                child: _isFilterExpanded
+                    ? Container(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(context).size.height * 0.6,
                         ),
-                      )
-                    : _posts == null || _posts!.isEmpty
-                        ? const Center(
-                            child: Text('لا توجد منشورات'),
-                          )
-                        : Scrollbar(
-                            controller: _scrollController,
-                            thickness: 8.0,
-                            radius: const Radius.circular(10.0),
-                            thumbVisibility: kIsWeb,
-                            child: ListView.builder(
-                              controller: _scrollController,
-                              itemCount: _posts!.length +
-                                  (_isLoadingMore && _hasMorePages ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                try {
-                                  if (index >= _posts!.length) {
-                                    return const Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(8.0),
-                                        child: CircularProgressIndicator(),
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
+                            child: Directionality(
+                              textDirection:
+                                  TextDirection.rtl, // RTL for Arabic
+                              child: Card(
+                                elevation: 2,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16)),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Title
+                                      Text(
+                                        'تصفية حسب المواضيع',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                          color: AppStyles.darkPurple,
+                                        ),
                                       ),
-                                    );
-                                  }
+                                      const SizedBox(height: 12),
 
-                                  final post = _posts![index];
-
-                                  // Use the reusable PostCard component
-                                  return PostCard(
-                                    post: post,
-                                    onLike: _likePost,
-                                    onComment: (context, post) {
-                                      PostUtils.showCommentsSheet(
-                                        context,
-                                        post,
-                                        (newCommentCount) {
-                                          // Update post's comment count without full reload
+                                      // Search bar for tags
+                                      TextField(
+                                        decoration: InputDecoration(
+                                          hintText: 'بحث عن مواضيع...',
+                                          prefixIcon: Icon(Icons.search),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: BorderSide(
+                                                color: AppStyles.lightPurple),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: BorderSide(
+                                                color: AppStyles.lightPurple
+                                                    .withOpacity(0.5)),
+                                          ),
+                                          contentPadding: EdgeInsets.symmetric(
+                                              vertical: 12, horizontal: 16),
+                                        ),
+                                        onChanged: (value) {
                                           setState(() {
-                                            final postIndex = _posts!
-                                                .indexWhere((p) =>
-                                                    p['id'].toString() ==
-                                                    post['id'].toString());
-                                            if (postIndex >= 0) {
-                                              _posts![postIndex]
-                                                      ['comments_count'] =
-                                                  newCommentCount;
-                                            }
+                                            _tagSearchQuery = value;
+                                            _filterTags();
                                           });
                                         },
-                                      );
-                                    },
-                                    onUserTap: _navigateToUserProfile,
-                                  );
-                                } catch (e) {
-                                  print(
-                                      "Error rendering post at index $index: $e");
-                                  return Card(
-                                    margin: const EdgeInsets.all(8),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Text("حدث خطأ في عرض هذا المنشور"),
-                                    ),
-                                  );
-                                }
-                              },
+                                      ),
+
+                                      const SizedBox(height: 16),
+
+                                      // Category selection
+                                      Text(
+                                        'تصفية حسب المواضيع',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: AppStyles.darkPurple,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      // Category chips
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          // "All" option
+                                          FilterChip(
+                                            label: Text('الكل'),
+                                            selected: _selectedCategory.isEmpty,
+                                            onSelected: (selected) {
+                                              setState(() {
+                                                _selectedCategory = '';
+                                                _filterTags();
+                                              });
+                                            },
+                                            backgroundColor: AppStyles
+                                                .lightPurple
+                                                .withOpacity(0.2),
+                                            selectedColor: AppStyles.lightPurple
+                                                .withOpacity(0.7),
+                                            checkmarkColor: AppStyles.white,
+                                            labelStyle: TextStyle(
+                                              color: _selectedCategory.isEmpty
+                                                  ? AppStyles.white
+                                                  : AppStyles.black,
+                                            ),
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 8),
+                                          ),
+
+                                          // Category options
+                                          ...List.generate(
+                                            _categories.length,
+                                            (index) {
+                                              final category =
+                                                  _categories[index];
+                                              final String label =
+                                                  _getCategoryDisplayName(
+                                                      category);
+
+                                              return FilterChip(
+                                                label: Text(label),
+                                                selected: _selectedCategory ==
+                                                    category,
+                                                onSelected: (selected) {
+                                                  setState(() {
+                                                    _selectedCategory = selected
+                                                        ? category
+                                                        : '';
+                                                    _filterTags();
+                                                  });
+                                                },
+                                                backgroundColor: AppStyles
+                                                    .lightPurple
+                                                    .withOpacity(0.2),
+                                                selectedColor: AppStyles
+                                                    .lightPurple
+                                                    .withOpacity(0.7),
+                                                checkmarkColor: AppStyles.white,
+                                                labelStyle: TextStyle(
+                                                  color: _selectedCategory ==
+                                                          category
+                                                      ? AppStyles.white
+                                                      : AppStyles.black,
+                                                ),
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 8),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 16),
+
+                                      // Selected tags display
+                                      if (_selectedTagIds.isNotEmpty) ...[
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'المواضيع المُختارة',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: AppStyles.darkPurple,
+                                              ),
+                                            ),
+                                            TextButton(
+                                              onPressed: _clearTagFilters,
+                                              child: Text(
+                                                'مسح الكل',
+                                                style: TextStyle(
+                                                  color: AppStyles.red,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Wrap(
+                                          spacing: 8,
+                                          children: _tags
+                                              .where((tag) => _selectedTagIds
+                                                  .contains(tag['id']))
+                                              .map<Widget>((tag) {
+                                            return Chip(
+                                              label: Text(
+                                                tag['display_name_ar'] ??
+                                                    tag['name'],
+                                                style: TextStyle(
+                                                  color: AppStyles.darkPurple,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              backgroundColor: AppStyles
+                                                  .lightPurple
+                                                  .withOpacity(0.2),
+                                              deleteIconColor:
+                                                  AppStyles.darkPurple,
+                                              onDeleted: () =>
+                                                  _toggleTagSelection(tag),
+                                            );
+                                          }).toList(),
+                                        ),
+                                        const SizedBox(height: 16),
+                                      ],
+
+                                      // Tags selection
+                                      _isLoadingTags
+                                          ? Center(
+                                              child:
+                                                  CircularProgressIndicator())
+                                          : _filteredTags.isEmpty
+                                              ? Center(
+                                                  child: Padding(
+                                                    padding:
+                                                        const EdgeInsets.all(
+                                                            8.0),
+                                                    child: Text(
+                                                      'لا توجد مواضيع متطابقة مع بحثك',
+                                                      style: TextStyle(
+                                                        color: AppStyles.grey,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                )
+                                              : Wrap(
+                                                  spacing: 8,
+                                                  children: _filteredTags
+                                                      .map<Widget>((tag) {
+                                                    final bool isSelected =
+                                                        _selectedTagIds
+                                                            .contains(
+                                                                tag['id']);
+                                                    return ActionChip(
+                                                      label: Text(
+                                                        tag['display_name_ar'] ??
+                                                            tag['name'],
+                                                        style: TextStyle(
+                                                          color: isSelected
+                                                              ? AppStyles.white
+                                                              : AppStyles
+                                                                  .darkPurple,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                      backgroundColor:
+                                                          isSelected
+                                                              ? AppStyles
+                                                                  .darkPurple
+                                                              : AppStyles
+                                                                  .lightPurple
+                                                                  .withOpacity(
+                                                                      0.2),
+                                                      onPressed: () =>
+                                                          _toggleTagSelection(
+                                                              tag),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+
+              // Posts list
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _fetchPosts,
+                  child: _isLoading && (_posts == null || _posts!.isEmpty)
+                      ? const Center(child: CircularProgressIndicator())
+                      : _error != null && (_posts == null || _posts!.isEmpty)
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'حدث خطأ: $_error',
+                                    style: TextStyle(color: AppStyles.red),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  ElevatedButton(
+                                    onPressed: _fetchPosts,
+                                    child: const Text('إعادة المحاولة'),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : _posts == null || _posts!.isEmpty
+                              ? const Center(
+                                  child: Text('لا توجد منشورات'),
+                                )
+                              : Scrollbar(
+                                  controller: _scrollController,
+                                  thickness: 8.0,
+                                  radius: const Radius.circular(10.0),
+                                  thumbVisibility: kIsWeb,
+                                  child: ListView.builder(
+                                    controller: _scrollController,
+                                    itemCount: _posts!.length +
+                                        (_isLoadingMore && _hasMorePages
+                                            ? 1
+                                            : 0),
+                                    itemBuilder: (context, index) {
+                                      if (index >= _posts!.length) {
+                                        return const Center(
+                                          child: Padding(
+                                            padding: EdgeInsets.all(16.0),
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        );
+                                      }
+
+                                      final post = _posts![index];
+
+                                      return PostCard(
+                                        post: post,
+                                        onLike: _likePost,
+                                        onComment: _showComments,
+                                        onUserTap: _navigateToUserProfile,
+                                        useRtlText: true,
+                                      );
+                                    },
+                                  ),
+                                ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

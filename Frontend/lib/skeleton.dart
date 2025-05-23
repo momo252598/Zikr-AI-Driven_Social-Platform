@@ -399,7 +399,11 @@ class _SkeletonState extends State<Skeleton> {
   Widget _buildWebLayout(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(
-          title: 'ذكر', showAddButton: false, showBackButton: false),
+        title: 'ذكر',
+        showAddButton: false,
+        showBackButton: false,
+        titleFontFamily: 'thuluth',
+      ),
       body: Row(
         children: [
           // Left vertical navigation bar with improved styling
@@ -446,7 +450,10 @@ class _SkeletonState extends State<Skeleton> {
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
       appBar: const CustomAppBar(
-          title: 'ذكر', showAddButton: false, showBackButton: false),
+          title: 'ذِكر',
+          showAddButton: false,
+          showBackButton: false,
+          titleFontFamily: 'thuluth'),
       body: _pages[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: AppStyles.bgColor,

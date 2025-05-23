@@ -34,7 +34,7 @@ class _SignUpFormState extends State<SignUpForm> {
     if (_formKey.currentState!.validate()) {
       final response = await http.post(
         Uri.parse(
-            'http://192.168.1.4:8000/api/signup/'), // Replace with your Django backend endpoint
+            'http://192.168.1.14:8000/api/signup/'), // Replace with your Django backend endpoint
         headers: <String, String>{
           'Content-Type': 'application/json; charset=UTF-8',
         },

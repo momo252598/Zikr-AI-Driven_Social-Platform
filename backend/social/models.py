@@ -87,7 +87,20 @@ class Like(models.Model):
 
 class Tag(models.Model):
     """Model for post tagging system"""
+    CATEGORY_CHOICES = (
+        ('religious', 'Religious Knowledge'),
+        ('practice', 'Daily Practice'),
+        ('lifestyle', 'Community & Lifestyle'),
+        ('contemporary', 'Contemporary Issues'),
+        ('community', 'Community Engagement'),
+        ('suggestions', 'suggested'),
+        ('other', 'Other'),
+    )
+    
     name = models.CharField(max_length=50, unique=True)
+    display_name_ar = models.CharField(max_length=100, blank=True, null=True, help_text="Arabic display name for the tag")
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    description = models.TextField(blank=True, null=True, help_text="Brief description of this tag topic")
     posts = models.ManyToManyField(Post, related_name='tags')
     
     def __str__(self):

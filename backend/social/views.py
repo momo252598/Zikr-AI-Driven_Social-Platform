@@ -9,8 +9,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from django.db.models import Count, Q
 
-from .models import Post, Comment, Like, MediaPost
-from .serializers import PostSerializer, CommentSerializer, MediaPostSerializer
+from .models import Post, Comment, Like, MediaPost, Tag
+from .serializers import PostSerializer, CommentSerializer, MediaPostSerializer, TagSerializer
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.annotate(
@@ -28,18 +28,29 @@ class PostViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
-    
     def get_queryset(self):
         # Filter by visibility based on relationship with the author
         user = self.request.user
-        return Post.objects.filter(
+        queryset = Post.objects.filter(
             Q(visibility='public') |
             Q(author=user) |
             (Q(visibility='followers') & Q(author__followers=user))
         ).annotate(
             comments_count=Count('comments', distinct=True),
             likes_count=Count('likes', distinct=True)
-        ).order_by('-created_at')
+        )
+        
+        # Filter by tags if specified in query parameters
+        tags = self.request.query_params.getlist('tag')
+        if tags:
+            queryset = queryset.filter(tags__id__in=tags).distinct()
+            
+        # Filter by category if specified
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(tags__category=category).distinct()
+            
+        return queryset.order_by('-created_at')
     
     @action(detail=True, methods=['POST'])
     def like(self, request, pk=None):
@@ -173,8 +184,34 @@ class CommentViewSet(viewsets.ModelViewSet):
                 Like.objects.create(user=user, comment=comment)
                 return Response({'status': 'liked'})
                 
-        except Exception as e:
-            return Response(
+        except Exception as e:            return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class TagViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for handling Tag model operations.
+    """
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Tag.objects.all()
+        
+        # Filter by category if specified
+        category = self.request.query_params.get('category')
+        if category:
+            queryset = queryset.filter(category=category)
+            
+        # Search by name
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) | 
+                Q(display_name_ar__icontains=search)
+            )
+            
+        return queryset

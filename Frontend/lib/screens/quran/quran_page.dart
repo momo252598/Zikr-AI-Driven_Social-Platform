@@ -845,6 +845,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                 title: "القرآن الكريم",
                 showAddButton: false,
                 showBackButton: false,
+                titleFontFamily: 'thuluth',
               ),
         body: Stack(
           children: [
@@ -889,12 +890,10 @@ class _QuranViewPageState extends State<QuranViewPage> {
                               SizedBox(
                                 width: screenSize.width,
                                 child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    // Left side: Back button (mobile) and Bookmarks
-                                    Flexible(
-                                      flex: 3,
+                                    // Left side: Back button (mobile) and Bookmarks - Fixed width
+                                    SizedBox(
+                                      width: screenSize.width * 0.3,
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -958,9 +957,8 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                       ),
                                     ),
 
-                                    // Center: Page number
-                                    Flexible(
-                                      flex: 4,
+                                    // Center: Page number - Fixed center with equal spacing
+                                    Expanded(
                                       child: Center(
                                         child: EasyContainer(
                                           borderRadius: 12,
@@ -969,8 +967,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                           height: 20,
                                           width: 120,
                                           padding: 0,
-                                          customMargin:
-                                              EdgeInsets.only(right: 16),
+                                          customMargin: EdgeInsets.zero,
                                           child: Center(
                                             child: Text(
                                               "${"الصفحة"} $index ",
@@ -985,9 +982,9 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                       ),
                                     ),
 
-                                    // Right side: Action buttons
-                                    Flexible(
-                                      flex: 3,
+                                    // Right side: Action buttons - Fixed width to match left
+                                    SizedBox(
+                                      width: screenSize.width * 0.3,
                                       child: Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.end,
@@ -1083,7 +1080,7 @@ class _QuranViewPageState extends State<QuranViewPage> {
                                           ),
                                         ],
                                       ),
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),

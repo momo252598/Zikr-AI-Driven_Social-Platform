@@ -21,9 +21,84 @@ class _CreatePostPageState extends State<CreatePostPage> {
   final _imagePicker = ImagePicker();
   final _socialService = SocialService();
   bool _isPosting = false;
+  bool _isLoadingTags = true;
+  List<dynamic> _tags = [];
+  List<dynamic> _filteredTags = [];
+  List<int> _selectedTagIds = [];
+  String _selectedCategory = '';
+  String _searchQuery = '';
+  final List<String> _categories = [
+    'religious',
+    'practice',
+    'lifestyle',
+    'contemporary',
+    'community',
+    'suggestions',
+    'other'
+  ];
 
   // All posts will be public by default
   String _visibility = 'public';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    try {
+      setState(() {
+        _isLoadingTags = true;
+      });
+
+      final tags = await _socialService.getTags();
+
+      if (!mounted) return;
+
+      setState(() {
+        _tags = tags;
+        _filteredTags = tags;
+        _isLoadingTags = false;
+      });
+    } catch (e) {
+      print('Error loading tags: $e');
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingTags = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('حدث خطأ أثناء تحميل الوسوم: $e')),
+      );
+    }
+  }
+
+  void _filterTags() {
+    setState(() {
+      _filteredTags = _tags.where((tag) {
+        bool matchesCategory =
+            _selectedCategory.isEmpty || tag['category'] == _selectedCategory;
+        bool matchesSearch = _searchQuery.isEmpty ||
+            tag['name'].toString().contains(_searchQuery) ||
+            (tag['display_name_ar'] != null &&
+                tag['display_name_ar'].toString().contains(_searchQuery));
+        return matchesCategory && matchesSearch;
+      }).toList();
+    });
+  }
+
+  void _toggleTagSelection(dynamic tag) {
+    final int tagId = tag['id'];
+    setState(() {
+      if (_selectedTagIds.contains(tagId)) {
+        _selectedTagIds.remove(tagId);
+      } else {
+        _selectedTagIds.add(tagId);
+      }
+    });
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -110,6 +185,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
       final postData = await _socialService.createPost(
         _contentController.text.trim(),
         _visibility,
+        tagIds: _selectedTagIds,
       );
 
       final postId = postData['id'];
@@ -230,7 +306,7 @@ class _CreatePostPageState extends State<CreatePostPage> {
 
                 const SizedBox(height: 16),
 
-                // Image selection button
+                // Image selection button - moved above tags
                 Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -333,22 +409,14 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                   ),
                                   Positioned(
                                     top: 4,
-                                    left: 4, // Position on left for RTL layout
+                                    left: 4,
                                     child: GestureDetector(
                                       onTap: () => _removeImage(index),
                                       child: Container(
                                         padding: const EdgeInsets.all(4),
                                         decoration: BoxDecoration(
-                                          color: AppStyles.darkPurple,
+                                          color: Colors.black.withOpacity(0.7),
                                           shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.black.withOpacity(0.3),
-                                              blurRadius: 3,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ],
                                         ),
                                         child: const Icon(
                                           Icons.close,
@@ -367,6 +435,213 @@ class _CreatePostPageState extends State<CreatePostPage> {
                     ),
                   ),
                 ],
+
+                const SizedBox(height: 16),
+
+                // Tags Section
+                Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'إختر الوسوم المناسبة لمنشورك',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: AppStyles.darkPurple,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Search bar for tags
+                        TextField(
+                          decoration: InputDecoration(
+                            hintText: 'بحث عن وسوم...',
+                            prefixIcon: Icon(Icons.search),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  BorderSide(color: AppStyles.lightPurple),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                  color:
+                                      AppStyles.lightPurple.withOpacity(0.5)),
+                            ),
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              _searchQuery = value;
+                              _filterTags();
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Category filter
+                        Text(
+                          'تصفية حسب الفئات',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: AppStyles.darkPurple,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            // "All" option
+                            FilterChip(
+                              label: Text('الكل'),
+                              selected: _selectedCategory.isEmpty,
+                              onSelected: (selected) {
+                                setState(() {
+                                  _selectedCategory = '';
+                                  _filterTags();
+                                });
+                              },
+                              backgroundColor:
+                                  AppStyles.lightPurple.withOpacity(0.2),
+                              selectedColor:
+                                  AppStyles.lightPurple.withOpacity(0.7),
+                              checkmarkColor: AppStyles.white,
+                              labelStyle: TextStyle(
+                                color: _selectedCategory.isEmpty
+                                    ? AppStyles.white
+                                    : AppStyles.black,
+                              ),
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                            ),
+
+                            // Category options
+                            ...List.generate(
+                              _categories.length,
+                              (index) {
+                                final category = _categories[index];
+                                final String label =
+                                    _getCategoryDisplayName(category);
+
+                                return FilterChip(
+                                  label: Text(label),
+                                  selected: _selectedCategory == category,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      _selectedCategory =
+                                          selected ? category : '';
+                                      _filterTags();
+                                    });
+                                  },
+                                  backgroundColor:
+                                      AppStyles.lightPurple.withOpacity(0.2),
+                                  selectedColor:
+                                      AppStyles.lightPurple.withOpacity(0.7),
+                                  checkmarkColor: AppStyles.white,
+                                  labelStyle: TextStyle(
+                                    color: _selectedCategory == category
+                                        ? AppStyles.white
+                                        : AppStyles.black,
+                                  ),
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Selected tags display
+                        if (_selectedTagIds.isNotEmpty) ...[
+                          Text(
+                            'الوسوم المختارة',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: AppStyles.darkPurple,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            children: _tags
+                                .where((tag) =>
+                                    _selectedTagIds.contains(tag['id']))
+                                .map<Widget>((tag) {
+                              return Chip(
+                                label: Text(
+                                  tag['display_name_ar'] ?? tag['name'],
+                                  style: TextStyle(
+                                    color: AppStyles.darkPurple,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                backgroundColor:
+                                    AppStyles.lightPurple.withOpacity(0.2),
+                                deleteIconColor: AppStyles.darkPurple,
+                                onDeleted: () => _toggleTagSelection(tag),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Tags list
+                        _isLoadingTags
+                            ? Center(child: CircularProgressIndicator())
+                            : _filteredTags.isEmpty
+                                ? Center(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Text(
+                                        'لا توجد وسوم متطابقة مع بحثك',
+                                        style: TextStyle(
+                                          color: AppStyles.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                : Wrap(
+                                    spacing: 8,
+                                    children: _filteredTags.map<Widget>((tag) {
+                                      final bool isSelected =
+                                          _selectedTagIds.contains(tag['id']);
+                                      return ActionChip(
+                                        label: Text(
+                                          tag['display_name_ar'] ?? tag['name'],
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? AppStyles.white
+                                                : AppStyles.darkPurple,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        backgroundColor: isSelected
+                                            ? AppStyles.darkPurple
+                                            : AppStyles.lightPurple
+                                                .withOpacity(0.2),
+                                        onPressed: () =>
+                                            _toggleTagSelection(tag),
+                                      );
+                                    }).toList(),
+                                  ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // ...existing code... (remove the old image selection section that was below tags)
               ],
             ),
           ),
@@ -383,6 +658,28 @@ class _CreatePostPageState extends State<CreatePostPage> {
             )
           : null,
     );
+  }
+
+  // Helper method to convert category code to display name
+  String _getCategoryDisplayName(String category) {
+    switch (category) {
+      case 'religious':
+        return 'معرفة دينية';
+      case 'practice':
+        return 'عبادات يومية';
+      case 'lifestyle':
+        return 'حياة إسلامية';
+      case 'contemporary':
+        return 'قضايا معاصرة';
+      case 'community':
+        return 'المجتمع';
+      case 'suggestions':
+        return 'المقترحات';
+      case 'other':
+        return 'أخرى';
+      default:
+        return category;
+    }
   }
 
   @override

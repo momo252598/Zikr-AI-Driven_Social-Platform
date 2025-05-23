@@ -5,6 +5,7 @@ from . import views
 router = DefaultRouter()
 router.register(r'posts', views.PostViewSet)
 router.register(r'comments', views.CommentViewSet, basename='comment')
+router.register(r'tags', views.TagViewSet)
 
 app_name = 'social'
 

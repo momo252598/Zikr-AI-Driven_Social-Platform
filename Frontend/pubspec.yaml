@@ -119,6 +119,9 @@ flutter:
   #     fonts:
   #       - asset: assets/fonts/uthmanic_hafs_v20.ttf
   fonts:
+    - family: thuluth
+      fonts:
+        - asset: assets/fonts/A.Thuluth_p30download.com_.ttf
     - family: othman
       fonts:
         - asset: assets/fonts/uthmanic_hafs_v20.ttf

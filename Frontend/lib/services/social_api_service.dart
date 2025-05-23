@@ -8,12 +8,24 @@ import '../models/user.dart';
 import 'package:http_parser/http_parser.dart'; // Add this import for MediaType
 
 class SocialService {
-  final ApiService _apiService = ApiService();
-  // Get all posts with pagination
-  Future<List<dynamic>> getPosts({int? page}) async {
+  final ApiService _apiService = ApiService(); // Get all posts with pagination
+  Future<List<dynamic>> getPosts({int? page, int? tagId}) async {
     try {
-      final endpoint =
-          page != null ? '/social/posts/?page=$page' : '/social/posts/';
+      String endpoint = '/social/posts/';
+      List<String> params = [];
+
+      if (page != null) {
+        params.add('page=$page');
+      }
+
+      if (tagId != null) {
+        params.add('tag=$tagId');
+      }
+
+      if (params.isNotEmpty) {
+        endpoint += '?' + params.join('&');
+      }
+
       print("Fetching posts from endpoint: $endpoint");
 
       final response = await _apiService.get(endpoint);
@@ -41,15 +53,49 @@ class SocialService {
   }
 
   // Create a new post
-  Future<Map<String, dynamic>> createPost(
-      String content, String visibility) async {
+  Future<Map<String, dynamic>> createPost(String content, String visibility,
+      {List<int> tagIds = const []}) async {
     final data = {
       'content': content,
       'visibility': visibility,
+      'tag_ids': tagIds,
     };
 
     final response = await _apiService.post('/social/posts/', data);
     return response;
+  }
+
+  // Get all available tags
+  Future<List<dynamic>> getTags({String? category, String? search}) async {
+    try {
+      String endpoint = '/social/tags/';
+      List<String> params = [];
+
+      if (category != null) {
+        params.add('category=$category');
+      }
+
+      if (search != null && search.isNotEmpty) {
+        params.add('search=$search');
+      }
+
+      if (params.isNotEmpty) {
+        endpoint += '?' + params.join('&');
+      }
+
+      final response = await _apiService.get(endpoint);
+
+      if (response is List) {
+        return response;
+      } else if (response is Map && response.containsKey('results')) {
+        return response['results'] as List<dynamic>? ?? [];
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print("Error in getTags: $e");
+      return [];
+    }
   }
 
   // Like or unlike a post
@@ -184,13 +230,14 @@ class SocialService {
       // Simulate upload delay
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Return a dummy URL for now - in a real app, replace with actual upload code
-      return "https://example.com/uploads/${DateTime.now().millisecondsSinceEpoch}.jpg";
-
-      // Real example would be something like:
+      // In a real implementation, you would upload bytes here
+      // Example:
       // final ref = firebase_storage.FirebaseStorage.instance.ref().child('uploads/${DateTime.now().millisecondsSinceEpoch}.jpg');
       // await ref.putData(bytes);
       // return await ref.getDownloadURL();
+
+      // For now, just return a dummy URL
+      return "https://example.com/uploads/${DateTime.now().millisecondsSinceEpoch}_${bytes.length}.jpg";
     } catch (e) {
       print("Error uploading image: $e");
       throw Exception("Failed to upload image: $e");

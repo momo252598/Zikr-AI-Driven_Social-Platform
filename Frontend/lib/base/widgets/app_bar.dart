@@ -11,6 +11,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool showAddButton;
   final bool showBackButton;
   final List<Widget>? actions; // Add this parameter for custom actions
+  final String titleFontFamily; // Add this parameter
 
   const CustomAppBar({
     Key? key,
@@ -20,6 +21,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.showAddButton = true,
     this.showBackButton = true,
     this.actions, // Add this parameter to constructor
+    this.titleFontFamily = 'poppins', // Add with default value
   }) : super(key: key);
 
   @override
@@ -52,7 +54,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       title: Text(
         title,
         style: TextStyle(
-          fontFamily: 'Poppins',
+          fontFamily:
+              titleFontFamily, // Use the parameter instead of hardcoded value
           fontWeight: FontWeight.bold,
           color: AppStyles.white,
         ),

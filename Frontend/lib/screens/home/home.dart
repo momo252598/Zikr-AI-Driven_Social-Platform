@@ -818,6 +818,7 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               color: AppStyles.white,
                               fontSize: 22,
+                              fontFamily: 'othman',
                               fontWeight: FontWeight.bold,
                               shadows: [
                                 Shadow(
