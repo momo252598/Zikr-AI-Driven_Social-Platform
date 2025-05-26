@@ -9,7 +9,7 @@ class AdminService {
 
   AdminService() {
     // Set base URL based on platform
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
     _baseUrl = 'http://$host:8000';
   }
 

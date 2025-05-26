@@ -94,6 +94,35 @@ class _QuranViewPageState extends State<QuranViewPage> {
   List<Color> _clusterColors = []; // List of colors for each cluster (0-19)
   bool _isClusterDataLoaded = false;
 
+  // Add state variables for color legend button auto-hide
+  bool _isColorLegendVisible =
+      false; // Changed from true to false - button starts transparent
+  Timer? _colorLegendTimer;
+
+  // Define cluster topics for color legend
+  final Map<int, String> _clusterTopics = {
+    0: 'الإيمان والتوحيد',
+    1: 'القصص القرآني',
+    2: 'العبادات والشعائر',
+    3: 'الأخلاق والسلوك',
+    4: 'الآخرة والحساب',
+    5: 'الأحكام والتشريعات',
+    6: 'الجهاد والقتال',
+    7: 'الدعوة والرسالة',
+    8: 'المعاملات والعلاقات',
+    9: 'قصص الأنبياء',
+    10: 'آيات الكون والخلق',
+    11: 'العقيدة والإيمان',
+    12: 'الصبر والابتلاء',
+    13: 'النفاق والكفر',
+    14: 'المواعظ والعبر',
+    15: 'بني إسرائيل',
+    16: 'الرزق والنعم',
+    17: 'الوعد والوعيد',
+    18: 'الذكر والدعاء',
+    19: 'الموضوعات المتنوعة',
+  };
+
   highlightVerseFunction() {
     setState(() {
       shouldHighlightText = widget.shouldHighlightText;
@@ -450,6 +479,11 @@ class _QuranViewPageState extends State<QuranViewPage> {
     // Cancel the reading progress timer
     if (_readingProgressTimer != null && _readingProgressTimer!.isActive) {
       _readingProgressTimer!.cancel();
+    }
+
+    // Cancel the color legend timer
+    if (_colorLegendTimer != null && _colorLegendTimer!.isActive) {
+      _colorLegendTimer!.cancel();
     }
 
     // Cancel any active timers - safely check if timer exists and is active
@@ -819,6 +853,117 @@ class _QuranViewPageState extends State<QuranViewPage> {
         }
       });
     }
+  }
+
+  // Show color legend dialog to explain the meaning of each color
+  void _showColorLegendDialog() {
+    // Reset visibility when dialog is opened
+    _resetColorLegendTimer();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'مفتاح الألوان للمجموعات',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Taha',
+              fontSize: widget.isWeb ? 16 : 20.sp,
+              fontWeight: FontWeight.bold,
+              color: AppStyles.darkPurple,
+            ),
+          ),
+          content: Container(
+            width: widget.isWeb
+                ? min(MediaQuery.of(context).size.width * 0.3, 300.0)
+                : double.maxFinite,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height *
+                  (widget.isWeb ? 0.4 : 0.5),
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: _clusterTopics.length,
+              itemBuilder: (context, index) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: _clusterColors[index].withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: _clusterColors[index],
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _clusterTopics[index] ?? 'مجموعة $index',
+                          style: TextStyle(
+                            fontFamily: 'Taha',
+                            fontSize: widget.isWeb ? 14 : 16.sp,
+                          ),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              child: Text(
+                'إغلاق',
+                style: TextStyle(
+                  fontFamily: 'Taha',
+                  fontSize: widget.isWeb ? 14 : 16.sp,
+                  color: AppStyles.txtFieldColor,
+                ),
+              ),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+        );
+      },
+    );
+  }
+
+  // Method to reset the color legend button timer
+  void _resetColorLegendTimer() {
+    // Cancel existing timer
+    if (_colorLegendTimer != null && _colorLegendTimer!.isActive) {
+      _colorLegendTimer!.cancel();
+    }
+
+    // Make button visible
+    if (mounted) {
+      setState(() {
+        _isColorLegendVisible = true;
+      });
+    }
+
+    // Start new timer to hide after 3 seconds
+    _colorLegendTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _isColorLegendVisible = false;
+        });
+      }
+    });
   }
 
   @override
@@ -1376,6 +1521,47 @@ class _QuranViewPageState extends State<QuranViewPage> {
                 ),
               ),
             ],
+
+            // Color legend button - fixed to bottom left, only show when coloring is enabled
+            if (_isColoringEnabled && _isClusterDataLoaded && index > 0)
+              Positioned(
+                left: 16,
+                bottom: 20,
+                child: MouseRegion(
+                  onEnter: (_) {
+                    _resetColorLegendTimer(); // Make visible on hover for web
+                  },
+                  child: GestureDetector(
+                    onTap: () {
+                      _showColorLegendDialog();
+                    },
+                    onPanDown: (_) {
+                      // Reset timer when user touches the button area
+                      _resetColorLegendTimer();
+                    },
+                    child: AnimatedOpacity(
+                      opacity: _isColorLegendVisible
+                          ? 1.0
+                          : 0.2, // Even more transparent when inactive (0.2 instead of 0.3)
+                      duration: const Duration(milliseconds: 500),
+                      child: FloatingActionButton(
+                        heroTag: 'colorLegend',
+                        backgroundColor: AppStyles.txtFieldColor,
+                        mini: true,
+                        elevation: _isColorLegendVisible
+                            ? 4
+                            : 0, // No elevation when transparent
+                        onPressed: _showColorLegendDialog,
+                        child: Icon(
+                          Icons.palette,
+                          color: AppStyles.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

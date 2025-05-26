@@ -15,6 +15,8 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/foundation.dart'
     show kIsWeb; // Import kIsWeb for platform detection
 import 'package:quran/quran.dart'; // Add this import for getPageData function
+import 'package:software_graduation_project/screens/shorcuts/chatbot_screen.dart'; // Import ChatbotScreen
+import 'package:software_graduation_project/screens/azkar/azkar_screen.dart'; // Add this import
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -485,8 +487,20 @@ class _HomePageState extends State<HomePage> {
                             MaterialPageRoute(
                                 builder: (context) => const AllChatsPage()))),
                     const SizedBox(width: 12),
+                    // Add Chatbot feature card
+                    _buildFeatureCard(context, Icons.smart_toy, "المساعد الذكي",
+                        AppStyles.darkPurple, standardCardWidth,
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const ChatbotScreen()))),
+                    const SizedBox(width: 12),
                     _buildFeatureCard(context, Icons.volunteer_activism,
-                        "الأذكار", AppStyles.purple, standardCardWidth),
+                        "الأذكار", AppStyles.purple, standardCardWidth,
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const AzkarScreen()))),
                     const SizedBox(width: 12),
                     _buildFeatureCard(context, Icons.compass_calibration,
                         "القبلة", AppStyles.darkPurple, standardCardWidth),
@@ -609,11 +623,29 @@ class _HomePageState extends State<HomePage> {
                                 context,
                                 MaterialPageRoute(
                                     builder: (context) =>
-                                        const BrowserChatLayout()))), // Changed to BrowserChatLayout
+                                        const BrowserChatLayout()))),
+                        // Add Chatbot feature card for web
+                        _buildFeatureCard(
+                            context,
+                            Icons.smart_toy,
+                            "المساعد الذكي",
+                            AppStyles.darkPurple,
+                            featureCardWidth,
+                            isWeb: true,
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ChatbotScreen()))),
                         // Azkar feature card
                         _buildFeatureCard(context, Icons.volunteer_activism,
                             "الأذكار", AppStyles.purple, featureCardWidth,
-                            isWeb: true),
+                            isWeb: true,
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AzkarScreen()))),
                         // Qibla feature card
                         _buildFeatureCard(context, Icons.compass_calibration,
                             "القبلة", AppStyles.darkPurple, featureCardWidth,

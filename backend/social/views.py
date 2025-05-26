@@ -24,10 +24,23 @@ class PostViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
     
+    def perform_destroy(self, instance):
+        """
+        Override to ensure proper cascading delete
+        """
+        # Check if user has permission to delete the post
+        if instance.author != self.request.user:
+            raise permissions.PermissionDenied("You can only delete your own posts.")
+        
+        # The cascade delete is handled by the database due to on_delete=models.CASCADE
+        # All related MediaPost, Comment, Like, and SavedPost objects will be deleted automatically
+        instance.delete()
+    
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+        
     def get_queryset(self):
         # Filter by visibility based on relationship with the author
         user = self.request.user
@@ -129,6 +142,18 @@ class CommentViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     permission_classes = [permissions.IsAuthenticated]
     
+    def perform_destroy(self, instance):
+        """
+        Override to ensure proper cascading delete for comments
+        """
+        # Check if user has permission to delete the comment
+        if instance.author != self.request.user:
+            raise permissions.PermissionDenied("You can only delete your own comments.")
+        
+        # The cascade delete is handled by the database due to on_delete=models.CASCADE
+        # All related Like objects and child comments (replies) will be deleted automatically
+        instance.delete()
+    
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context['request'] = self.request
@@ -184,7 +209,8 @@ class CommentViewSet(viewsets.ModelViewSet):
                 Like.objects.create(user=user, comment=comment)
                 return Response({'status': 'liked'})
                 
-        except Exception as e:            return Response(
+        except Exception as e:
+            return Response(
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )

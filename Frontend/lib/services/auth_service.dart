@@ -16,8 +16,8 @@ class AuthService {
   Timer? _tokenRefreshTimer;
 
   AuthService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.14 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.9 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
     _baseUrl = 'http://$host:8000/api/accounts';
   }
 
@@ -431,7 +431,7 @@ class AuthService {
       final accessToken = await getAccessToken();
 
       // Use the chat API base URL instead of accounts
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
       final chatApiUrl = 'http://$host:8000/api/chat';
 
       // Call Django endpoint to get a Firebase custom token
@@ -539,7 +539,7 @@ class AuthService {
         return false;
       }
 
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.14';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.9';
       final baseUrl = 'http://$host:8000';
       final response = await http.post(
         Uri.parse('$baseUrl/api/accounts/register-fcm-token/'),
