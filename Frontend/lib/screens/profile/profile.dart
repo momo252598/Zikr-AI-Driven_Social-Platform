@@ -42,6 +42,7 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isLoadingPosts = true;
   bool _isOwnProfile = true;
   bool _isStartingChat = false; // Add loading state for chat button
+  int? _currentUserId; // Track current user ID for delete functionality
 
   @override
   void initState() {
@@ -55,6 +56,9 @@ class _ProfilePageState extends State<ProfilePage> {
     });
 
     try {
+      // Load current user ID for delete functionality
+      _currentUserId = await _authService.getCurrentUserId();
+
       User? user;
 
       if (widget.userId == null) {
@@ -172,6 +176,36 @@ class _ProfilePageState extends State<ProfilePage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ: $e')),
+      );
+    }
+  }
+
+  // Delete post functionality
+  Future<void> _deletePost(dynamic post) async {
+    try {
+      final postId = post['id'];
+      await _socialService.deletePost(postId);
+
+      if (!mounted) return;
+
+      setState(() {
+        _userPosts!.removeWhere((p) => p['id'].toString() == postId.toString());
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم حذف المنشور بنجاح'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل حذف المنشور: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -665,6 +699,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                           onLike: _likePost,
                                           onComment: _showCommentsSheet,
                                           onUserTap: _navigateToUserProfile,
+                                          onDelete: _isOwnProfile
+                                              ? _deletePost
+                                              : null,
+                                          currentUserId: _currentUserId,
                                           useRtlText: true,
                                         ),
                                       );

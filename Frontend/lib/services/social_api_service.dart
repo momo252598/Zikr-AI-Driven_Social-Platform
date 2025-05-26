@@ -106,6 +106,19 @@ class SocialService {
     return response['status'] == 'liked';
   }
 
+  // Delete a post
+  Future<bool> deletePost(dynamic postId) async {
+    try {
+      final int postIdInt =
+          postId is int ? postId : int.parse(postId.toString());
+      await _apiService.delete('/social/posts/$postIdInt/');
+      return true; // If no exception is thrown, deletion was successful
+    } catch (e) {
+      print("Error deleting post: $e");
+      return false;
+    }
+  }
+
   // Add media to a post
   Future<Map<String, dynamic>> addMediaToPost(
       dynamic postId, XFile image, String fileType) async {

@@ -5,6 +5,7 @@ import 'package:software_graduation_project/base/res/styles/app_styles.dart';
 import 'package:software_graduation_project/screens/chat/all_chats.dart';
 import 'package:software_graduation_project/screens/chat/browser_chat_layout.dart';
 import 'package:software_graduation_project/services/social_api_service.dart';
+import 'package:software_graduation_project/services/auth_service.dart';
 import 'package:software_graduation_project/screens/community/create_post.dart';
 import 'package:software_graduation_project/screens/profile/profile.dart';
 import 'package:software_graduation_project/components/community/post.dart';
@@ -20,6 +21,7 @@ class CommunityPage extends StatefulWidget {
 class _CommunityPageState extends State<CommunityPage> {
   final ScrollController _scrollController = ScrollController();
   final SocialService _socialService = SocialService();
+  final AuthService _authService = AuthService();
   List<dynamic>? _posts;
   bool _isLoading = false;
   bool _isLoadingMore = false;
@@ -28,6 +30,7 @@ class _CommunityPageState extends State<CommunityPage> {
   int _currentPage = 1;
   bool _hasMorePages = true;
   final Set<dynamic> _loadedPostIds = <dynamic>{};
+  int? _currentUserId; // Track current user ID for delete functionality
 
   // Tag filtering
   List<dynamic> _tags = [];
@@ -46,10 +49,10 @@ class _CommunityPageState extends State<CommunityPage> {
     'suggestions',
     'other'
   ];
-
   @override
   void initState() {
     super.initState();
+    _loadCurrentUser();
     _loadTags();
     _fetchPosts();
 
@@ -62,6 +65,14 @@ class _CommunityPageState extends State<CommunityPage> {
         _loadMorePosts();
       }
     });
+  }
+
+  Future<void> _loadCurrentUser() async {
+    try {
+      _currentUserId = await _authService.getCurrentUserId();
+    } catch (e) {
+      print('Error loading current user ID: $e');
+    }
   }
 
   Future<void> _loadTags() async {
@@ -276,6 +287,35 @@ class _CommunityPageState extends State<CommunityPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('حدث خطأ: $e')),
+      );
+    }
+  }
+
+  Future<void> _deletePost(dynamic post) async {
+    try {
+      final postId = post['id'];
+      await _socialService.deletePost(postId);
+
+      if (!mounted) return;
+
+      setState(() {
+        _posts!.removeWhere((p) => p['id'].toString() == postId.toString());
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم حذف المنشور بنجاح'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل حذف المنشور: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -766,12 +806,13 @@ class _CommunityPageState extends State<CommunityPage> {
                                       }
 
                                       final post = _posts![index];
-
                                       return PostCard(
                                         post: post,
                                         onLike: _likePost,
                                         onComment: _showComments,
                                         onUserTap: _navigateToUserProfile,
+                                        onDelete: _deletePost,
+                                        currentUserId: _currentUserId,
                                         useRtlText: true,
                                       );
                                     },

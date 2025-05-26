@@ -11,7 +11,10 @@ class PostCard extends StatelessWidget {
   final Function(dynamic) onLike;
   final Function(BuildContext, dynamic) onComment;
   final Function(dynamic)? onUserTap; // Optional callback for username tap
+  final Function(dynamic)? onDelete; // Optional callback for post deletion
   final bool useRtlText; // Parameter for RTL text direction
+  final int?
+      currentUserId; // Current user ID to check if they can delete the post
 
   const PostCard({
     Key? key,
@@ -19,7 +22,9 @@ class PostCard extends StatelessWidget {
     required this.onLike,
     required this.onComment,
     this.onUserTap,
+    this.onDelete,
     this.useRtlText = true, // Default to RTL for Arabic content
+    this.currentUserId,
   }) : super(key: key);
 
   @override
@@ -117,6 +122,8 @@ class PostCard extends StatelessWidget {
                         ],
                       ),
                     ),
+                    // Three-dot menu button
+                    _buildPostMenuButton(context),
                   ],
                 ),
               ),
@@ -348,10 +355,101 @@ class PostCard extends StatelessWidget {
     final String name = authorDetails['name']?.toString() ?? '';
     if (name.isNotEmpty) {
       return name;
+    } // Fallback to username
+    return authorDetails['username']?.toString() ?? "مستخدم غير معروف";
+  }
+
+  /// Build the three-dot menu button for post actions
+  Widget _buildPostMenuButton(BuildContext context) {
+    // Only show menu if user can delete the post
+    if (onDelete == null ||
+        currentUserId == null ||
+        post['author'] == null ||
+        currentUserId != post['author']) {
+      return SizedBox.shrink();
     }
 
-    // Fallback to username
-    return authorDetails['username']?.toString() ?? "مستخدم غير معروف";
+    return PopupMenuButton<String>(
+      icon: Icon(
+        Icons.more_vert,
+        color: AppStyles.grey,
+      ),
+      onSelected: (String value) {
+        if (value == 'delete') {
+          _showDeleteConfirmationDialog(context);
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: Row(
+            children: [
+              Icon(Icons.delete, color: AppStyles.red, size: 18),
+              SizedBox(width: 8),
+              Text(
+                'حذف المنشور',
+                style: TextStyle(color: AppStyles.red),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Show Arabic confirmation dialog before deleting post
+  void _showDeleteConfirmationDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Directionality(
+          textDirection: ui.TextDirection.rtl,
+          child: AlertDialog(
+            title: Text(
+              'حذف المنشور',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppStyles.darkPurple,
+              ),
+            ),
+            content: Text(
+              'هل انت متاكد من حذف هذا المنشور؟',
+              style: TextStyle(fontSize: 16),
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'إلغاء',
+                  style: TextStyle(color: AppStyles.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  if (onDelete != null) {
+                    onDelete!(post);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppStyles.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text('حذف'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -972,10 +1070,8 @@ class PostUtils {
       if (mediaList == null || !(mediaList is List)) {
         print("MediaList is null or not a list: $mediaList");
         return [];
-      }
-
-      // Return the complete media objects from the API, not just URLs
-      return mediaList as List;
+      } // Return the complete media objects from the API, not just URLs
+      return mediaList;
     } catch (e) {
       print("Error extracting media URLs: $e");
       return [];
