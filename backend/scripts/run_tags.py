@@ -47,12 +47,8 @@ TAGS = {
     'community': [
         {'name': 'question_answer', 'display_name_ar': 'سؤال وجواب', 'description': 'Where users can ask specific questions to the community'},
         {'name': 'announcements', 'display_name_ar': 'إعلانات', 'description': 'Local events, mosque activities, etc.'},
-        {'name': 'education', 'display_name_ar': 'التعليم الإسلامي', 'description': 'Resources for learning more about Islam'},
-        {'name': 'inspirational', 'display_name_ar': 'قصص ملهمة', 'description': 'Personal testimonies and inspirational content'},
+        {'name': 'education', 'display_name_ar': 'التعليم الإسلامي', 'description': 'Resources for learning more about Islam'},        {'name': 'inspirational', 'display_name_ar': 'قصص ملهمة', 'description': 'Personal testimonies and inspirational content'},
         {'name': 'resources', 'display_name_ar': 'موارد وكتب', 'description': 'Sharing beneficial Islamic literature and resources'},
-    ],
-    'suggestions': [
-        {'name': 'suggested', 'display_name_ar': 'المقترحات', 'description': 'Suggestions for new tags or topics to discuss based on user behavior'},
     ],
 }
 

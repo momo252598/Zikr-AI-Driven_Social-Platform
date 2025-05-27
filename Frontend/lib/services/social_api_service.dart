@@ -1,6 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import './api_service.dart';
@@ -8,8 +6,8 @@ import '../models/user.dart';
 import 'package:http_parser/http_parser.dart'; // Add this import for MediaType
 
 class SocialService {
-  final ApiService _apiService = ApiService(); // Get all posts with pagination
-  Future<List<dynamic>> getPosts({int? page, int? tagId}) async {
+  final ApiService _apiService = ApiService();  // Get all posts with pagination
+  Future<Map<String, dynamic>> getPosts({int? page, int? tagId, int? authorId}) async {
     try {
       String endpoint = '/social/posts/';
       List<String> params = [];
@@ -20,6 +18,10 @@ class SocialService {
 
       if (tagId != null) {
         params.add('tag=$tagId');
+      }
+
+      if (authorId != null) {
+        params.add('author=$authorId');
       }
 
       if (params.isNotEmpty) {
@@ -33,16 +35,37 @@ class SocialService {
 
       // Handle different response structures safely
       if (response is Map && response.containsKey('results')) {
-        return response['results'] as List<dynamic>? ?? [];
+        return {
+          'results': response['results'] as List<dynamic>? ?? [],
+          'count': response['count'] ?? 0,
+          'next': response['next'],
+          'previous': response['previous'],
+        };
       } else if (response is List) {
-        return response;
+        // For backward compatibility, return as paginated format
+        return {
+          'results': response,
+          'count': response.length,
+          'next': null,
+          'previous': null,
+        };
       } else {
         print("Unexpected response format: $response");
-        return [];
+        return {
+          'results': [],
+          'count': 0,
+          'next': null,
+          'previous': null,
+        };
       }
     } catch (e) {
       print("Error in getPosts: $e");
-      return []; // Return empty list instead of crashing
+      return {
+        'results': [],
+        'count': 0,
+        'next': null,
+        'previous': null,
+      };
     }
   }
 
@@ -64,7 +87,6 @@ class SocialService {
     final response = await _apiService.post('/social/posts/', data);
     return response;
   }
-
   // Get all available tags
   Future<List<dynamic>> getTags({String? category, String? search}) async {
     try {
@@ -83,15 +105,55 @@ class SocialService {
         endpoint += '?' + params.join('&');
       }
 
-      final response = await _apiService.get(endpoint);
+      print("Fetching tags from endpoint: $endpoint");
 
-      if (response is List) {
-        return response;
-      } else if (response is Map && response.containsKey('results')) {
-        return response['results'] as List<dynamic>? ?? [];
-      } else {
-        return [];
+      // Fetch all pages of tags
+      List<dynamic> allTags = [];
+      String? nextUrl = endpoint;
+      
+      while (nextUrl != null) {
+        final response = await _apiService.get(nextUrl);
+        
+        // Debug: Print the response structure
+        print("Tags response type: ${response.runtimeType}");
+        
+        if (response is List) {
+          // Non-paginated response
+          allTags.addAll(response);
+          break;
+        } else if (response is Map && response.containsKey('results')) {
+          // Paginated response
+          final List<dynamic> pageResults = response['results'] as List<dynamic>? ?? [];
+          allTags.addAll(pageResults);
+          
+          // Check if there's a next page
+          nextUrl = response['next'];
+          if (nextUrl != null) {
+            // Convert full URL to relative path for our API service
+            final uri = Uri.parse(nextUrl);
+            nextUrl = uri.path + (uri.query.isNotEmpty ? '?' + uri.query : '');
+          }
+        } else {
+          print("Unexpected tags response format: $response");
+          break;
+        }
       }
+
+      // Debug: Print tag details
+      print("Total tags received: ${allTags.length}");
+      if (allTags.isNotEmpty) {
+        print("Sample tag: ${allTags.first}");
+
+        // Count tags by category
+        Map<String, int> categoryCount = {};
+        for (var tag in allTags) {
+          String category = tag['category'] ?? 'unknown';
+          categoryCount[category] = (categoryCount[category] ?? 0) + 1;
+        }
+        print("Tags by category: $categoryCount");
+      }
+
+      return allTags;
     } catch (e) {
       print("Error in getTags: $e");
       return [];
@@ -274,13 +336,36 @@ class SocialService {
         });
       } else {
         throw Exception('Unexpected response format: $responseData');
-      }
-
-      // Convert the response data to a User object
+      } // Convert the response data to a User object
       return User.fromJson(data);
     } catch (e) {
       print('Error in getUserProfileById: $e');
       rethrow; // Make sure to rethrow so it can be caught in the UI
+    }
+  }
+
+  // Helper method to get posts for a specific tag (returns just the results list)
+  Future<List<dynamic>> getPostsForTag(int tagId) async {
+    final response = await getPosts(tagId: tagId);
+    return response['results'] as List<dynamic>;
+  }
+
+  // Get posts liked by the current user
+  Future<List<dynamic>> getLikedPosts() async {
+    try {
+      // Get all posts first
+      final postsResponse = await getPosts();
+      final allPosts = postsResponse['results'] as List<dynamic>;
+
+      // Filter posts that are liked by the current user
+      final likedPosts = allPosts.where((post) {
+        return post['is_liked'] == true;
+      }).toList();
+
+      return likedPosts;
+    } catch (e) {
+      print("Error in getLikedPosts: $e");
+      return [];
     }
   }
 }

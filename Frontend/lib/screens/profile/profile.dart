@@ -32,22 +32,37 @@ class ProfilePage extends StatefulWidget {
   _ProfilePageState createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
+  // Add SingleTickerProviderStateMixin
   final AuthService _authService = AuthService();
   final SocialService _socialService = SocialService();
-  final ChatApiService _chatApiService = ChatApiService(); // Add chat service
+  final ChatApiService _chatApiService = ChatApiService();
   User? _user;
   List<dynamic>? _userPosts;
+  List<dynamic>? _likedPosts; // Add liked posts list
   bool _isLoading = true;
   bool _isLoadingPosts = true;
+  bool _isLoadingLikedPosts = false; // Add loading state for liked posts
   bool _isOwnProfile = true;
   bool _isStartingChat = false; // Add loading state for chat button
   int? _currentUserId; // Track current user ID for delete functionality
 
+  // Add tab controller
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController =
+        TabController(length: 2, vsync: this); // Initialize tab controller
     _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose(); // Dispose tab controller
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -116,23 +131,21 @@ class _ProfilePageState extends State<ProfilePage> {
       print('Error loading user data: $e');
     }
   }
-
   Future<void> _loadUserPosts() async {
     setState(() {
       _isLoadingPosts = true;
     });
-
     try {
-      // Get posts from API
-      final posts = await _socialService.getPosts();
+      if (_user == null) {
+        setState(() {
+          _isLoadingPosts = false;
+        });
+        return;
+      }
 
-      // Filter posts to only show the selected user's posts
-      final userPosts = posts.where((post) {
-        // Check if post belongs to the user we're viewing
-        return post['author_details'] != null &&
-            _user != null &&
-            post['author_details']['id'].toString() == _user!.id.toString();
-      }).toList();
+      // Get posts from API filtered by the specific user
+      final postsResponse = await _socialService.getPosts(authorId: _user!.id);
+      final userPosts = postsResponse['results'] as List<dynamic>;
 
       // Check if widget is still mounted before updating state
       if (!mounted) return;
@@ -149,6 +162,34 @@ class _ProfilePageState extends State<ProfilePage> {
         _isLoadingPosts = false;
       });
       print('Error loading user posts: $e');
+    }
+  }
+
+  // Add method to load liked posts
+  Future<void> _loadLikedPosts() async {
+    // Only load liked posts for own profile
+    if (!_isOwnProfile) return;
+
+    setState(() {
+      _isLoadingLikedPosts = true;
+    });
+
+    try {
+      final likedPosts = await _socialService.getLikedPosts();
+
+      if (!mounted) return;
+
+      setState(() {
+        _likedPosts = likedPosts;
+        _isLoadingLikedPosts = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingLikedPosts = false;
+      });
+      print('Error loading liked posts: $e');
     }
   }
 
@@ -402,6 +443,214 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  // Add tab button builder similar to azkar screen
+  Widget _buildTabButtons() {
+    // Only show tabs for own profile
+    if (!_isOwnProfile) return SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppStyles.lightPurple.withOpacity(0.1),
+            AppStyles.purple.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: AppStyles.purple.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        border: Border.all(
+          color: AppStyles.lightPurple.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(6),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => _tabController.animateTo(0),
+                child: AnimatedBuilder(
+                  animation: _tabController,
+                  builder: (context, child) {
+                    final isSelected = _tabController.index == 0;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                                colors: [
+                                  AppStyles.darkPurple,
+                                  AppStyles.purple,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppStyles.purple.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        'المنشورات',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color:
+                              isSelected ? AppStyles.white : AppStyles.purple,
+                          fontSize: 16,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  _tabController.animateTo(1);
+                  // Load liked posts when tab is selected
+                  if (_likedPosts == null && !_isLoadingLikedPosts) {
+                    _loadLikedPosts();
+                  }
+                },
+                child: AnimatedBuilder(
+                  animation: _tabController,
+                  builder: (context, child) {
+                    final isSelected = _tabController.index == 1;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(
+                                colors: [
+                                  AppStyles.darkPurple,
+                                  AppStyles.purple,
+                                ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : null,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: AppStyles.purple.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        'المنشورات المعجب بها',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color:
+                              isSelected ? AppStyles.white : AppStyles.purple,
+                          fontSize: 16,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w600,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Add method to build posts list for each tab
+  Widget _buildPostsList(
+      List<dynamic>? posts, bool isLoading, String emptyMessage) {
+    if (isLoading) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (posts == null || posts.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            children: [
+              Icon(
+                Icons.post_add,
+                size: 64,
+                color: AppStyles.grey,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                emptyMessage,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: AppStyles.grey,
+                ),
+                textDirection: ui.TextDirection.rtl,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: kIsWeb ? 700 : double.infinity,
+        ),
+        child: ListView.builder(
+          shrinkWrap: true,
+          physics: NeverScrollableScrollPhysics(),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            final post = posts[index];
+            return Directionality(
+              textDirection: ui.TextDirection.rtl,
+              child: PostCard(
+                post: post,
+                onLike: _likePost,
+                onComment: _showCommentsSheet,
+                onUserTap: _navigateToUserProfile,
+                onDelete: _isOwnProfile ? _deletePost : null,
+                currentUserId: _currentUserId,
+                useRtlText: true,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     Widget content = _isLoading
@@ -416,7 +665,6 @@ class _ProfilePageState extends State<ProfilePage> {
             : CustomScrollView(
                 controller: widget.scrollController,
                 slivers: <Widget>[
-                  // Add explicit <Widget> type to the list
                   // Enhanced app bar for overlay mode - removed the name from title
                   widget.isOverlay
                       ? SliverAppBar(
@@ -512,7 +760,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 tooltip: 'إعدادات الحساب',
                               ),
                             ],
-                          ],
+                          ], // <-- FIXED: changed ',' to ']'
                         ),
 
                   // Simplified profile header for overlay mode
@@ -592,134 +840,32 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
 
-                  // User's posts section with improved styling
+                  // Add tab buttons
                   SliverToBoxAdapter(
-                    child: Center(
-                      // Center the content
-                      child: ConstrainedBox(
-                        // Add constraint box
-                        constraints: BoxConstraints(
-                          maxWidth: kIsWeb
-                              ? 700
-                              : double.infinity, // Limit width on web
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.only(bottom: 8),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(
-                                      color: AppStyles.purple.withOpacity(0.3),
-                                      width: 2,
-                                    ),
-                                  ),
-                                ),
-                                child: Text(
-                                  _isOwnProfile
-                                      ? 'منشوراتي'
-                                      : 'منشورات ${_user!.name}',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppStyles.purple,
-                                  ),
-                                  textDirection: ui.TextDirection.rtl,
-                                  textAlign: TextAlign.right,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    child: _buildTabButtons(),
                   ),
 
-                  // Posts content with RTL direction and width constraint
-                  _isLoadingPosts
-                      ? SliverToBoxAdapter(
-                          child: Center(
-                              child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: CircularProgressIndicator(),
-                        )))
-                      : _userPosts == null || _userPosts!.isEmpty
-                          ? SliverToBoxAdapter(
-                              child: Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(32.0),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.post_add,
-                                        size: 64,
-                                        color: AppStyles.grey,
-                                      ),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        _isOwnProfile
-                                            ? 'ليس لديك أي منشورات بعد'
-                                            : 'لا توجد منشورات لهذا المستخدم',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: AppStyles.grey,
-                                        ),
-                                        textDirection: ui.TextDirection.rtl,
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            )
-                          : SliverToBoxAdapter(
-                              child: Center(
-                                // Center the ListView
-                                child: ConstrainedBox(
-                                  // Add constraint box
-                                  constraints: BoxConstraints(
-                                    maxWidth: kIsWeb
-                                        ? 700
-                                        : double.infinity, // Limit width on web
-                                  ),
-                                  child: ListView.builder(
-                                    shrinkWrap: true,
-                                    physics: NeverScrollableScrollPhysics(),
-                                    itemCount: _userPosts!.length,
-                                    itemBuilder: (context, index) {
-                                      final post = _userPosts![index];
-                                      return Directionality(
-                                        textDirection: ui.TextDirection.rtl,
-                                        child: PostCard(
-                                          post: post,
-                                          onLike: _likePost,
-                                          onComment: _showCommentsSheet,
-                                          onUserTap: _navigateToUserProfile,
-                                          onDelete: _isOwnProfile
-                                              ? _deletePost
-                                              : null,
-                                          currentUserId: _currentUserId,
-                                          useRtlText: true,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                  // Extra space at the bottom
-                  SliverToBoxAdapter(
-                    child: SizedBox(height: 20),
+                  // Posts content with TabBarView
+                  SliverFillRemaining(
+                    child: _isOwnProfile
+                        ? TabBarView(
+                            controller: _tabController,
+                            children: [
+                              // User's posts tab
+                              _buildPostsList(_userPosts, _isLoadingPosts,
+                                  'ليس لديك أي منشورات بعد'),
+                              // Liked posts tab
+                              _buildPostsList(_likedPosts, _isLoadingLikedPosts,
+                                  'لم تعجب بأي منشورات بعد'),
+                            ],
+                          )
+                        : _buildPostsList(_userPosts, _isLoadingPosts,
+                            'لا توجد منشورات لهذا المستخدم'),
                   ),
                 ],
               );
 
-    // Improved container for overlay mode
+    // Return the appropriate widget based on overlay mode
     return widget.isOverlay
         ? Material(
             color: AppStyles.bgColor,

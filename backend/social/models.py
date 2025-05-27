@@ -93,7 +93,6 @@ class Tag(models.Model):
         ('lifestyle', 'Community & Lifestyle'),
         ('contemporary', 'Contemporary Issues'),
         ('community', 'Community Engagement'),
-        ('suggestions', 'suggested'),
         ('other', 'Other'),
     )
     

@@ -39,14 +39,12 @@ class _CommunityPageState extends State<CommunityPage> {
   String _selectedCategory = '';
   String _tagSearchQuery = '';
   bool _isFilterExpanded = false;
-
   final List<String> _categories = [
     'religious',
     'practice',
     'lifestyle',
     'contemporary',
     'community',
-    'suggestions',
     'other'
   ];
   @override
@@ -145,15 +143,16 @@ class _CommunityPageState extends State<CommunityPage> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _currentPage = 1;
+      _hasMorePages = true;
     });
 
     try {
       List<dynamic> posts;
       if (_selectedTagIds.isNotEmpty) {
         Map<String, dynamic> uniquePosts = {};
-
         for (int tagId in _selectedTagIds) {
-          final tagPosts = await _socialService.getPosts(tagId: tagId);
+          final tagPosts = await _socialService.getPostsForTag(tagId);
           for (var post in tagPosts) {
             if (post['id'] != null) {
               uniquePosts[post['id'].toString()] = post;
@@ -162,8 +161,16 @@ class _CommunityPageState extends State<CommunityPage> {
         }
 
         posts = uniquePosts.values.toList();
+        // For tag filtering, disable pagination as we're merging results
+        _hasMorePages = false;
       } else {
-        posts = await _socialService.getPosts();
+        final response = await _socialService.getPosts(page: 1);
+        posts = response['results'] as List<dynamic>;
+
+        // Check if there are more pages
+        _hasMorePages = response['next'] != null;
+        print("Has more pages: $_hasMorePages");
+        print("Total posts count: ${response['count']}");
       }
 
       if (posts.isNotEmpty) {
@@ -221,7 +228,8 @@ class _CommunityPageState extends State<CommunityPage> {
 
     try {
       final nextPage = _currentPage + 1;
-      final morePosts = await _socialService.getPosts(page: nextPage);
+      final response = await _socialService.getPosts(page: nextPage);
+      final morePosts = response['results'] as List<dynamic>;
 
       print("Received ${morePosts.length} posts from page $nextPage");
 
@@ -244,9 +252,12 @@ class _CommunityPageState extends State<CommunityPage> {
         if (newPosts.isNotEmpty) {
           _posts?.addAll(newPosts);
           _currentPage = nextPage;
-        } else {
-          _hasMorePages = false;
-          print("No more unique posts available - reached the end");
+        }
+
+        // Check if there are more pages based on API response
+        _hasMorePages = response['next'] != null;
+        if (!_hasMorePages) {
+          print("No more pages available - reached the end");
         }
         _isLoadingMore = false;
       });
@@ -396,8 +407,6 @@ class _CommunityPageState extends State<CommunityPage> {
         return 'قضايا معاصرة';
       case 'community':
         return 'المجتمع';
-      case 'suggestions':
-        return 'المقترحات';
       case 'other':
         return 'أخرى';
       default:

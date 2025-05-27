@@ -33,7 +33,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
     'lifestyle',
     'contemporary',
     'community',
-    'suggestions',
     'other'
   ];
 
@@ -673,8 +672,6 @@ class _CreatePostPageState extends State<CreatePostPage> {
         return 'قضايا معاصرة';
       case 'community':
         return 'المجتمع';
-      case 'suggestions':
-        return 'المقترحات';
       case 'other':
         return 'أخرى';
       default:
