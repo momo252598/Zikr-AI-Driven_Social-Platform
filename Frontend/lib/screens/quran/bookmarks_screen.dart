@@ -46,6 +46,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       });
 
       final bookmarks = await _quranService.getBookmarks();
+      print('Successfully loaded ${bookmarks.length} bookmarks');
 
       if (mounted) {
         setState(() {
@@ -54,17 +55,21 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         });
       }
     } catch (e) {
+      print('Bookmarks loading error: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
           // Check if this is an authentication error
           if (e.toString().contains('Authentication failed') ||
-              e.toString().contains('Unauthorized')) {
+              e.toString().contains('Unauthorized') ||
+              e.toString().contains('401')) {
             _errorMessage = 'يرجى تسجيل الدخول لعرض المفضلة';
-            // You might want to navigate to login screen here
-            // _navigateToLogin();
+          } else if (e.toString().contains('network') ||
+              e.toString().contains('connection') ||
+              e.toString().contains('timeout')) {
+            _errorMessage = 'تحقق من اتصال الإنترنت والمحاولة مرة أخرى';
           } else {
-            _errorMessage = 'حدث خطأ في تحميل المفضلة. الرجاء المحاولة لاحقا.';
+            _errorMessage = 'حدث خطأ في تحميل المفضلة: ${e.toString()}';
           }
         });
       }

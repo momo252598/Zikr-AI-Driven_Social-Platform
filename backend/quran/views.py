@@ -4,6 +4,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import QuranBookmark, QuranReadingProgress
 from .serializers import QuranBookmarkSerializer, QuranReadingProgressSerializer
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -14,11 +17,19 @@ class BookmarkListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         """Return only the current user's bookmarks"""
-        return QuranBookmark.objects.filter(user=self.request.user)
+        queryset = QuranBookmark.objects.filter(user=self.request.user)
+        logger.info(f"Returning {queryset.count()} bookmarks for user {self.request.user.username}")
+        return queryset
     
     def perform_create(self, serializer):
         """Save the current user as the bookmark owner"""
         serializer.save(user=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        """Override list method to add debugging"""
+        response = super().list(request, *args, **kwargs)
+        logger.info(f"Bookmark list response: {response.data}")
+        return response
 
 class BookmarkDeleteView(generics.DestroyAPIView):
     """View for deleting a specific bookmark"""

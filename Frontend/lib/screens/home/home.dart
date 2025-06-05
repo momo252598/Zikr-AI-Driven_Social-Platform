@@ -501,9 +501,6 @@ class _HomePageState extends State<HomePage> {
                             context,
                             MaterialPageRoute(
                                 builder: (context) => const AzkarScreen()))),
-                    const SizedBox(width: 12),
-                    _buildFeatureCard(context, Icons.compass_calibration,
-                        "القبلة", AppStyles.darkPurple, standardCardWidth),
                   ],
                 ),
               ),
@@ -646,10 +643,6 @@ class _HomePageState extends State<HomePage> {
                                 MaterialPageRoute(
                                     builder: (context) =>
                                         const AzkarScreen()))),
-                        // Qibla feature card
-                        _buildFeatureCard(context, Icons.compass_calibration,
-                            "القبلة", AppStyles.darkPurple, featureCardWidth,
-                            isWeb: true),
                       ],
                     ),
                   ],
@@ -801,67 +794,133 @@ class _HomePageState extends State<HomePage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppStyles.darkPurple,
-            AppStyles.lightPurple,
+            const Color(0xFF667eea),
+            const Color(0xFF764ba2),
+            AppStyles.purple,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          stops: const [0.0, 0.5, 1.0],
         ),
-        image: DecorationImage(
-          image: AssetImage(AppMedia.pattern3),
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(
-            AppStyles.appBarGrey,
-            BlendMode.dstATop,
-          ),
-        ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppStyles.darkPurple.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: AppStyles.purple.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
+          ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(-5, -5),
           ),
         ],
-        border: Border.all(
-          color: AppStyles.white.withOpacity(0.2),
-          width: 1.5,
-        ),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: [
+            // Animated background circles
+            Positioned(
+              right: -30,
+              top: -30,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.1),
+                ),
+              ),
+            ),
+            Positioned(
+              left: -20,
+              bottom: -20,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.08),
+                ),
+              ),
+            ),
+            // Subtle pattern overlay
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.1),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
+            // Content
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
               child: FutureBuilder<String?>(
                 future: futureUserFirstName,
                 builder: (context, snapshot) {
                   final firstName = snapshot.data ?? '';
                   return Row(
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            firstName.isNotEmpty
-                                ? "السلام عليكم $firstName"
-                                : "السلام عليكم",
-                            style: TextStyle(
-                              color: AppStyles.white,
-                              fontSize: 22,
-                              fontFamily: 'othman',
-                              fontWeight: FontWeight.bold,
-                              shadows: [
-                                Shadow(
-                                  offset: const Offset(1.0, 1.0),
-                                  blurRadius: 3.0,
-                                  color: Colors.black.withOpacity(0.5),
-                                ),
-                              ],
-                            ),
+                      // Welcome icon
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(15),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1,
                           ),
-                        ],
+                        ),
+                        child: Icon(
+                          Icons.mosque,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              firstName.isNotEmpty
+                                  ? "السلام عليكم"
+                                  : "السلام عليكم",
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              firstName.isNotEmpty ? firstName : "أهلاً وسهلاً",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 28,
+                                fontFamily: 'othman',
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                                shadows: [
+                                  Shadow(
+                                    offset: const Offset(0, 2),
+                                    blurRadius: 4.0,
+                                    color: Colors.black.withOpacity(0.3),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   );

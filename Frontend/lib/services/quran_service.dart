@@ -12,19 +12,58 @@ class QuranService {
     try {
       final response = await _apiService.get('/quran/bookmarks/');
 
-      if (response is List) {
-        // Properly cast each map item to Map<String, dynamic> before creating QuranBookmark objects
+      // Add debugging information
+      print('Raw API response: $response');
+      print('Response type: ${response.runtimeType}');
+
+      // Handle different response formats
+      if (response is Map) {
+        // Convert any Map type to Map<String, dynamic>
+        final Map<String, dynamic> responseMap =
+            Map<String, dynamic>.from(response);
+
+        // If response is wrapped in an object, check for common wrapper keys
+        if (responseMap.containsKey('results')) {
+          // Paginated response
+          final results = responseMap['results'];
+          if (results is List) {
+            return results.map((item) {
+              Map<String, dynamic> bookmarkMap =
+                  Map<String, dynamic>.from(item);
+              return QuranBookmark.fromJson(bookmarkMap);
+            }).toList();
+          }
+        } else if (responseMap.containsKey('data')) {
+          // Data wrapper
+          final data = responseMap['data'];
+          if (data is List) {
+            return data.map((item) {
+              Map<String, dynamic> bookmarkMap =
+                  Map<String, dynamic>.from(item);
+              return QuranBookmark.fromJson(bookmarkMap);
+            }).toList();
+          }
+        } else {
+          // Single bookmark object response - convert the entire response
+          return [QuranBookmark.fromJson(responseMap)];
+        }
+      } else if (response is List) {
+        // Direct list response (expected format)
         return response.map((item) {
-          // Explicitly convert the dynamic map to Map<String, dynamic>
           Map<String, dynamic> bookmarkMap = Map<String, dynamic>.from(item);
           return QuranBookmark.fromJson(bookmarkMap);
         }).toList();
       } else {
-        throw Exception('Unexpected response format from bookmarks API');
+        print('Unexpected response format: $response');
+        throw Exception(
+            'Unexpected response format from bookmarks API. Got: ${response.runtimeType}');
       }
+
+      // If we reach here, no valid format was found
+      throw Exception('No valid bookmark data found in response');
     } catch (e) {
       print('Error getting bookmarks: $e');
-      throw e;
+      rethrow;
     }
   }
 

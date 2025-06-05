@@ -11,8 +11,8 @@ class ChatApiService {
   final FirebaseService _firebaseService = FirebaseService();
 
   ChatApiService() {
-    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.2 (for Android emulator)
-    final host = kIsWeb ? '127.0.0.1' : '192.168.1.2';
+    // Use 127.0.0.1 when running on web, otherwise use 192.168.1.18 (for Android emulator)
+    final host = kIsWeb ? '127.0.0.1' : '192.168.1.18';
     baseUrl = 'http://$host:8000/api/chat';
   }
 
@@ -28,7 +28,7 @@ class ChatApiService {
 
     try {
       final token = await _authService.getAccessToken();
-      final host = kIsWeb ? '127.0.0.1' : '192.168.1.2';
+      final host = kIsWeb ? '127.0.0.1' : '192.168.1.18';
 
       // Properly encode the Arabic query with spaces preserved
       final encodedQuery = Uri.encodeComponent(query);

@@ -447,125 +447,125 @@ class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
               },
             ),
           ),
-          // Test buttons for notifications - only show on mobile
-          if (!kIsWeb)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppStyles.whitePurple,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, -2),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "إختبار الإشعارات",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppStyles.purple,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () async {
-                          // Request notification permissions if not already granted
-                          final hasPermissions = await _notificationService
-                              .requestPermissions(context: context);
-                          if (!hasPermissions) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text("يرجى منح الإذن للإشعارات أولاً")),
-                            );
-                            return;
-                          }
-
-                          // Show immediate test notification
-                          await _notificationService.showNotification(
-                            id: 100,
-                            title: "إشعار إختباري",
-                            body: "هذا إشعار لإختبار نظام الإشعارات. الآن!",
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    "تم إرسال إشعار اختباري. ستظهر خلال ثوانٍ")),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppStyles.purple,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text("إشعار فوري"),
-                      ),
-                      ElevatedButton(
-                        onPressed: () async {
-                          // Request notification permissions if not already granted
-                          final hasPermissions = await _notificationService
-                              .requestPermissions(context: context);
-                          if (!hasPermissions) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content:
-                                      Text("يرجى منح الإذن للإشعارات أولاً")),
-                            );
-                            return;
-                          }
-
-                          // Schedule a delayed notification (testing background notification handling)
-                          await _notificationService.schedulePrayerNotification(
-                            id: 101,
-                            title: "إشعار تجريبي مجدول",
-                            body:
-                                "هذا إشعار مجدول لإختبار نظام الإشعارات في الخلفية",
-                            scheduledTime:
-                                DateTime.now().add(const Duration(seconds: 10)),
-                            minutesBefore: 0,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    "تم جدولة إشعار اختباري. سيظهر بعد ١٠ ثوانٍ")),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppStyles.lightPurple,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: const Text("إشعار بعد ١٠ ثوانٍ"),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton(
-                    onPressed: () async {
-                      await _notificationService.cancelAllNotifications();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text("تم إلغاء جميع الإشعارات")),
-                      );
-                    },
-                    child: Text(
-                      "إلغاء كل الإشعارات",
-                      style: TextStyle(
-                        color: AppStyles.purple,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // Test buttons for notifications - hidden
+          // if (!kIsWeb)
+          //   Container(
+          //     padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+          //     decoration: BoxDecoration(
+          //       color: AppStyles.whitePurple,
+          //       boxShadow: [
+          //         BoxShadow(
+          //           color: Colors.black.withOpacity(0.1),
+          //           blurRadius: 4,
+          //           offset: const Offset(0, -2),
+          //         ),
+          //       ],
+          //     ),
+          //     child: Column(
+          //       mainAxisSize: MainAxisSize.min,
+          //       children: [
+          //         Text(
+          //           "إختبار الإشعارات",
+          //           style: TextStyle(
+          //             fontSize: 18,
+          //             fontWeight: FontWeight.bold,
+          //             color: AppStyles.purple,
+          //           ),
+          //         ),
+          //         const SizedBox(height: 12),
+          //         Row(
+          //           mainAxisAlignment: MainAxisAlignment.spaceAround,
+          //           children: [
+          //             ElevatedButton(
+          //               onPressed: () async {
+          //                 // Request notification permissions if not already granted
+          //                 final hasPermissions = await _notificationService
+          //                     .requestPermissions(context: context);
+          //                 if (!hasPermissions) {
+          //                   ScaffoldMessenger.of(context).showSnackBar(
+          //                     const SnackBar(
+          //                         content:
+          //                             Text("يرجى منح الإذن للإشعارات أولاً")),
+          //                   );
+          //                   return;
+          //                 }
+          //
+          //                 // Show immediate test notification
+          //                 await _notificationService.showNotification(
+          //                   id: 100,
+          //                   title: "إشعار إختباري",
+          //                   body: "هذا إشعار لإختبار نظام الإشعارات. الآن!",
+          //                 );
+          //                 ScaffoldMessenger.of(context).showSnackBar(
+          //                   const SnackBar(
+          //                       content: Text(
+          //                           "تم إرسال إشعار اختباري. ستظهر خلال ثوانٍ")),
+          //                 );
+          //               },
+          //               style: ElevatedButton.styleFrom(
+          //                 backgroundColor: AppStyles.purple,
+          //                 foregroundColor: Colors.white,
+          //               ),
+          //               child: const Text("إشعار فوري"),
+          //             ),
+          //             ElevatedButton(
+          //               onPressed: () async {
+          //                 // Request notification permissions if not already granted
+          //                 final hasPermissions = await _notificationService
+          //                     .requestPermissions(context: context);
+          //                 if (!hasPermissions) {
+          //                   ScaffoldMessenger.of(context).showSnackBar(
+          //                     const SnackBar(
+          //                         content:
+          //                             Text("يرجى منح الإذن للإشعارات أولاً")),
+          //                   );
+          //                   return;
+          //                 }
+          //
+          //                 // Schedule a delayed notification (testing background notification handling)
+          //                 await _notificationService.schedulePrayerNotification(
+          //                   id: 101,
+          //                   title: "إشعار تجريبي مجدول",
+          //                   body:
+          //                       "هذا إشعار مجدول لإختبار نظام الإشعارات في الخلفية",
+          //                   scheduledTime:
+          //                       DateTime.now().add(const Duration(seconds: 10)),
+          //                   minutesBefore: 0,
+          //                 );
+          //                 ScaffoldMessenger.of(context).showSnackBar(
+          //                   const SnackBar(
+          //                       content: Text(
+          //                           "تم جدولة إشعار اختباري. سيظهر بعد ١٠ ثوانٍ")),
+          //                 );
+          //               },
+          //               style: ElevatedButton.styleFrom(
+          //                 backgroundColor: AppStyles.lightPurple,
+          //                 foregroundColor: Colors.white,
+          //               ),
+          //               child: const Text("إشعار بعد ١٠ ثوانٍ"),
+          //             ),
+          //           ],
+          //         ),
+          //         const SizedBox(height: 8),
+          //         TextButton(
+          //           onPressed: () async {
+          //             await _notificationService.cancelAllNotifications();
+          //             ScaffoldMessenger.of(context).showSnackBar(
+          //               const SnackBar(
+          //                   content: Text("تم إلغاء جميع الإشعارات")),
+          //             );
+          //           },
+          //           child: Text(
+          //             "إلغاء كل الإشعارات",
+          //             style: TextStyle(
+          //               color: AppStyles.purple,
+          //               fontWeight: FontWeight.bold,
+          //             ),
+          //           ),
+          //         ),
+          //       ],
+          //     ),
+          //   ),
         ],
       ),
     );
