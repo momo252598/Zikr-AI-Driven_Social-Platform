@@ -430,20 +430,33 @@ class _PrayersPageState extends State<PrayersPage> with WidgetsBindingObserver {
                     nextPrayer = prayer;
                   }
                 }
-                return Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: prayers
-                          .map((prayer) => PrayerCard(
-                                prayer: prayer,
-                                isClosest: nextPrayer != null &&
-                                    prayer.name == nextPrayer.name,
-                              ))
-                          .toList(),
-                    ),
-                  ),
-                );
+                return kIsWeb
+                    ? SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: prayers
+                              .map((prayer) => PrayerCard(
+                                    prayer: prayer,
+                                    isClosest: nextPrayer != null &&
+                                        prayer.name == nextPrayer.name,
+                                  ))
+                              .toList(),
+                        ),
+                      )
+                    : Center(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: prayers
+                                .map((prayer) => PrayerCard(
+                                      prayer: prayer,
+                                      isClosest: nextPrayer != null &&
+                                          prayer.name == nextPrayer.name,
+                                    ))
+                                .toList(),
+                          ),
+                        ),
+                      );
               },
             ),
           ),
