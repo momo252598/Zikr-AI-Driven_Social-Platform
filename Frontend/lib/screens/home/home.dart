@@ -479,13 +479,12 @@ class _HomePageState extends State<HomePage> {
                     _buildQuranFeatureCard(context, standardCardWidth),
                     const SizedBox(width: 12),
                     // Mobile navigation remains the same - goes to AllChatsPage
-                    _buildFeatureCard(context, Icons.chat, "الدردشة",
-                        AppStyles.lightPurple, standardCardWidth,
-                        isChat: true,
+                    _buildFeatureCard(context, Icons.volunteer_activism,
+                        "الأذكار", AppStyles.purple, standardCardWidth,
                         onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const AllChatsPage()))),
+                                builder: (context) => const AzkarScreen()))),
                     const SizedBox(width: 12),
                     // Add Chatbot feature card
                     _buildFeatureCard(context, Icons.smart_toy, "المساعد الذكي",
@@ -495,12 +494,13 @@ class _HomePageState extends State<HomePage> {
                             MaterialPageRoute(
                                 builder: (context) => const ChatbotScreen()))),
                     const SizedBox(width: 12),
-                    _buildFeatureCard(context, Icons.volunteer_activism,
-                        "الأذكار", AppStyles.purple, standardCardWidth,
+                    _buildFeatureCard(context, Icons.chat, "الدردشة",
+                        AppStyles.lightPurple, standardCardWidth,
+                        isChat: true,
                         onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) => const AzkarScreen()))),
+                                builder: (context) => const AllChatsPage()))),
                   ],
                 ),
               ),

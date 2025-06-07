@@ -48,6 +48,14 @@ class _ProfilePageState extends State<ProfilePage>
   bool _isStartingChat = false; // Add loading state for chat button
   int? _currentUserId; // Track current user ID for delete functionality
 
+  // Add pagination variables
+  int _userPostsPage = 1;
+  int _likedPostsPage = 1;
+  bool _hasMoreUserPosts = true;
+  bool _hasMoreLikedPosts = true;
+  bool _isLoadingMoreUserPosts = false;
+  bool _isLoadingMoreLikedPosts = false;
+
   // Add tab controller
   late TabController _tabController;
 
@@ -131,9 +139,12 @@ class _ProfilePageState extends State<ProfilePage>
       print('Error loading user data: $e');
     }
   }
+
   Future<void> _loadUserPosts() async {
     setState(() {
       _isLoadingPosts = true;
+      _userPostsPage = 1;
+      _hasMoreUserPosts = true;
     });
     try {
       if (_user == null) {
@@ -143,8 +154,11 @@ class _ProfilePageState extends State<ProfilePage>
         return;
       }
 
-      // Get posts from API filtered by the specific user
-      final postsResponse = await _socialService.getPosts(authorId: _user!.id);
+      // Get posts from API filtered by the specific user with pagination
+      final postsResponse = await _socialService.getPosts(
+        page: 1,
+        authorId: _user!.id,
+      );
       final userPosts = postsResponse['results'] as List<dynamic>;
 
       // Check if widget is still mounted before updating state
@@ -153,6 +167,8 @@ class _ProfilePageState extends State<ProfilePage>
       setState(() {
         _userPosts = userPosts;
         _isLoadingPosts = false;
+        _userPostsPage = 1;
+        _hasMoreUserPosts = postsResponse['next'] != null;
       });
     } catch (e) {
       // Check if widget is still mounted before updating state
@@ -165,23 +181,64 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // Add method to load liked posts
+  // Add method to load more user posts
+  Future<void> _loadMoreUserPosts() async {
+    if (_isLoadingMoreUserPosts || !_hasMoreUserPosts) return;
+
+    setState(() {
+      _isLoadingMoreUserPosts = true;
+    });
+
+    try {
+      final nextPage = _userPostsPage + 1;
+      final postsResponse = await _socialService.getPosts(
+        page: nextPage,
+        authorId: _user!.id,
+      );
+      final morePosts = postsResponse['results'] as List<dynamic>;
+
+      if (!mounted) return;
+
+      setState(() {
+        if (morePosts.isNotEmpty) {
+          _userPosts!.addAll(morePosts);
+          _userPostsPage = nextPage;
+        }
+        _hasMoreUserPosts = postsResponse['next'] != null;
+        _isLoadingMoreUserPosts = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingMoreUserPosts = false;
+      });
+      print('Error loading more user posts: $e');
+    }
+  }
+
+  // Add method to load liked posts with pagination
   Future<void> _loadLikedPosts() async {
     // Only load liked posts for own profile
     if (!_isOwnProfile) return;
 
     setState(() {
       _isLoadingLikedPosts = true;
+      _likedPostsPage = 1;
+      _hasMoreLikedPosts = true;
     });
 
     try {
-      final likedPosts = await _socialService.getLikedPosts();
+      final likedPostsResponse = await _socialService.getLikedPosts(page: 1);
+      final likedPosts = likedPostsResponse['results'] as List<dynamic>;
 
       if (!mounted) return;
 
       setState(() {
         _likedPosts = likedPosts;
         _isLoadingLikedPosts = false;
+        _likedPostsPage = 1;
+        _hasMoreLikedPosts = likedPostsResponse['next'] != null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -190,6 +247,40 @@ class _ProfilePageState extends State<ProfilePage>
         _isLoadingLikedPosts = false;
       });
       print('Error loading liked posts: $e');
+    }
+  }
+
+  // Add method to load more liked posts
+  Future<void> _loadMoreLikedPosts() async {
+    if (_isLoadingMoreLikedPosts || !_hasMoreLikedPosts) return;
+
+    setState(() {
+      _isLoadingMoreLikedPosts = true;
+    });
+
+    try {
+      final nextPage = _likedPostsPage + 1;
+      final likedPostsResponse =
+          await _socialService.getLikedPosts(page: nextPage);
+      final morePosts = likedPostsResponse['results'] as List<dynamic>;
+
+      if (!mounted) return;
+
+      setState(() {
+        if (morePosts.isNotEmpty) {
+          _likedPosts!.addAll(morePosts);
+          _likedPostsPage = nextPage;
+        }
+        _hasMoreLikedPosts = likedPostsResponse['next'] != null;
+        _isLoadingMoreLikedPosts = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingMoreLikedPosts = false;
+      });
+      print('Error loading more liked posts: $e');
     }
   }
 
@@ -202,13 +293,41 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
 
       setState(() {
-        final postIndex = _userPosts!
-            .indexWhere((p) => p['id'].toString() == postId.toString());
-        if (postIndex >= 0) {
-          _userPosts![postIndex]['is_liked'] = isLiked;
-          _userPosts![postIndex]['likes_count'] = isLiked
-              ? (_userPosts![postIndex]['likes_count'] ?? 0) + 1
-              : (_userPosts![postIndex]['likes_count'] ?? 1) - 1;
+        // Update in user posts if present
+        if (_userPosts != null) {
+          final postIndex = _userPosts!
+              .indexWhere((p) => p['id'].toString() == postId.toString());
+          if (postIndex >= 0) {
+            _userPosts![postIndex]['is_liked'] = isLiked;
+            _userPosts![postIndex]['likes_count'] = isLiked
+                ? (_userPosts![postIndex]['likes_count'] ?? 0) + 1
+                : (_userPosts![postIndex]['likes_count'] ?? 1) - 1;
+          }
+        }
+
+        // Update in liked posts if present
+        if (_likedPosts != null) {
+          final likedPostIndex = _likedPosts!
+              .indexWhere((p) => p['id'].toString() == postId.toString());
+
+          if (likedPostIndex >= 0) {
+            if (isLiked) {
+              // Update the existing post
+              _likedPosts![likedPostIndex]['is_liked'] = true;
+              _likedPosts![likedPostIndex]['likes_count'] =
+                  (_likedPosts![likedPostIndex]['likes_count'] ?? 0) + 1;
+            } else {
+              // Remove from liked posts since it's no longer liked
+              _likedPosts!.removeAt(likedPostIndex);
+            }
+          } else if (isLiked) {
+            // If the post was just liked but not in the liked posts list,
+            // we might need to reload the liked posts to get the updated list
+            // For now, we'll just reload if the user is on the liked posts tab
+            if (_tabController.index == 1) {
+              _loadLikedPosts();
+            }
+          }
         }
       });
     } catch (e) {
@@ -230,7 +349,17 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
 
       setState(() {
-        _userPosts!.removeWhere((p) => p['id'].toString() == postId.toString());
+        // Remove from user posts
+        if (_userPosts != null) {
+          _userPosts!
+              .removeWhere((p) => p['id'].toString() == postId.toString());
+        }
+
+        // Remove from liked posts if present
+        if (_likedPosts != null) {
+          _likedPosts!
+              .removeWhere((p) => p['id'].toString() == postId.toString());
+        }
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -254,12 +383,24 @@ class _ProfilePageState extends State<ProfilePage>
   // Show comments sheet - now using the shared utility method
   void _showCommentsSheet(BuildContext context, dynamic post) {
     PostUtils.showCommentsSheet(context, post, (newCommentCount) {
-      // Update post's comment count without full reload
+      // Update post's comment count in both lists
       setState(() {
-        final postIndex = _userPosts!
-            .indexWhere((p) => p['id'].toString() == post['id'].toString());
-        if (postIndex >= 0) {
-          _userPosts![postIndex]['comments_count'] = newCommentCount;
+        // Update in user posts
+        if (_userPosts != null) {
+          final postIndex = _userPosts!
+              .indexWhere((p) => p['id'].toString() == post['id'].toString());
+          if (postIndex >= 0) {
+            _userPosts![postIndex]['comments_count'] = newCommentCount;
+          }
+        }
+
+        // Update in liked posts
+        if (_likedPosts != null) {
+          final likedPostIndex = _likedPosts!
+              .indexWhere((p) => p['id'].toString() == post['id'].toString());
+          if (likedPostIndex >= 0) {
+            _likedPosts![likedPostIndex]['comments_count'] = newCommentCount;
+          }
         }
       });
     });
@@ -583,10 +724,11 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // Add method to build posts list for each tab
+  // Add method to build posts list for each tab with pagination
   Widget _buildPostsList(
-      List<dynamic>? posts, bool isLoading, String emptyMessage) {
-    if (isLoading) {
+      List<dynamic>? posts, bool isLoading, String emptyMessage,
+      {bool isUserPosts = false}) {
+    if (isLoading && (posts == null || posts.isEmpty)) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32.0),
@@ -622,30 +764,60 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
+    // Simple column layout without nested scroll controllers
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: kIsWeb ? 700 : double.infinity,
         ),
-        child: ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: posts.length,
-          itemBuilder: (context, index) {
-            final post = posts[index];
-            return Directionality(
-              textDirection: ui.TextDirection.rtl,
-              child: PostCard(
-                post: post,
-                onLike: _likePost,
-                onComment: _showCommentsSheet,
-                onUserTap: _navigateToUserProfile,
-                onDelete: _isOwnProfile ? _deletePost : null,
-                currentUserId: _currentUserId,
-                useRtlText: true,
+        child: Column(
+          children: [
+            // Posts list
+            ...List.generate(posts.length, (index) {
+              final post = posts[index];
+              return Directionality(
+                textDirection: ui.TextDirection.rtl,
+                child: PostCard(
+                  post: post,
+                  onLike: _likePost,
+                  onComment: _showCommentsSheet,
+                  onUserTap: _navigateToUserProfile,
+                  onDelete: _isOwnProfile ? _deletePost : null,
+                  currentUserId: _currentUserId,
+                  useRtlText: true,
+                ),
+              );
+            }),
+
+            // Loading more indicator
+            if ((isUserPosts && _isLoadingMoreUserPosts) ||
+                (!isUserPosts && _isLoadingMoreLikedPosts))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(),
+                ),
               ),
-            );
-          },
+
+            // End of content indicator
+            if ((isUserPosts && !_hasMoreUserPosts && posts.isNotEmpty) ||
+                (!isUserPosts && !_hasMoreLikedPosts && posts.isNotEmpty))
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text(
+                    'تم تحميل جميع المنشورات',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Extra padding for better scrolling
+            const SizedBox(height: 100),
+          ],
         ),
       ),
     );
@@ -662,207 +834,263 @@ class _ProfilePageState extends State<ProfilePage>
                   style: TextStyle(fontSize: 16, color: Colors.red),
                 ),
               )
-            : CustomScrollView(
-                controller: widget.scrollController,
-                slivers: <Widget>[
-                  // Enhanced app bar for overlay mode - removed the name from title
-                  widget.isOverlay
-                      ? SliverAppBar(
-                          floating: true,
-                          snap: true,
-                          backgroundColor: AppStyles.txtFieldColor,
-                          elevation: 2,
-                          automaticallyImplyLeading: false,
-                          // Removed name from title
-                          title: Text(
-                            'الملف الشخصي',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          centerTitle: true,
-                          actions: [
-                            IconButton(
-                              icon:
-                                  const Icon(Icons.close, color: Colors.white),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ],
-                        )
-                      : SliverAppBar(
-                          expandedHeight: 200.0,
-                          floating: false,
-                          pinned: true,
-                          backgroundColor: AppStyles.trans,
-                          flexibleSpace: FlexibleSpaceBar(
-                            title: null,
-                            background: Container(
-                              color: AppStyles.bgColor,
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 50,
-                                      backgroundColor: AppStyles.txtFieldColor,
-                                      backgroundImage: _user!
-                                              .profilePicture.isNotEmpty
-                                          ? NetworkImage(_user!.profilePicture)
-                                          : null,
-                                      child: _user!.profilePicture.isEmpty
-                                          ? Text(
-                                              _user!.name.isNotEmpty
-                                                  ? _user!.name[0].toUpperCase()
-                                                  : '?',
-                                              style: TextStyle(
-                                                  fontSize: 40,
-                                                  color: AppStyles.bgColor),
-                                            )
-                                          : null,
-                                    ),
-                                    SizedBox(height: 10),
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          _user!.name,
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 18,
-                                            color: AppStyles.purple,
-                                          ),
-                                        ),
-                                        // Show verification badge for sheikh users
-                                        if (_user!.userType == 'sheikh')
-                                          const VerificationBadge(
-                                            isVerifiedSheikh: true,
-                                            size: 16.0,
-                                          ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
+            : NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification scrollInfo) {
+                  // Handle pagination detection at the main scroll level
+                  if (scrollInfo.metrics.pixels >=
+                      scrollInfo.metrics.maxScrollExtent * 0.9) {
+                    if (_isOwnProfile) {
+                      // Check which tab is active and load more accordingly
+                      if (_tabController.index == 0) {
+                        // User posts tab
+                        if (_hasMoreUserPosts && !_isLoadingMoreUserPosts) {
+                          print("Loading more user posts...");
+                          _loadMoreUserPosts();
+                        }
+                      } else if (_tabController.index == 1) {
+                        // Liked posts tab
+                        if (_hasMoreLikedPosts && !_isLoadingMoreLikedPosts) {
+                          print("Loading more liked posts...");
+                          _loadMoreLikedPosts();
+                        }
+                      }
+                    } else {
+                      // For other user profiles, only user posts
+                      if (_hasMoreUserPosts && !_isLoadingMoreUserPosts) {
+                        print("Loading more user posts...");
+                        _loadMoreUserPosts();
+                      }
+                    }
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  controller: widget.scrollController,
+                  slivers: <Widget>[
+                    // Enhanced app bar for overlay mode - removed the name from title
+                    widget.isOverlay
+                        ? SliverAppBar(
+                            floating: true,
+                            snap: true,
+                            backgroundColor: AppStyles.txtFieldColor,
+                            elevation: 2,
+                            automaticallyImplyLeading: false,
+                            // Removed name from title
+                            title: Text(
+                              'الملف الشخصي',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          ),
-                          // Show settings and logout buttons only if it's the user's own profile
-                          actions: [
-                            if (_isOwnProfile) ...[
+                            centerTitle: true,
+                            actions: [
                               IconButton(
-                                icon: const Icon(Icons.logout),
-                                onPressed: _handleLogout,
-                                tooltip: 'تسجيل الخروج',
+                                icon: const Icon(Icons.close,
+                                    color: Colors.white),
+                                onPressed: () => Navigator.of(context).pop(),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.settings),
-                                onPressed: _navigateToAccountSettings,
-                                tooltip: 'إعدادات الحساب',
-                              ),
-                            ],
-                          ], // <-- FIXED: changed ',' to ']'
-                        ),
-
-                  // Simplified profile header for overlay mode
-                  if (widget.isOverlay)
-                    SliverToBoxAdapter(
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                        child: Column(
-                          children: [
-                            Center(
-                              child: CircleAvatar(
-                                radius: 45,
-                                backgroundColor: AppStyles.txtFieldColor,
-                                backgroundImage:
-                                    _user!.profilePicture.isNotEmpty
-                                        ? NetworkImage(_user!.profilePicture)
-                                        : null,
-                                child: _user!.profilePicture.isEmpty
-                                    ? Text(
-                                        _user!.name.isNotEmpty
-                                            ? _user!.name[0].toUpperCase()
-                                            : '?',
-                                        style: TextStyle(
-                                            fontSize: 36,
-                                            color: AppStyles.bgColor),
-                                      )
-                                    : null,
-                              ),
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _user!.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: AppStyles.purple,
-                                  ),
-                                ),
-                                // Show verification badge for sheikh users
-                                if (_user!.userType == 'sheikh')
-                                  const VerificationBadge(
-                                    isVerifiedSheikh: true,
-                                    size: 16.0,
-                                  ),
-                              ],
-                            ),
-                            // Add chat button only when viewing other profiles in overlay mode
-                            if (!_isOwnProfile && widget.isOverlay)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 16.0),
-                                child: ElevatedButton(
-                                  onPressed:
-                                      _isStartingChat ? null : _startOrOpenChat,
-                                  child: _isStartingChat
-                                      ? SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.white,
-                                          ),
-                                        )
-                                      : Icon(Icons.chat),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppStyles.txtFieldColor,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.all(12),
-                                    shape: CircleBorder(),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // Add tab buttons
-                  SliverToBoxAdapter(
-                    child: _buildTabButtons(),
-                  ),
-
-                  // Posts content with TabBarView
-                  SliverFillRemaining(
-                    child: _isOwnProfile
-                        ? TabBarView(
-                            controller: _tabController,
-                            children: [
-                              // User's posts tab
-                              _buildPostsList(_userPosts, _isLoadingPosts,
-                                  'ليس لديك أي منشورات بعد'),
-                              // Liked posts tab
-                              _buildPostsList(_likedPosts, _isLoadingLikedPosts,
-                                  'لم تعجب بأي منشورات بعد'),
                             ],
                           )
-                        : _buildPostsList(_userPosts, _isLoadingPosts,
-                            'لا توجد منشورات لهذا المستخدم'),
-                  ),
-                ],
+                        : SliverAppBar(
+                            expandedHeight: 200.0,
+                            floating: false,
+                            pinned: true,
+                            backgroundColor: AppStyles.trans,
+                            flexibleSpace: FlexibleSpaceBar(
+                              title: null,
+                              background: Container(
+                                color: AppStyles.bgColor,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 50,
+                                        backgroundColor:
+                                            AppStyles.txtFieldColor,
+                                        backgroundImage:
+                                            _user!.profilePicture.isNotEmpty
+                                                ? NetworkImage(
+                                                    _user!.profilePicture)
+                                                : null,
+                                        child: _user!.profilePicture.isEmpty
+                                            ? Text(
+                                                _user!.name.isNotEmpty
+                                                    ? _user!.name[0]
+                                                        .toUpperCase()
+                                                    : '?',
+                                                style: TextStyle(
+                                                    fontSize: 40,
+                                                    color: AppStyles.bgColor),
+                                              )
+                                            : null,
+                                      ),
+                                      SizedBox(height: 10),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            _user!.name,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18,
+                                              color: AppStyles.purple,
+                                            ),
+                                          ),
+                                          // Show verification badge for sheikh users
+                                          if (_user!.userType == 'sheikh')
+                                            const VerificationBadge(
+                                              isVerifiedSheikh: true,
+                                              size: 16.0,
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Show settings and logout buttons only if it's the user's own profile
+                            actions: [
+                              if (_isOwnProfile) ...[
+                                IconButton(
+                                  icon: const Icon(Icons.logout),
+                                  onPressed: _handleLogout,
+                                  tooltip: 'تسجيل الخروج',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.settings),
+                                  onPressed: _navigateToAccountSettings,
+                                  tooltip: 'إعدادات الحساب',
+                                ),
+                              ],
+                            ], // <-- FIXED: changed ',' to ']'
+                          ),
+
+                    // Simplified profile header for overlay mode
+                    if (widget.isOverlay)
+                      SliverToBoxAdapter(
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                          child: Column(
+                            children: [
+                              Center(
+                                child: CircleAvatar(
+                                  radius: 45,
+                                  backgroundColor: AppStyles.txtFieldColor,
+                                  backgroundImage:
+                                      _user!.profilePicture.isNotEmpty
+                                          ? NetworkImage(_user!.profilePicture)
+                                          : null,
+                                  child: _user!.profilePicture.isEmpty
+                                      ? Text(
+                                          _user!.name.isNotEmpty
+                                              ? _user!.name[0].toUpperCase()
+                                              : '?',
+                                          style: TextStyle(
+                                              fontSize: 36,
+                                              color: AppStyles.bgColor),
+                                        )
+                                      : null,
+                                ),
+                              ),
+                              SizedBox(height: 10),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _user!.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: AppStyles.purple,
+                                    ),
+                                  ),
+                                  // Show verification badge for sheikh users
+                                  if (_user!.userType == 'sheikh')
+                                    const VerificationBadge(
+                                      isVerifiedSheikh: true,
+                                      size: 16.0,
+                                    ),
+                                ],
+                              ),
+                              // Add chat button only when viewing other profiles in overlay mode
+                              if (!_isOwnProfile && widget.isOverlay)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 16.0),
+                                  child: ElevatedButton(
+                                    onPressed: _isStartingChat
+                                        ? null
+                                        : _startOrOpenChat,
+                                    child: _isStartingChat
+                                        ? SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Icon(Icons.chat),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppStyles.txtFieldColor,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.all(12),
+                                      shape: CircleBorder(),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                    // Posts content - convert TabBarView to sliver content
+                    if (_isOwnProfile) ...[
+                      // Tab buttons
+                      SliverToBoxAdapter(
+                        child: _buildTabButtons(),
+                      ),
+
+                      // Show content based on selected tab
+                      SliverToBoxAdapter(
+                        child: AnimatedBuilder(
+                          animation: _tabController,
+                          builder: (context, child) {
+                            if (_tabController.index == 0) {
+                              // User's posts tab
+                              return _buildPostsList(
+                                _userPosts,
+                                _isLoadingPosts,
+                                'ليس لديك أي منشورات بعد',
+                                isUserPosts: true,
+                              );
+                            } else {
+                              // Liked posts tab
+                              return _buildPostsList(
+                                _likedPosts,
+                                _isLoadingLikedPosts,
+                                'لم تعجب بأي منشورات بعد',
+                                isUserPosts: false,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ] else ...[
+                      // For other user profiles, show posts directly
+                      SliverToBoxAdapter(
+                        child: _buildPostsList(
+                          _userPosts,
+                          _isLoadingPosts,
+                          'لا توجد منشورات لهذا المستخدم',
+                          isUserPosts: true,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               );
 
     // Return the appropriate widget based on overlay mode

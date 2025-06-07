@@ -226,6 +226,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         title: 'القرآن الكريم - المفضلة',
         showBackButton: true,
         showAddButton: false,
+        titleFontFamily: 'thuluth',
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

@@ -39,6 +39,7 @@ class _CommunityPageState extends State<CommunityPage> {
   String _selectedCategory = '';
   String _tagSearchQuery = '';
   bool _isFilterExpanded = false;
+  bool _useLatestOrdering = false; // New field for time-based ordering
   final List<String> _categories = [
     'religious',
     'practice',
@@ -55,12 +56,24 @@ class _CommunityPageState extends State<CommunityPage> {
     _fetchPosts();
 
     _scrollController.addListener(() {
-      if (_scrollController.position.pixels >=
-              _scrollController.position.maxScrollExtent * 0.8 &&
-          !_isLoading &&
-          !_isLoadingMore &&
-          _hasMorePages) {
-        _loadMorePosts();
+      if (kIsWeb) {
+        // For web, use a more sensitive threshold
+        if (_scrollController.position.pixels >=
+                _scrollController.position.maxScrollExtent - 200 &&
+            !_isLoading &&
+            !_isLoadingMore &&
+            _hasMorePages) {
+          _loadMorePosts();
+        }
+      } else {
+        // Original mobile logic
+        if (_scrollController.position.pixels >=
+                _scrollController.position.maxScrollExtent * 0.8 &&
+            !_isLoading &&
+            !_isLoadingMore &&
+            _hasMorePages) {
+          _loadMorePosts();
+        }
       }
     });
   }
@@ -131,6 +144,7 @@ class _CommunityPageState extends State<CommunityPage> {
       _selectedTagIds.clear();
       _selectedCategory = '';
       _tagSearchQuery = '';
+      _useLatestOrdering = false; // Reset ordering as well
       _filteredTags = _tags;
     });
 
@@ -164,7 +178,10 @@ class _CommunityPageState extends State<CommunityPage> {
         // For tag filtering, disable pagination as we're merging results
         _hasMorePages = false;
       } else {
-        final response = await _socialService.getPosts(page: 1);
+        final response = await _socialService.getPosts(
+          page: 1,
+          ordering: _useLatestOrdering ? 'latest' : null,
+        );
         posts = response['results'] as List<dynamic>;
 
         // Check if there are more pages
@@ -228,7 +245,10 @@ class _CommunityPageState extends State<CommunityPage> {
 
     try {
       final nextPage = _currentPage + 1;
-      final response = await _socialService.getPosts(page: nextPage);
+      final response = await _socialService.getPosts(
+        page: nextPage,
+        ordering: _useLatestOrdering ? 'latest' : null,
+      );
       final morePosts = response['results'] as List<dynamic>;
 
       print("Received ${morePosts.length} posts from page $nextPage");
@@ -431,7 +451,11 @@ class _CommunityPageState extends State<CommunityPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                _selectedTagIds.isEmpty ? 'المنشورات' : 'تصفية حسب المواضيع',
+                _selectedTagIds.isNotEmpty
+                    ? 'تصفية حسب المواضيع'
+                    : _useLatestOrdering
+                        ? 'الأحدث أولاً'
+                        : 'مقترح',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -521,7 +545,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                     children: [
                                       // Title
                                       Text(
-                                        'تصفية حسب المواضيع',
+                                        'خيارات التصفية',
                                         style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 16,
@@ -529,6 +553,148 @@ class _CommunityPageState extends State<CommunityPage> {
                                         ),
                                       ),
                                       const SizedBox(height: 12),
+
+                                      // Ordering selection - redesigned as segmented control
+                                      Text(
+                                        'ترتيب المنشورات',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: AppStyles.darkPurple,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: AppStyles.lightPurple
+                                              .withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          border: Border.all(
+                                            color: AppStyles.lightPurple
+                                                .withOpacity(0.3),
+                                          ),
+                                        ),
+                                        child: Row(
+                                          children: [
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  if (_useLatestOrdering) {
+                                                    setState(() {
+                                                      _useLatestOrdering =
+                                                          false;
+                                                    });
+                                                    _fetchPosts();
+                                                  }
+                                                },
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                      horizontal: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: !_useLatestOrdering
+                                                        ? AppStyles
+                                                            .txtFieldColor
+                                                        : Colors.transparent,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.auto_awesome,
+                                                        color:
+                                                            !_useLatestOrdering
+                                                                ? AppStyles
+                                                                    .white
+                                                                : AppStyles
+                                                                    .darkPurple,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'مُقترح',
+                                                        style: TextStyle(
+                                                          color:
+                                                              !_useLatestOrdering
+                                                                  ? AppStyles
+                                                                      .white
+                                                                  : AppStyles
+                                                                      .darkPurple,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: GestureDetector(
+                                                onTap: () {
+                                                  if (!_useLatestOrdering) {
+                                                    setState(() {
+                                                      _useLatestOrdering = true;
+                                                    });
+                                                    _fetchPosts();
+                                                  }
+                                                },
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                      vertical: 12,
+                                                      horizontal: 16),
+                                                  decoration: BoxDecoration(
+                                                    color: _useLatestOrdering
+                                                        ? AppStyles
+                                                            .txtFieldColor
+                                                        : Colors.transparent,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            10),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      Icon(
+                                                        Icons.access_time,
+                                                        color:
+                                                            _useLatestOrdering
+                                                                ? AppStyles
+                                                                    .white
+                                                                : AppStyles
+                                                                    .darkPurple,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'الأحدث',
+                                                        style: TextStyle(
+                                                          color:
+                                                              _useLatestOrdering
+                                                                  ? AppStyles
+                                                                      .white
+                                                                  : AppStyles
+                                                                      .darkPurple,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 16),
 
                                       // Search bar for tags
                                       TextField(
@@ -793,45 +959,118 @@ class _CommunityPageState extends State<CommunityPage> {
                               ? const Center(
                                   child: Text('لا توجد منشورات'),
                                 )
-                              : Scrollbar(
-                                  controller: _scrollController,
-                                  thickness: 8.0,
-                                  radius: const Radius.circular(10.0),
-                                  thumbVisibility: kIsWeb,
-                                  child: ListView.builder(
-                                    controller: _scrollController,
-                                    itemCount: _posts!.length +
-                                        (_isLoadingMore && _hasMorePages
-                                            ? 1
-                                            : 0),
-                                    itemBuilder: (context, index) {
-                                      if (index >= _posts!.length) {
-                                        return const Center(
-                                          child: Padding(
-                                            padding: EdgeInsets.all(16.0),
-                                            child: CircularProgressIndicator(),
-                                          ),
-                                        );
-                                      }
-
-                                      final post = _posts![index];
-                                      return PostCard(
-                                        post: post,
-                                        onLike: _likePost,
-                                        onComment: _showComments,
-                                        onUserTap: _navigateToUserProfile,
-                                        onDelete: _deletePost,
-                                        currentUserId: _currentUserId,
-                                        useRtlText: true,
-                                      );
-                                    },
+                              : ScrollConfiguration(
+                                  behavior:
+                                      ScrollConfiguration.of(context).copyWith(
+                                    scrollbars: kIsWeb ? false : true,
                                   ),
+                                  child: kIsWeb
+                                      ? _buildWebScrollView()
+                                      : _buildMobileScrollView(),
                                 ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildWebScrollView() {
+    return Scrollbar(
+      controller: _scrollController,
+      thickness: 8.0,
+      radius: const Radius.circular(10.0),
+      thumbVisibility: true,
+      scrollbarOrientation: ScrollbarOrientation.right,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        scrollDirection: Axis.vertical,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height,
+          ),
+          child: Column(
+            children: [
+              // Posts
+              ...List.generate(_posts!.length, (index) {
+                final post = _posts![index];
+                return PostCard(
+                  post: post,
+                  onLike: _likePost,
+                  onComment: _showComments,
+                  onUserTap: _navigateToUserProfile,
+                  onDelete: _deletePost,
+                  currentUserId: _currentUserId,
+                  useRtlText: true,
+                );
+              }),
+
+              // Loading indicator
+              if (_isLoadingMore && _hasMorePages)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+
+              // End of content indicator
+              if (!_hasMorePages && _posts!.isNotEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Text(
+                      'تم تحميل جميع المنشورات',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ),
+
+              // Extra space to ensure scrollability
+              const SizedBox(height: 100),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileScrollView() {
+    return Scrollbar(
+      controller: _scrollController,
+      thickness: 8.0,
+      radius: const Radius.circular(10.0),
+      thumbVisibility: false,
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: _posts!.length + (_isLoadingMore && _hasMorePages ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (index >= _posts!.length) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+
+          final post = _posts![index];
+          return PostCard(
+            post: post,
+            onLike: _likePost,
+            onComment: _showComments,
+            onUserTap: _navigateToUserProfile,
+            onDelete: _deletePost,
+            currentUserId: _currentUserId,
+            useRtlText: true,
+          );
+        },
       ),
     );
   }

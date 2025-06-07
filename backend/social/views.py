@@ -70,11 +70,19 @@ class PostViewSet(viewsets.ModelViewSet):
             try:
                 author_id_int = int(author_id)
                 queryset = queryset.filter(author__id=author_id_int)
+                # Return chronological order for profile pages, no suggestion algorithm
+                return queryset.order_by('-created_at')
             except (ValueError, TypeError):
                 pass  # Ignore invalid author_id
+        
+        # Check for time-based ordering parameter
+        ordering = self.request.query_params.get('ordering')
+        if ordering == 'latest':
+            # Return posts ordered by creation time (latest first) with pagination
+            return queryset.order_by('-created_at')
             
         # If no specific filters are applied (الكل filter), apply suggestion algorithm
-        if not tags and not category and not author_id:
+        if not tags and not category and not author_id and ordering != 'latest':
             return self._apply_suggestion_algorithm(queryset)
             
         return queryset.order_by('-created_at')
@@ -319,6 +327,34 @@ class PostViewSet(viewsets.ModelViewSet):
                 {'error': f'Failed to upload media: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @action(detail=False, methods=['GET'])
+    def liked_posts(self, request):
+        """
+        Get posts liked by the current user with proper pagination.
+        """
+        user = request.user
+        
+        # Get posts that the current user has liked, with proper visibility filtering
+        liked_posts = Post.objects.filter(
+            likes__user=user
+        ).filter(
+            Q(visibility='public') |
+            Q(author=user) |
+            (Q(visibility='followers') & Q(author__followers=user))
+        ).annotate(
+            comments_count=Count('comments', distinct=True),
+            likes_count=Count('likes', distinct=True)
+        ).order_by('-likes__created_at').distinct()
+        
+        # Apply pagination
+        page = self.paginate_queryset(liked_posts)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(liked_posts, many=True)
+        return Response(serializer.data)
 
 class CommentViewSet(viewsets.ModelViewSet):
     queryset = Comment.objects.all()

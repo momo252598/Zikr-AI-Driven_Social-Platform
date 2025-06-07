@@ -6,8 +6,9 @@ import '../models/user.dart';
 import 'package:http_parser/http_parser.dart'; // Add this import for MediaType
 
 class SocialService {
-  final ApiService _apiService = ApiService();  // Get all posts with pagination
-  Future<Map<String, dynamic>> getPosts({int? page, int? tagId, int? authorId}) async {
+  final ApiService _apiService = ApiService(); // Get all posts with pagination
+  Future<Map<String, dynamic>> getPosts(
+      {int? page, int? tagId, int? authorId, String? ordering}) async {
     try {
       String endpoint = '/social/posts/';
       List<String> params = [];
@@ -22,6 +23,10 @@ class SocialService {
 
       if (authorId != null) {
         params.add('author=$authorId');
+      }
+
+      if (ordering != null) {
+        params.add('ordering=$ordering');
       }
 
       if (params.isNotEmpty) {
@@ -87,6 +92,7 @@ class SocialService {
     final response = await _apiService.post('/social/posts/', data);
     return response;
   }
+
   // Get all available tags
   Future<List<dynamic>> getTags({String? category, String? search}) async {
     try {
@@ -110,22 +116,23 @@ class SocialService {
       // Fetch all pages of tags
       List<dynamic> allTags = [];
       String? nextUrl = endpoint;
-      
+
       while (nextUrl != null) {
         final response = await _apiService.get(nextUrl);
-        
+
         // Debug: Print the response structure
         print("Tags response type: ${response.runtimeType}");
-        
+
         if (response is List) {
           // Non-paginated response
           allTags.addAll(response);
           break;
         } else if (response is Map && response.containsKey('results')) {
           // Paginated response
-          final List<dynamic> pageResults = response['results'] as List<dynamic>? ?? [];
+          final List<dynamic> pageResults =
+              response['results'] as List<dynamic>? ?? [];
           allTags.addAll(pageResults);
-          
+
           // Check if there's a next page
           nextUrl = response['next'];
           if (nextUrl != null) {
@@ -344,28 +351,59 @@ class SocialService {
     }
   }
 
+  // Get posts liked by the current user with pagination
+  Future<Map<String, dynamic>> getLikedPosts({int? page}) async {
+    try {
+      String endpoint = '/social/posts/liked_posts/';
+
+      if (page != null) {
+        endpoint += '?page=$page';
+      }
+
+      print("Fetching liked posts from endpoint: $endpoint");
+
+      final response = await _apiService.get(endpoint);
+      print("Liked posts response type: ${response.runtimeType}");
+
+      // Handle different response structures safely
+      if (response is Map && response.containsKey('results')) {
+        return {
+          'results': response['results'] as List<dynamic>? ?? [],
+          'count': response['count'] ?? 0,
+          'next': response['next'],
+          'previous': response['previous'],
+        };
+      } else if (response is List) {
+        // For backward compatibility, return as paginated format
+        return {
+          'results': response,
+          'count': response.length,
+          'next': null,
+          'previous': null,
+        };
+      } else {
+        print("Unexpected liked posts response format: $response");
+        return {
+          'results': [],
+          'count': 0,
+          'next': null,
+          'previous': null,
+        };
+      }
+    } catch (e) {
+      print("Error in getLikedPosts: $e");
+      return {
+        'results': [],
+        'count': 0,
+        'next': null,
+        'previous': null,
+      };
+    }
+  }
+
   // Helper method to get posts for a specific tag (returns just the results list)
   Future<List<dynamic>> getPostsForTag(int tagId) async {
     final response = await getPosts(tagId: tagId);
     return response['results'] as List<dynamic>;
-  }
-
-  // Get posts liked by the current user
-  Future<List<dynamic>> getLikedPosts() async {
-    try {
-      // Get all posts first
-      final postsResponse = await getPosts();
-      final allPosts = postsResponse['results'] as List<dynamic>;
-
-      // Filter posts that are liked by the current user
-      final likedPosts = allPosts.where((post) {
-        return post['is_liked'] == true;
-      }).toList();
-
-      return likedPosts;
-    } catch (e) {
-      print("Error in getLikedPosts: $e");
-      return [];
-    }
   }
 }
