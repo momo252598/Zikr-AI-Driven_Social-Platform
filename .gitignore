@@ -1,4 +1,6 @@
 backend/islamicsocial-15380-firebase-adminsdk-fbsvc-c5ed0571f1.json
+backend/zikr-94f9a-firebase-adminsdk-fbsvc-7b2b722804.json
+backend/zikr-94f9a-firebase-adminsdk-fbsvc-8c693eec91.json
 backend/.env
 # Python virtual environment directories
 backend/venv/
@@ -10,3 +12,4 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/*.py[cod]
 backend/*$py.class
+Frontend\lib\firebase_options.dart

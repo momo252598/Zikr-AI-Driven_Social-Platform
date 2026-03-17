@@ -498,8 +498,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                         ),
                         const SizedBox(height: 8),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: kIsWeb ? 12 : 8,
+                          runSpacing: kIsWeb ? 12 : 8,
                           children: [
                             // "All" option
                             FilterChip(
@@ -521,7 +521,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                     ? AppStyles.white
                                     : AppStyles.black,
                               ),
-                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: kIsWeb ? 12 : 8),
                             ),
 
                             // Category options
@@ -552,7 +553,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                         ? AppStyles.white
                                         : AppStyles.black,
                                   ),
-                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: kIsWeb ? 12 : 8),
                                 );
                               },
                             ),
@@ -573,7 +575,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                           ),
                           const SizedBox(height: 8),
                           Wrap(
-                            spacing: 8,
+                            spacing: kIsWeb ? 12 : 8,
+                            runSpacing: kIsWeb ? 12 : 8,
                             children: _tags
                                 .where((tag) =>
                                     _selectedTagIds.contains(tag['id']))
@@ -612,7 +615,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                     ),
                                   )
                                 : Wrap(
-                                    spacing: 8,
+                                    spacing: kIsWeb ? 12 : 8,
+                                    runSpacing: kIsWeb ? 12 : 8,
                                     children: _filteredTags.map<Widget>((tag) {
                                       final bool isSelected =
                                           _selectedTagIds.contains(tag['id']);
@@ -632,6 +636,8 @@ class _CreatePostPageState extends State<CreatePostPage> {
                                                 .withOpacity(0.2),
                                         onPressed: () =>
                                             _toggleTagSelection(tag),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: kIsWeb ? 12 : 8),
                                       );
                                     }).toList(),
                                   ),

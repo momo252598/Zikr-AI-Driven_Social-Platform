@@ -6,7 +6,7 @@ def initialize_firebase():
     # Get your service account key from Firebase console > Project settings > Service accounts
     # Use path relative to this file instead of working directory
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    credentials_path = os.path.join(current_dir, "../zikr-94f9a-firebase-adminsdk-fbsvc-8c693eec91.json")
+    credentials_path = os.path.join(current_dir, "../zikr-94f9a-firebase-adminsdk-fbsvc-7b2b722804.json")
     
     # Alternative: use environment variable (more secure for production)
     # credentials_path = os.environ.get("FIREBASE_CREDENTIALS_PATH", credentials_path)

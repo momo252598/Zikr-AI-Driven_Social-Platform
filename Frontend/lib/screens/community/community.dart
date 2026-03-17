@@ -740,8 +740,8 @@ class _CommunityPageState extends State<CommunityPage> {
 
                                       // Category chips
                                       Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
+                                        spacing: kIsWeb ? 12 : 8,
+                                        runSpacing: kIsWeb ? 12 : 8,
                                         children: [
                                           // "All" option
                                           FilterChip(
@@ -765,7 +765,7 @@ class _CommunityPageState extends State<CommunityPage> {
                                                   : AppStyles.black,
                                             ),
                                             padding: EdgeInsets.symmetric(
-                                                horizontal: 8),
+                                                horizontal: kIsWeb ? 12 : 8),
                                           ),
 
                                           // Category options
@@ -804,7 +804,8 @@ class _CommunityPageState extends State<CommunityPage> {
                                                       : AppStyles.black,
                                                 ),
                                                 padding: EdgeInsets.symmetric(
-                                                    horizontal: 8),
+                                                    horizontal:
+                                                        kIsWeb ? 12 : 8),
                                               );
                                             },
                                           ),
@@ -888,7 +889,8 @@ class _CommunityPageState extends State<CommunityPage> {
                                                   ),
                                                 )
                                               : Wrap(
-                                                  spacing: 8,
+                                                  spacing: kIsWeb ? 12 : 8,
+                                                  runSpacing: kIsWeb ? 12 : 8,
                                                   children: _filteredTags
                                                       .map<Widget>((tag) {
                                                     final bool isSelected =
@@ -918,6 +920,11 @@ class _CommunityPageState extends State<CommunityPage> {
                                                       onPressed: () =>
                                                           _toggleTagSelection(
                                                               tag),
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                              horizontal: kIsWeb
+                                                                  ? 12
+                                                                  : 8),
                                                     );
                                                   }).toList(),
                                                 ),

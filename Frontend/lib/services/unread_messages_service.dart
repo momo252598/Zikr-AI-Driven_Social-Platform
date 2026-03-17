@@ -45,7 +45,7 @@ class UnreadMessagesService {
 
     // Set up more frequent periodic refresh (every 15 seconds instead of every minute)
     // This will make the badge count update more responsive
-    _refreshTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       refreshUnreadCount();
     });
 
