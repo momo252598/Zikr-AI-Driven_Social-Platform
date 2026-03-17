@@ -12,4 +12,4 @@ backend/__pycache__/
 backend/**/__pycache__/
 backend/*.py[cod]
 backend/*$py.class
-Frontend\lib\firebase_options.dart
+Frontend/lib/firebase_options.dart
